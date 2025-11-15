@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD Productos Competencia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Paleta Neutra
+                        'fondo-claro': '#F9FAFB', 
+                        'panel-claro': '#FFFFFF',
+                        'texto-oscuro': '#1F2937',
+
+                        // Paleta Ámbar (Accent)
+                        'ambar-base': '#F59E0B',
+                        'ambar-claro': '#FCD34D',
+                        'ambar-oscuro': '#D97706',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos personalizados */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { 
+            background-color: #FFFFFF; 
+            margin: 5% auto; 
+            padding: 30px; 
+            border-radius: 12px; 
+            width: 80%; 
+            max-width: 600px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .close { 
+            color: #D97706; 
+            float: right; 
+            font-size: 32px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            line-height: 0.8;
+        }
+
+        /* Estilo para los botones principales con degradado (CORREGIDO CON !IMPORTANT) */
+        .btn-ambar {
+            background-image: linear-gradient(to right, var(--tw-color-ambar-base), var(--tw-color-ambar-oscuro)) !important; 
+            color: white !important;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: #D97706; /* Fallback color */
+        }
+
+        .btn-ambar:hover {
+            opacity: 0.9;
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Degradado de fondo del encabezado */
+        .header-bg {
+            background-image: linear-gradient(to right, #FCD34D, #F59E0B);
+        }
+    </style>
+</head>
+<body class="bg-fondo-claro p-8 font-sans text-texto-oscuro">
+    <div class="max-w-4xl mx-auto">
+        <div class="header-bg p-6 rounded-xl shadow-xl mb-8">
+            <h1 class="text-3xl font-extrabold text-white text-center tracking-wide">
+                Gestión de Productos de la Competencia
+            </h1>
+        </div>
+
+        <div class="flex justify-center space-x-4 mb-8">
+            <a href="/" class="bg-gray-200 text-texto-oscuro p-3 rounded-lg hover:bg-gray-300 transition duration-150">Dashboard</a>
+            <a href="/productos" class="bg-gray-200 text-texto-oscuro p-3 rounded-lg hover:bg-gray-300 transition duration-150">Productos Propios</a>
+        </div>
+        
+        <div class="mb-10 bg-panel-claro p-8 rounded-xl shadow-lg border border-gray-200">
+            <h2 class="text-2xl font-semibold mb-6 text-ambar-oscuro" id="formTitle">Añadir Nueva Presentación de Competidor</h2>
+            
+            <form id="productForm" class="grid grid-cols-1 gap-6">
+                <input type="hidden" id="product_id" value="">
+                
+                <input type="text" id="presentation" placeholder="Nombre/Descripción de la Presentación (*)" class="p-3 border border-gray-300 rounded-lg focus:ring-ambar-base focus:border-ambar-base transition" required>
+                
+                <div class="flex justify-end space-x-4"> 
+                    <button type="submit" id="submitButton" class="btn-ambar px-6 py-3 rounded-lg font-bold text-lg text-white bg-ambar-oscuro"> 
+                        Crear Presentación 
+                    </button>
+                    <button type="button" id="cancelButton" class="bg-gray-400 text-white px-6 py-3 rounded-lg font-bold text-lg hover:bg-gray-500 transition duration-150 hidden" onclick="resetForm()">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="mb-6">
+            <input type="text" id="searchInput" placeholder="Buscar presentación de competidor..." 
+                   class="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-ambar-base focus:border-ambar-base transition" 
+                   onkeyup="filterProducts()">
+            <p class="text-sm text-gray-600 mt-1">Escribe para filtrar la lista.</p>
+        </div>
+
+
+        <h2 class="text-2xl font-semibold mb-4 text-ambar-oscuro">Lista de Presentaciones de Competidores</h2>
+        
+        <div class="bg-panel-claro p-6 rounded-xl shadow-lg border border-gray-200 overflow-x-auto">
+            <table id="productsTable" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="w-2/3 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Presentación</th>
+                        <th class="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Creado en</th>
+                        <th class="w-1/6 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="productsTableBody" class="bg-white divide-y divide-gray-100">
+                    </tbody>
+            </table>
+            <p id="loadingMessage" class="text-center text-gray-500 mt-4">Cargando presentaciones...</p>
+            <p id="noResultsMessage" class="text-center text-gray-500 mt-4 hidden">No se encontraron presentaciones que coincidan con la búsqueda.</p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/competitorproducts'; 
+        const form = document.getElementById('productForm');
+        const tableBody = document.getElementById('productsTableBody');
+        const submitButton = document.getElementById('submitButton');
+        const cancelButton = document.getElementById('cancelButton');
+        const formTitle = document.getElementById('formTitle'); // Ahora funciona
+        const loadingMessage = document.getElementById('loadingMessage');
+        const noResultsMessage = document.getElementById('noResultsMessage');
+        const inputPresentation = document.getElementById('presentation');
+        const searchInput = document.getElementById('searchInput'); 
+        
+        let allProducts = []; 
+
+        const defaultHeaders = { 'Content-Type': 'application/json' };
+
+        function formatDateTime(isoString) {
+            if (!isoString) return 'N/A';
+            const date = new Date(isoString);
+            return date.toLocaleDateString('es-ES', { 
+                year: '2-digit', month: 'numeric', day: 'numeric',
+            }) + ' ' + date.toLocaleTimeString('es-ES', {
+                hour: '2-digit', minute: '2-digit', hour12: false 
+            });
+        }
+
+        async function loadProducts() {
+            loadingMessage.classList.remove('hidden');
+            tableBody.innerHTML = '';
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                allProducts = data.products || []; 
+                renderTable(allProducts);
+            } catch (error) {
+                console.error('Error al cargar productos:', error);
+                alert('Error al cargar productos. Asegúrate que el backend de Flask esté corriendo.');
+                loadingMessage.textContent = 'Error al cargar productos.';
+            } finally {
+                loadingMessage.classList.add('hidden');
+            }
+        }
+        
+        function filterProducts() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const filteredProducts = allProducts.filter(product => 
+                product.presentation.toLowerCase().includes(searchTerm)
+            );
+            renderTable(filteredProducts);
+        }
+
+        function renderTable(products) {
+            tableBody.innerHTML = '';
+            loadingMessage.classList.add('hidden');
+            noResultsMessage.classList.add('hidden');
+
+            if (products.length === 0) {
+                if (searchInput.value.trim() !== '') {
+                    noResultsMessage.classList.remove('hidden');
+                } else {
+                    loadingMessage.textContent = 'No hay presentaciones de competidores registradas.';
+                    loadingMessage.classList.remove('hidden');
+                }
+                return;
+            }
+            
+            products.forEach(product => {
+                const row = tableBody.insertRow();
+                row.id = `row-${product.id}`;
+                row.className = 'hover:bg-gray-50 transition duration-150';
+
+                const presentationCell = row.insertCell();
+                presentationCell.textContent = product.presentation;
+                presentationCell.className = 'px-3 py-2 whitespace-nowrap text-sm font-medium';
+                
+                const dateCell = row.insertCell();
+                dateCell.textContent = formatDateTime(product.created_at);
+                dateCell.className = 'px-3 py-2 whitespace-nowrap text-xs text-gray-500'; 
+                
+                const actionsCell = row.insertCell();
+                actionsCell.className = 'px-3 py-2 whitespace-nowrap text-center text-sm font-medium space-x-1'; 
+                actionsCell.innerHTML = `
+                    <button onclick="editProduct('${product.id}', '${product.presentation}')" class="text-blue-600 hover:text-blue-800 transition duration-150">Editar</button>
+                    <button onclick="deleteProduct('${product.id}')" class="text-red-600 hover:text-red-800 transition duration-150">Eliminar</button>
+                `;
+            });
+        }
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('product_id').value;
+            const presentation = inputPresentation.value.trim();
+            
+            if (!presentation) {
+                alert("El nombre de la presentación es obligatorio.");
+                return;
+            }
+            
+            const payload = { presentation };
+
+            try {
+                let response;
+                if (id) {
+                    response = await fetch(`${API_URL}/${id}`, {
+                        method: 'PATCH',
+                        headers: defaultHeaders,
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: defaultHeaders,
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (response.ok || response.status === 201 || response.status === 204) {
+                    alert(id ? 'Presentación de competidor actualizada con éxito.' : 'Presentación de competidor creada con éxito.');
+                    resetForm();
+                    loadProducts(); 
+                } else {
+                    const errorData = await response.json();
+                    let errorMessage = errorData.error || response.statusText;
+                    
+                    if (errorMessage.includes('web_competidor_presentation_key')) {
+                        errorMessage = "Error: El nombre de la presentación de competidor ya existe. Debe ser único.";
+                    }
+                    
+                    alert(`Error: ${errorMessage}`);
+                }
+            } catch (error) {
+                console.error('Error en la operación:', error);
+                alert('Error de conexión con la API.');
+            }
+        });
+
+        // FUNCIONES DE EDICIÓN/CANCELACIÓN
+        function editProduct(id, presentation) {
+            document.getElementById('product_id').value = id;
+            inputPresentation.value = presentation;
+
+            // 👈 CAMBIA EL TITULO Y EL TEXTO DEL BOTÓN
+            formTitle.textContent = 'Editar Presentación de Competidor';
+            submitButton.textContent = 'Guardar Cambios';
+            cancelButton.classList.remove('hidden'); // MUESTRA CANCELAR
+            
+            document.getElementById(`row-${id}`).classList.add('bg-ambar-claro', 'bg-opacity-20');
+        }
+
+        function resetForm() {
+            const currentId = document.getElementById('product_id').value;
+            if (currentId) {
+                const activeRow = document.getElementById(`row-${currentId}`);
+                if (activeRow) {
+                    activeRow.classList.remove('bg-ambar-claro', 'bg-opacity-20');
+                }
+            }
+            document.getElementById('product_id').value = '';
+            form.reset();
+            // 👈 REVierte el TITULO y el TEXTO DEL BOTÓN
+            formTitle.textContent = 'Añadir Nueva Presentación de Competidor';
+            submitButton.textContent = 'Crear Presentación';
+            cancelButton.classList.add('hidden'); // OCULTA CANCELAR
+        }
+        
+        async function deleteProduct(id) {
+            if (!confirm(`¿Estás seguro de que quieres eliminar esta presentación de competidor? Esta acción es irreversible.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'DELETE',
+                    headers: defaultHeaders
+                });
+
+                if (response.status === 204) {
+                    alert('Presentación de competidor eliminada con éxito.');
+                    loadProducts();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error al eliminar: ${errorData.error || response.statusText}`);
+                }
+            } catch (error) {
+                console.error('Error al eliminar producto:', error);
+                alert('Error de conexión al eliminar.');
+            }
+        }
+
+        window.onload = loadProducts;
+    </script>
+</body>
+</html>
