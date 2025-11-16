@@ -9,11 +9,11 @@ from datetime import datetime, timedelta
 app = Flask(__name__)
 
 # Credenciales de Supabase (usa variables de entorno en producción)
-SUPABASE_URL = "https://zgbsrbjtjnozpzxifpua.supabase.co"
+SUPABASE_URL = "https://djjylikkocemrlsjxscr.supabase.co"
 # OJO: DEBES MANTENER ESTA CLAVE OCULTA EN UN ENTORNO DE PRODUCCIÓN REAL
 # La clave que has provisto es una clave 'anon' (anónima), que es menos peligrosa,
 # pero en producción DEBERÍAS usar una clave de servicio oculta.
-SUPABASE_KEY = os.getenv('SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnYnNyYmp0am5venB6eGlmcHVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNjI5MjUsImV4cCI6MjA2OTkzODkyNX0.zHVKe6Ab73PFhQqD3Au94x1Z71hMyRpxE1PCWP8-QTI")
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M")
 
 headers = {
     "apikey": SUPABASE_KEY,

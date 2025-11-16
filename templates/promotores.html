@@ -40,7 +40,7 @@
     <div class="mb-8 bg-white p-6 rounded-lg shadow-lg border border-verde-vivo">
       <h2 class="text-2xl font-semibold mb-4 text-verde-oscuro">Agregar Nuevo Promotor</h2>
       <form id="createForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input type="text" id="promoter_id" placeholder="ID del promotor" class="p-3 border border-verde-vivo rounded-lg" required oninput="this.value = this.value.toLowerCase()">
+        <!-- promoter_id eliminado: se genera automáticamente -->
         <input type="text" id="promoter_name" placeholder="Nombre del promotor" class="p-3 border border-verde-vivo rounded-lg" required oninput="this.value = this.value.toUpperCase()">
         <select id="estado_id" class="p-3 border border-verde-vivo rounded-lg" required>
           <option value="">Seleccione un estado</option>
@@ -91,6 +91,7 @@
       <h2 class="text-2xl font-bold mb-4 text-verde-oscuro">Editar Promotor</h2>
       <form id="editForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input type="hidden" id="edit_id">
+        <!-- promoter_id NO se muestra ni se edita -->
         <input type="text" id="edit_promoter_name" placeholder="Nombre del promotor" class="p-3 border border-verde-vivo rounded-lg" required oninput="this.value = this.value.toUpperCase()">
         <select id="edit_estado_id" class="p-3 border border-verde-vivo rounded-lg" required>
           <option value="">Seleccione un estado</option>
@@ -115,9 +116,34 @@
     let searchTerm = '';
 
     // Configuración de Supabase
-    const supabaseUrl = 'https://zgbsrbjtjnozpzxifpua.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnYnNyYmp0am5venB6eGlmcHVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNjI5MjUsImV4cCI6MjA2OTkzODkyNX0.zHVKe6Ab73PFhQqD3Au94x1Z71hMyRpxE1PCWP8-QTI';
+    const supabaseUrl = 'https://djjylikkocemrlsjxscr.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Generar promoter_id autoincremental (001, 002, etc.)
+    async function generatePromoterId() {
+      const { data, error } = await supabaseClient
+        .from('web_promotores')
+        .select('promoter_id')
+        .order('promoter_id', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error al obtener último ID:', error);
+        return '001';
+      }
+
+      if (!data || data.length === 0) {
+        return '001';
+      }
+
+      const lastId = data[0].promoter_id;
+      const num = parseInt(lastId, 10);
+      if (isNaN(num)) return '001';
+
+      const nextNum = num + 1;
+      return String(nextNum).padStart(3, '0');
+    }
 
     // Cargar estados
     async function loadEstados(selectId = 'estado_id') {
@@ -128,7 +154,6 @@
         return;
       }
       allEstados = data || [];
-      console.log('Estados cargados:', allEstados);
       const estadoSelect = document.getElementById(selectId);
       estadoSelect.innerHTML = '<option value="">Seleccione un estado</option>';
       allEstados.forEach(estado => {
@@ -142,7 +167,7 @@
     // Cargar zonas por estado
     async function loadZonas(estadoId, selectId = 'zona_id') {
       const zonaSelect = document.getElementById(selectId);
-      zonaSelect.innerHTML = '<option value="">Seleccione una zona</option><option value="add_new">Agregar nueva zona</option>';
+      zonaSelect.innerHTML = '<option value="">Seleccione una zona</option><option value="add_new">+ Agregar nueva zona</option>';
       if (!estadoId) {
         zonaSelect.disabled = true;
         return;
@@ -154,13 +179,12 @@
         return;
       }
       allZonas = data || [];
-      console.log('Zonas cargadas para estado', estadoId, ':', allZonas);
       zonaSelect.disabled = false;
       allZonas.forEach(zona => {
         const option = document.createElement('option');
         option.value = zona.id;
         option.textContent = zona.nombre;
-        zonaSelect.insertBefore(option, zonaSelect.lastChild); // Insert before "Add new zone"
+        zonaSelect.insertBefore(option, zonaSelect.lastChild);
       });
     }
 
@@ -170,7 +194,7 @@
         *,
         web_estados!web_promotores_estado_id_fkey(nombre),
         web_zonas!web_promotores_zona_id_fkey(nombre)
-      `).order('promoter_name', { ascending: true });
+      `).order('promoter_id', { ascending: true });
       if (error) {
         console.error('Error al cargar promotores:', error);
         alert('Error al cargar promotores: ' + error.message);
@@ -178,9 +202,7 @@
         return;
       }
       allPromoters = data || [];
-      console.log('Promotores cargados:', allPromoters);
       if (allPromoters.length === 0) {
-        console.warn('No se encontraron promotores en la base de datos.');
         document.getElementById('noResults').classList.remove('hidden');
       } else {
         document.getElementById('noResults').classList.add('hidden');
@@ -196,7 +218,6 @@
         return promoter.promoter_name?.toLowerCase().includes(term) ||
                promoter.promoter_id?.toLowerCase().includes(term);
       });
-      console.log('Promotores filtrados:', filtered);
       const startIndex = (currentPage - 1) * promotersPerPage;
       return filtered.slice(startIndex, startIndex + promotersPerPage);
     }
@@ -208,7 +229,6 @@
       promotersList.innerHTML = '';
       if (promoters.length === 0) {
         noResults.classList.remove('hidden');
-        console.log('No hay promotores para mostrar en la página actual.');
         return;
       }
       noResults.classList.add('hidden');
@@ -301,7 +321,6 @@
       `).eq('id', id).single();
       if (!promoter) return;
 
-      // Cargar estados y zonas para el modal de edición
       await loadEstados('edit_estado_id');
       document.getElementById('edit_id').value = promoter.id;
       document.getElementById('edit_promoter_name').value = promoter.promoter_name || '';
@@ -350,8 +369,10 @@
         zonaId = data.id;
       }
 
+      const promoterId = await generatePromoterId();
+
       const newPromoter = {
-        promoter_id: document.getElementById('promoter_id').value.toLowerCase(),
+        promoter_id: promoterId,
         promoter_name: document.getElementById('promoter_name').value,
         estado_id: estadoId,
         zona_id: zonaId || null,
@@ -364,7 +385,7 @@
         console.error('Error al crear promotor:', error.message);
         alert('Error al crear promotor: ' + error.message);
       } else {
-        alert('Promotor creado exitosamente');
+        alert(`Promotor creado exitosamente con ID: ${promoterId}`);
         loadPromoters();
         loadZonas(estadoId);
         document.getElementById('createForm').reset();
@@ -402,7 +423,7 @@
           return;
         }
         zonaId = data.id;
-        loadZonas(estadoId, 'edit_zona_id');
+        await loadZonas(estadoId, 'edit_zona_id');
       }
 
       const updates = {
@@ -445,12 +466,12 @@
       if (event.target === editModal) closeModal('editModal');
     }
 
-    // Filtrar zonas al cambiar estado (para create)
+    // Filtrar zonas al cambiar estado (create)
     document.getElementById('estado_id').addEventListener('change', (e) => {
       loadZonas(e.target.value);
     });
 
-    // Filtrar zonas al cambiar estado (para edit)
+    // Filtrar zonas al cambiar estado (edit)
     document.getElementById('edit_estado_id').addEventListener('change', (e) => {
       loadZonas(e.target.value, 'edit_zona_id');
     });
