@@ -12,52 +12,45 @@
                         'fondo-claro': '#F9FAFB', 
                         'panel-claro': '#FFFFFF', 
                         'texto-oscuro': '#1F2937', 
-                        'turquesa-base': '#14B8A6',  
-                        'turquesa-claro': '#5EEAD4',  
-                        'turquesa-oscuro': '#0F766E',  
+                        'turquesa-base': '#14B8A6',  
+                        'turquesa-claro': '#5EEAD4',  
+                        'turquesa-oscuro': '#0F766E',  
                     }
                 }
             }
         }
     </script>
     <style>
-        /* Estilos personalizados para modal (si se llegara a usar) */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: #FFFFFF; margin: 5% auto; padding: 30px; border-radius: 12px; width: 80%; max-width: 600px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
         .close { color: #0F766E; float: right; font-size: 32px; font-weight: bold; cursor: pointer; line-height: 0.8; }
 
-        /* Estilo para los botones principales con degradado */
         .btn-turquesa { 
             background-image: linear-gradient(to right, #14B8A6, #0F766E) !important; 
             color: white !important; 
             transition: all 0.2s;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            background-color: #0F766E;
         }
         .btn-turquesa:hover { opacity: 0.9; box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15); }
 
-        /* Degradado de fondo del encabezado */
         .header-bg { background-image: linear-gradient(to right, #5EEAD4, #14B8A6); }
 
-        /* Mejora de esbeltez para la tabla */
         #productsTable th, #productsTable td { 
-            padding: 0.6rem 1.5rem; /* Padding reducido */
-            font-size: 0.875rem; /* Tamaño de fuente ligeramente menor */
+            padding: 0.6rem 1.5rem; 
+            font-size: 0.875rem; 
         }
         
-        /* Contenedor de la tabla con scroll vertical */
         .table-container { 
-            max-height: 500px; /* Limita la altura del scroll */
+            max-height: 500px; 
             overflow-y: auto; 
-            border: 1px solid #E5E7EB; /* Borde sutil para el contenedor */
+            border: 1px solid #E5E7EB; 
             border-radius: 0.75rem;
         }
 
-        /* Encabezado fijo (Sticky Header) */
         #productsTable thead th {
             position: sticky;
             top: 0;
-            background-color: #F9FAFB; /* Fondo claro para que se vea por encima de las filas */
+            background-color: #F9FAFB; 
             z-index: 10;
         }
     </style>
@@ -78,6 +71,7 @@
             <a href="/analisis" class="bg-gray-200 text-texto-oscuro p-2.5 rounded-lg hover:bg-gray-300 transition duration-150 text-sm font-semibold">ANÁLISIS DE DATOS</a>
             <a href="/promotores" class="bg-gray-200 text-texto-oscuro p-2.5 rounded-lg hover:bg-gray-300 transition duration-150 text-sm font-semibold">GESTOR PROMOTORES</a>
         </div>
+
         <div class="mb-10 bg-panel-claro p-6 rounded-xl shadow-lg border border-gray-200">
             <h2 class="text-xl font-semibold mb-4 text-turquesa-oscuro" id="formTitle">AÑADIR NUEVA PRESENTACIÓN</h2>
             <form id="productForm" class="flex flex-col md:flex-row gap-3 items-center">
@@ -120,11 +114,10 @@
     </div>
 
     <script>
-        // *************************************************************************
-        // NOTA IMPORTANTE: Debes tener un backend de Flask corriendo en esta ruta
-        // *************************************************************************
+        // API
         const API_URL = '/api/myproducts';
 
+        // Elementos
         const form = document.getElementById('productForm');
         const tableBody = document.getElementById('productsTableBody');
         const submitButton = document.getElementById('submitButton');
@@ -132,20 +125,18 @@
         const formTitle = document.getElementById('formTitle');
         const loadingMessage = document.getElementById('loadingMessage');
         const inputPresentation = document.getElementById('presentation');
-
         const defaultHeaders = { 'Content-Type': 'application/json' };
 
-        // Funciones de Utilería
+        // Formatear fecha
         function formatDateTime(isoString) {
             if (!isoString) return 'N/A';
             const date = new Date(isoString);
-            // Formato DD/MM/AA HH:MM (más corto)
             const d = date.toLocaleDateString('es-ES', { year: '2-digit', month: '2-digit', day: '2-digit' });
             const t = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
             return `${d} ${t}`;
         }
 
-        // --- Funciones de Carga de Datos [READ] ---
+        // Cargar productos
         async function loadProducts() {
             loadingMessage.classList.remove('hidden');
             tableBody.innerHTML = '';
@@ -155,11 +146,12 @@
                 renderTable(data.products);
             } catch (error) {
                 console.error('Error al cargar productos:', error);
-                loadingMessage.textContent = 'ERROR AL CARGAR LOS DATOS. VERIFICA LA CONEXIÓN CON EL SERVIDOR.';
+                loadingMessage.textContent = 'ERROR AL CARGAR LOS DATOS.';
                 loadingMessage.classList.remove('hidden');
             }
         }
 
+        // Renderizar tabla
         function renderTable(products) {
             tableBody.innerHTML = '';
             loadingMessage.classList.add('hidden');
@@ -174,28 +166,22 @@
                 row.id = `row-${product.id}`;
                 row.className = 'hover:bg-gray-50 transition duration-150';
 
-                // Presentación
                 row.insertCell().textContent = product.presentation;
-                
-                // Creado en
                 row.insertCell().textContent = formatDateTime(product.created_at);
                 
-                // Acciones
                 const actionsCell = row.insertCell();
-                actionsCell.className = 'whitespace-nowrap text-center text-xs font-medium space-x-2'; // Clase compacta
+                actionsCell.className = 'whitespace-nowrap text-center text-xs font-medium space-x-2';
                 actionsCell.innerHTML = `
                     <button onclick="editProduct('${product.id}', \`${product.presentation.replace(/'/g, "\\'")}\`)" class="text-turquesa-base hover:text-turquesa-oscuro transition duration-150">EDITAR</button>
                     <button onclick="deleteProduct('${product.id}')" class="text-red-600 hover:text-red-800 transition duration-150">ELIMINAR</button>
                 `;
             });
         }
-        
-        // --- Manejo del Formulario (CREATE/UPDATE) ---
+
+        // === ENVÍO DE FORMULARIO (CORREGIDO) ===
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('product_id').value;
-            
-            // *** REGLA: Convertir a MAYÚSCULAS antes de enviar ***
             const presentation = inputPresentation.value.trim().toUpperCase();
             
             if (!presentation) {
@@ -206,7 +192,6 @@
             const payload = { presentation };
 
             try {
-                // Lógica de CREATE o UPDATE...
                 let response;
                 if (id) {
                     response = await fetch(`${API_URL}/${id}`, {
@@ -222,51 +207,56 @@
                     });
                 }
 
+                // ÉXITO: 200, 201, 204
                 if (response.ok || response.status === 201 || response.status === 204) {
                     alert(id ? 'PRESENTACIÓN ACTUALIZADA CON ÉXITO.' : 'PRESENTACIÓN CREADA CON ÉXITO.');
                     resetForm();
-                    loadProducts(); 
-                } else {
-                    const errorData = await response.json().catch(() => ({}));
-                    let errorMessage = errorData.error || response.statusText;
-                    
+                    loadProducts();
+                    return;
+                }
+
+                // ERROR: intentar leer JSON solo si hay contenido
+                let errorMessage = 'ERROR DESCONOCIDO';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || response.statusText;
+
                     if (errorMessage.includes('web_myproductos_presentation_key') || errorMessage.includes('unique constraint')) {
                         errorMessage = "ERROR: EL NOMBRE DE LA PRESENTACIÓN YA EXISTE. DEBE SER ÚNICO.";
                     }
-                    
-                    alert(`ERROR: ${errorMessage}`);
+                } catch (jsonError) {
+                    errorMessage = response.statusText || `ERROR HTTP ${response.status}`;
                 }
+
+                alert(`ERROR: ${errorMessage}`);
+
             } catch (error) {
                 console.error('Error en la operación:', error);
                 alert('ERROR DE CONEXIÓN CON LA API.');
             }
         });
 
-        // Mostrar datos de un producto para editar
+        // Editar
         function editProduct(id, presentation) {
             document.getElementById('product_id').value = id;
-            inputPresentation.value = presentation.toUpperCase();
-
+            inputPresentation.value = presentation;
             formTitle.textContent = 'EDITAR PRESENTACIÓN';
             submitButton.textContent = 'GUARDAR CAMBIOS';
             cancelButton.classList.remove('hidden');
             
-            // Quitar el highlight de la fila anterior y ponerlo en la nueva
             document.querySelectorAll('#productsTableBody tr').forEach(row => {
                 row.classList.remove('bg-turquesa-claro', 'bg-opacity-20');
             });
             document.getElementById(`row-${id}`).classList.add('bg-turquesa-claro', 'bg-opacity-20');
-            inputPresentation.focus(); // Enfocar el campo para edición
+            inputPresentation.focus();
         }
 
-        // Limpiar el formulario y volver al modo "Crear"
+        // Resetear formulario
         function resetForm() {
             const currentId = document.getElementById('product_id').value;
             if (currentId) {
-                const activeRow = document.getElementById(`row-${currentId}`);
-                if (activeRow) {
-                    activeRow.classList.remove('bg-turquesa-claro', 'bg-opacity-20');
-                }
+                const row = document.getElementById(`row-${currentId}`);
+                if (row) row.classList.remove('bg-turquesa-claro', 'bg-opacity-20');
             }
             document.getElementById('product_id').value = '';
             form.reset();
@@ -274,39 +264,35 @@
             submitButton.textContent = 'CREAR PRESENTACIÓN';
             cancelButton.classList.add('hidden');
         }
-        
-        // --- Función de Eliminación [DELETE] ---
+
+        // Eliminar
         async function deleteProduct(id) {
-            if (!confirm(`¿ESTÁS SEGURO DE QUE QUIERES ELIMINAR ESTA PRESENTACIÓN? ESTA ACCIÓN ES IRREVERSIBLE.`)) {
-                return;
-            }
+            if (!confirm(`¿ESTÁS SEGURO DE QUE QUIERES ELIMINAR ESTA PRESENTACIÓN?`)) return;
 
             try {
-                // Lógica de DELETE...
                 const response = await fetch(`${API_URL}/${id}`, {
                     method: 'DELETE',
                     headers: defaultHeaders
                 });
 
-                if (response.status === 204) {
+                if (response.status === 204 || response.ok) {
                     alert('PRESENTACIÓN ELIMINADA CON ÉXITO.');
                     loadProducts();
                 } else {
-                    const errorData = await response.json().catch(() => ({}));
-                    alert(`ERROR AL ELIMINAR: ${errorData.error || response.statusText}`);
+                    const err = await response.json().catch(() => ({}));
+                    alert(`ERROR: ${err.error || 'No se pudo eliminar'}`);
                 }
             } catch (error) {
-                console.error('Error al eliminar producto:', error);
                 alert('ERROR DE CONEXIÓN AL ELIMINAR.');
             }
         }
 
-        // Exportar funciones a la ventana global
+        // Exportar funciones
         window.editProduct = editProduct;
         window.deleteProduct = deleteProduct;
         window.resetForm = resetForm;
 
-        // Cargar los datos al iniciar la página
+        // Cargar al iniciar
         window.onload = loadProducts;
     </script>
 </body>

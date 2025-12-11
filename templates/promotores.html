@@ -40,7 +40,23 @@
     <div class="mb-8 bg-white p-6 rounded-lg shadow-lg border border-verde-vivo">
       <h2 class="text-2xl font-semibold mb-4 text-verde-oscuro">Agregar Nuevo Promotor</h2>
       <form id="createForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- promoter_id eliminado: se genera automáticamente -->
+        <!-- Campo promoter_id con prefijo fijo -->
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-verde-oscuro mb-1">ID del Promotor</label>
+          <div class="flex">
+            <span class="inline-flex items-center px-3 text-gray-600 bg-gray-100 border border-r-0 border-verde-vivo rounded-l-lg">promotor_</span>
+            <input 
+              type="text" 
+              id="promoter_suffix" 
+              placeholder="lara, barquisimeto, valencia..." 
+              class="flex-1 p-3 border border-verde-vivo rounded-r-lg focus:outline-none focus:ring-2 focus:ring-verde-vivo" 
+              required 
+              oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9_]/g, '')"
+            >
+          </div>
+          <p class="text-xs text-gray-500 mt-1">Solo letras minúsculas, números y guiones bajos.</p>
+        </div>
+
         <input type="text" id="promoter_name" placeholder="Nombre del promotor" class="p-3 border border-verde-vivo rounded-lg" required oninput="this.value = this.value.toUpperCase()">
         <select id="estado_id" class="p-3 border border-verde-vivo rounded-lg" required>
           <option value="">Seleccione un estado</option>
@@ -91,7 +107,22 @@
       <h2 class="text-2xl font-bold mb-4 text-verde-oscuro">Editar Promotor</h2>
       <form id="editForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input type="hidden" id="edit_id">
-        <!-- promoter_id NO se muestra ni se edita -->
+
+        <!-- Campo promoter_id editable -->
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-verde-oscuro mb-1">ID del Promotor</label>
+          <div class="flex">
+            <span class="inline-flex items-center px-3 text-gray-600 bg-gray-100 border border-r-0 border-verde-vivo rounded-l-lg">promotor_</span>
+            <input 
+              type="text" 
+              id="edit_promoter_suffix" 
+              class="flex-1 p-3 border border-verde-vivo rounded-r-lg focus:outline-none focus:ring-2 focus:ring-verde-vivo" 
+              required 
+              oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9_]/g, '')"
+            >
+          </div>
+        </div>
+
         <input type="text" id="edit_promoter_name" placeholder="Nombre del promotor" class="p-3 border border-verde-vivo rounded-lg" required oninput="this.value = this.value.toUpperCase()">
         <select id="edit_estado_id" class="p-3 border border-verde-vivo rounded-lg" required>
           <option value="">Seleccione un estado</option>
@@ -119,31 +150,6 @@
     const supabaseUrl = 'https://djjylikkocemrlsjxscr.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-    // Generar promoter_id autoincremental (001, 002, etc.)
-    async function generatePromoterId() {
-      const { data, error } = await supabaseClient
-        .from('web_promotores')
-        .select('promoter_id')
-        .order('promoter_id', { ascending: false })
-        .limit(1);
-
-      if (error) {
-        console.error('Error al obtener último ID:', error);
-        return '001';
-      }
-
-      if (!data || data.length === 0) {
-        return '001';
-      }
-
-      const lastId = data[0].promoter_id;
-      const num = parseInt(lastId, 10);
-      if (isNaN(num)) return '001';
-
-      const nextNum = num + 1;
-      return String(nextNum).padStart(3, '0');
-    }
 
     // Cargar estados
     async function loadEstados(selectId = 'estado_id') {
@@ -240,7 +246,7 @@
         li.innerHTML = `
           <div>
             <strong class="text-verde-oscuro block">${promoter.promoter_name || 'Sin nombre'}</strong>
-            <span class="text-gray-600">ID: ${promoter.promoter_id || 'N/A'} | Estado: ${estadoNombre} | Zona: ${zonaNombre} | Clientes: ${promoter.clientes_asig || 0} | Días: ${promoter.dias_trabajo || 0}</span>
+            <span class="text-gray-600">ID: <strong>${promoter.promoter_id || 'N/A'}</strong> | Estado: ${estadoNombre} | Zona: ${zonaNombre} | Clientes: ${promoter.clientes_asig || 0} | Días: ${promoter.dias_trabajo || 0}</span>
           </div>
           <div class="space-x-2">
             <button onclick="viewDetails('${promoter.id}')" class="bg-verde-vivo text-verde-oscuro px-3 py-1 rounded hover:bg-verde-oscuro hover:text-white">Ver Detalles</button>
@@ -324,6 +330,10 @@
       await loadEstados('edit_estado_id');
       document.getElementById('edit_id').value = promoter.id;
       document.getElementById('edit_promoter_name').value = promoter.promoter_name || '';
+
+      const suffix = promoter.promoter_id?.replace('promotor_', '') || '';
+      document.getElementById('edit_promoter_suffix').value = suffix;
+
       document.getElementById('edit_estado_id').value = promoter.estado_id || '';
       await loadZonas(promoter.estado_id, 'edit_zona_id');
       document.getElementById('edit_zona_id').value = promoter.zona_id || '';
@@ -341,6 +351,14 @@
     // Crear promotor
     document.getElementById('createForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      const suffix = document.getElementById('promoter_suffix').value.trim();
+      if (!suffix) {
+        alert('El sufijo del ID es obligatorio (ej: lara, caracas)');
+        return;
+      }
+
+      const promoterId = `promotor_${suffix}`;
       const estadoId = document.getElementById('estado_id').value;
       let zonaId = document.getElementById('zona_id').value;
 
@@ -356,20 +374,23 @@
 
       if (zonaId === 'add_new') {
         const newZonaName = prompt('Ingrese el nombre de la nueva zona:');
-        if (!newZonaName) {
-          alert('Debe ingresar un nombre para la nueva zona');
-          return;
-        }
+        if (!newZonaName) return;
         const { data, error } = await supabaseClient.from('web_zonas').insert([{ nombre: newZonaName, estado_id: estadoId }]).select().single();
-        if (error) {
-          console.error('Error al crear zona:', error.message);
-          alert('Error al crear zona: ' + error.message);
-          return;
-        }
+        if (error) { alert('Error al crear zona: ' + error.message); return; }
         zonaId = data.id;
       }
 
-      const promoterId = await generatePromoterId();
+      // Verificar duplicado
+      const { data: existing } = await supabaseClient
+        .from('web_promotores')
+        .select('id')
+        .eq('promoter_id', promoterId)
+        .maybeSingle();
+
+      if (existing) {
+        alert(`El ID "${promoterId}" ya está en uso. Usa otro sufijo.`);
+        return;
+      }
 
       const newPromoter = {
         promoter_id: promoterId,
@@ -382,14 +403,12 @@
 
       const { error } = await supabaseClient.from('web_promotores').insert([newPromoter]);
       if (error) {
-        console.error('Error al crear promotor:', error.message);
         alert('Error al crear promotor: ' + error.message);
       } else {
-        alert(`Promotor creado exitosamente con ID: ${promoterId}`);
-        loadPromoters();
-        loadZonas(estadoId);
+        alert(`Promotor creado con ID: ${promoterId}`);
         document.getElementById('createForm').reset();
         document.getElementById('zona_id').disabled = true;
+        loadPromoters();
       }
     });
 
@@ -397,36 +416,44 @@
     document.getElementById('editForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const id = document.getElementById('edit_id').value;
+      const suffix = document.getElementById('edit_promoter_suffix').value.trim();
+      if (!suffix) {
+        alert('El sufijo del ID es obligatorio');
+        return;
+      }
+      const promoterId = `promotor_${suffix}`;
       const estadoId = document.getElementById('edit_estado_id').value;
       let zonaId = document.getElementById('edit_zona_id').value;
 
-      if (!estadoId) {
-        alert('Por favor, seleccione un estado');
-        return;
-      }
-
-      if (!zonaId) {
-        alert('Por favor, seleccione una zona o agregue una nueva');
+      if (!estadoId || !zonaId) {
+        alert('Estado y zona son obligatorios');
         return;
       }
 
       if (zonaId === 'add_new') {
         const newZonaName = prompt('Ingrese el nombre de la nueva zona:');
-        if (!newZonaName) {
-          alert('Debe ingresar un nombre para la nueva zona');
-          return;
-        }
+        if (!newZonaName) return;
         const { data, error } = await supabaseClient.from('web_zonas').insert([{ nombre: newZonaName, estado_id: estadoId }]).select().single();
-        if (error) {
-          console.error('Error al crear zona:', error.message);
-          alert('Error al crear zona: ' + error.message);
-          return;
-        }
+        if (error) { alert('Error al crear zona: ' + error.message); return; }
         zonaId = data.id;
         await loadZonas(estadoId, 'edit_zona_id');
       }
 
+      // Verificar duplicado (excepto el actual)
+      const { data: existing } = await supabaseClient
+        .from('web_promotores')
+        .select('id')
+        .eq('promoter_id', promoterId)
+        .neq('id', id)
+        .maybeSingle();
+
+      if (existing) {
+        alert(`El ID "${promoterId}" ya está en uso por otro promotor.`);
+        return;
+      }
+
       const updates = {
+        promoter_id: promoterId,
         promoter_name: document.getElementById('edit_promoter_name').value.toUpperCase(),
         estado_id: estadoId,
         zona_id: zonaId || null,
@@ -436,10 +463,9 @@
 
       const { error } = await supabaseClient.from('web_promotores').update(updates).eq('id', id);
       if (error) {
-        console.error('Error al actualizar promotor:', error.message);
-        alert('Error al actualizar promotor: ' + error.message);
+        alert('Error al actualizar: ' + error.message);
       } else {
-        alert('Promotor actualizado exitosamente');
+        alert('Promotor actualizado');
         closeModal('editModal');
         loadPromoters();
       }
@@ -466,12 +492,10 @@
       if (event.target === editModal) closeModal('editModal');
     }
 
-    // Filtrar zonas al cambiar estado (create)
+    // Filtrar zonas al cambiar estado
     document.getElementById('estado_id').addEventListener('change', (e) => {
       loadZonas(e.target.value);
     });
-
-    // Filtrar zonas al cambiar estado (edit)
     document.getElementById('edit_estado_id').addEventListener('change', (e) => {
       loadZonas(e.target.value, 'edit_zona_id');
     });
