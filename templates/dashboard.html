@@ -6,6 +6,7 @@
     <title>Dashboard - Geolocalización y Precios</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         :root {
@@ -78,6 +79,9 @@
 <body class="bg-gray-50 font-sans leading-normal tracking-normal">
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <h1 class="text-3xl font-extrabold mb-6 text-center text-gray-800">Dashboard de Visitas (Geolocalización y Precios) DEMO</h1>
+        <div class="text-center mb-4 text-lg font-semibold text-indigo-700">
+            Empresa: <span id="empresaNombreDisplay">Cargando...</span>
+        </div>
         <div class="flex justify-center space-x-4 mb-6">
             <a href="/analisis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-chart-bar mr-2"></i>Análisis de Precio</a>
             <a href="/clientes" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-users mr-2"></i>Panel de Clientes</a>
@@ -227,6 +231,22 @@
         </div>
     </div>
     <script>
+        const { createClient } = supabase; 
+        const supabaseClient = createClient( 
+            'https://djjylikkocemrlsjxscr.supabase.co', 
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M' 
+        );
+        
+        const empresaId = localStorage.getItem('empresa_id');
+        const empresaNombre = localStorage.getItem('empresa_nombre') || 'Desconocida';
+        
+        if (!empresaId) {
+            alert('Debes iniciar sesión primero.');
+            window.location.href = 'login.html';
+        } else {
+            document.getElementById('empresaNombreDisplay').textContent = empresaNombre;
+        }
+        
         let allRecords = []; 
         let filteredRecords = []; 
         let promoters = [];
@@ -241,24 +261,27 @@
         const closeBtn = document.querySelector('.close-btn');
         const loadingMessageElement = document.getElementById('loadingMessage'); 
         const apiCache = new Map();
+        
         closeBtn.onclick = () => detailsModal.style.display = 'none';
         window.onclick = (event) => { if (event.target === detailsModal) detailsModal.style.display = 'none'; };
+        
         function getTodayMinus4Hours() {
             const now = new Date();
             now.setHours(now.getHours() - 4);
             return now.toISOString().split('T')[0];
         }
+        
         function getCurrentYear() {
             return new Date().getFullYear();
         }
-
+        
         function getCurrentWeek() {
             const today = new Date();
             const jan1 = new Date(today.getFullYear(), 0, 1);
             const days = Math.floor((today - jan1) / (24 * 60 * 60 * 1000));
             return Math.ceil((days + jan1.getDay() + 1) / 7);
         }
-
+        
         function getWeekDateRange(week, year) {
             const jan4 = new Date(year, 0, 4);
             const daysToSubtract = jan4.getDay() === 0 ? 6 : jan4.getDay() - 1;
@@ -273,10 +296,11 @@
                 end: endOfWeek.toISOString().split('T')[0]
             };
         }
+        
         function populateYears() {
             const yearSelect = document.getElementById('yearSelect');
             const currentYear = getCurrentYear();
-            for (let y = 2025; y <= currentYear + 5; y++) { // Desde 2025 hacia adelante, hasta 5 años futuros
+            for (let y = 2025; y <= currentYear + 5; y++) { 
                 const option = document.createElement('option');
                 option.value = y;
                 option.textContent = y;
@@ -284,21 +308,22 @@
                 yearSelect.appendChild(option);
             }
         }
+        
         async function populateWeeks(year) {
             const weekSelect = document.getElementById('weekSelect');
             weekSelect.innerHTML = '<option value="">Selecciona una semana</option>';
             weekSelect.disabled = !year;
-
+        
             if (!year) return;
-
+        
             try {
                 const response = await fetch(`/api/weeks_with_visits?year=${year}`);
                 const data = await response.json();
                 let weeks = data.weeks || [];
-                weeks = weeks.sort((a, b) => b - a); // Orden descendente
+                weeks = weeks.sort((a, b) => b - a); 
                 const currentWeek = getCurrentWeek();
                 const currentYear = getCurrentYear();
-
+        
                 weeks.forEach(w => {
                     const weekRange = getWeekDateRange(w, year);
                     const option = document.createElement('option');
@@ -306,8 +331,7 @@
                     option.textContent = `Semana ${w} (${weekRange.start} - ${weekRange.end})`;
                     weekSelect.appendChild(option);
                 });
-
-                // Preseleccionar la semana actual si existe
+        
                 if (year === currentYear && weeks.includes(currentWeek)) {
                     weekSelect.value = currentWeek;
                 }
@@ -315,6 +339,7 @@
                 console.error('Error fetching weeks:', error);
             }
         }
+        
         function getConfirmationBadge(record) {
             let className = 'badge-default', icon = 'fas fa-question-circle', displayText = record.verified || 'Desconocido';
             if (record.verified && record.verified.includes('Desconocido')) {
@@ -340,11 +365,13 @@
             }
             return `<span class="badge ${className}"><i class="${icon} mr-1"></i> ${displayText}</span>`;
         }
+        
         function isConfirmed(record) {
             const hasVisitCoords = record.visit_coords !== null && record.visit_coords !== 'N/A';
             const hasClientCoords = record.client_coords !== null && record.client_coords !== 'N/A';
             return hasVisitCoords && hasClientCoords && record.distance < 150;
         }
+        
         function updateZoneFilter() {
             const stateSelect = document.getElementById('state');
             const zoneSelect = document.getElementById('zone');
@@ -365,8 +392,9 @@
             });
             filterRecords(); 
         }
+        
         async function fetchRecordsFromAPI(filters) {
-            const cacheKey = JSON.stringify(filters);
+            const cacheKey = JSON.stringify({ ...filters, empresa_id: empresaId });
             if (apiCache.has(cacheKey)) {
                 const cachedData = apiCache.get(cacheKey);
                 promoters = cachedData.promoters || [];
@@ -382,6 +410,7 @@
             if (filters.promoterId !== 'all') params.append('promoter_id', filters.promoterId);
             if (filters.week) params.append('week', filters.week);
             if (filters.year) params.append('year', filters.year);
+            params.append('empresa_id', empresaId);
             try {
                 const response = await fetch(`/api/records?${params.toString()}`);
                 const serverData = await response.json();
@@ -396,6 +425,7 @@
                 return [];
             }
         }
+        
         async function fetchWeeklyRecords(week = null, year = null) {
             const promoterId = 'all';
             const apiFilters = { promoterId };
@@ -414,6 +444,7 @@
             }
             return fetchRecordsFromAPI(apiFilters);
         }
+        
         async function filterRecords() {
             const dateFromValue = document.getElementById('dateFrom').value;
             const dateToValue = document.getElementById('dateTo').value;
@@ -450,6 +481,7 @@
             currentPage = 1;
             updateDashboard(promoterName);
         }
+        
         function updateTable() {
             const tableBody = document.getElementById('priceRecordsTable');
             tableBody.innerHTML = '';
@@ -471,12 +503,12 @@
                     <td class="py-3 px-4"><input type="checkbox" class="selectRecord" data-id="${record.id}" ${selectedRecords.has(record.id) ? 'checked' : ''}></td>
                     <td class="py-3 px-4">${fecha} <span class="text-xs text-gray-500 block">${hora}</span></td>
                     <td class="py-3 px-4">${record.promoter_name}</td>
-                    <td class="py-3 px-4 font-semibold">${record.trade_name}</td>
-                    <td class="py-3 px-4 text-sm">${record.estado}</td>
-                    <td class="py-3 px-4 text-sm">${record.zona}</td>
+                    <td class="py-3 px-4 font-semibold">${record.trade || '—'}</td>
+                    <td class="py-3 px-4 text-sm">${record.state || '—'}</td>
+                    <td class="py-3 px-4 text-sm">${record.zone || '—'}</td>
                     <td class="py-3 px-4 text-sm">${distanceText}</td>
-                    <td class="py-3 px-4 text-sm">${record.visit_coords}</td>
-                    <td class="py-3 px-4 text-blue-600 text-sm">${record.client_coords}</td>
+                    <td class="py-3 px-4 text-sm">${record.latitude}, ${record.longitude}</td>
+                    <td class="py-3 px-4 text-blue-600 text-sm">${record.client_coords || 'N/A'}</td>
                     <td class="py-3 px-4">${confirmationBadge}</td>
                     <td class="py-3 px-4 space-x-2 whitespace-nowrap">
                         <button class="view-details-btn text-indigo-500 hover:text-indigo-700 transition-colors" title="Ver Detalles" data-id="${record.id}">
@@ -506,12 +538,14 @@
             }));
             document.getElementById('selectAll').checked = filteredRecords.every(r => selectedRecords.has(r.id));
         }
+        
         function updateConfirmationRate() {
             const totalVisits = filteredRecords.length;
             const confirmedVisits = filteredRecords.filter(record => isConfirmed(record)).length;
             const confirmationRate = totalVisits > 0 ? (confirmedVisits / totalVisits) * 100 : 0;
             document.getElementById('confirmationRate').textContent = `${confirmationRate.toFixed(1)}%`;
         }
+        
         async function updateWeeklyProgress(promoterName) {
             const selectedYear = document.getElementById('yearSelect').value;
             const selectedWeek = document.getElementById('weekSelect').value;
@@ -587,6 +621,7 @@
                 document.getElementById('totalGoalProgressBar').style.width = '0%';
             }
         }
+        
         function updateDashboard(promoterName = 'all') { 
             updateMetrics(); 
             updateTable(); 
@@ -594,7 +629,9 @@
             updateConfirmationRate(); 
             updateWeeklyProgress(promoterName); 
         }
+        
         function updateMetrics() { document.getElementById('totalRecords').textContent = filteredRecords.length; }
+        
         function showDetails(record) {
             modalDetailsContent.innerHTML = '';
             const fields = {
@@ -602,14 +639,14 @@
                 'Cliente ID': record.cliente_id || 'N/A',
                 'Fecha': record.created_at ? new Date(record.created_at).toLocaleString('es-ES') : 'N/A',
                 'Promotor': record.promoter_name,
-                'Comercio': record.trade_name,
-                'Estado': record.estado,
-                'Zona': record.zona,
+                'Comercio': record.trade || '—',
+                'Estado': record.state || '—',
+                'Zona': record.zone || '—',
                 'Distancia (m)': record.distance > 0 ? `${record.distance} m` : 'N/A',
-                'Coords Visita': record.visit_coords,
-                'Coords Cliente': record.client_coords,
+                'Coords Visita': `${record.latitude}, ${record.longitude}`,
+                'Coords Cliente': record.client_coords || 'N/A',
                 'Confirmación': getConfirmationBadge(record),
-                'Comentarios': record.comments
+                'Comentarios': record.comments || '—'
             };
             for (const k in fields) {
                 const p = document.createElement('p');
@@ -675,6 +712,7 @@
             }
             detailsModal.style.display = 'flex';
         }
+        
         function updateSelected() {
             selectedRecords.clear();
             document.querySelectorAll('.selectRecord').forEach(cb => {
@@ -685,6 +723,7 @@
             document.getElementById('deleteSelected').disabled = selectedRecords.size === 0;
             document.getElementById('selectedCount').textContent = selectedRecords.size;
         }
+        
         async function deleteRecords(ids) {
             const response = await fetch('/delete_records', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -697,12 +736,14 @@
                 selectedRecords.clear(); updateSelected();
             } else alert('Error al eliminar');
         }
+        
         function updatePaginationInfo() {
             const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
             document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages || 1}`;
             document.getElementById('prevPage').disabled = currentPage === 1;
             document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
         }
+        
         function populateSelects() {
             const promoterSelect = document.getElementById('promoter');
             promoterSelect.innerHTML = '<option value="all">Todos los promotores</option>';
@@ -725,6 +766,7 @@
             });
             updateZoneFilter();
         }
+        
         async function init() {
             const today = getTodayMinus4Hours();
             document.getElementById('dateFrom').value = today;
@@ -762,7 +804,10 @@
             document.getElementById('exportCSV').addEventListener('click', () => alert('Exportar CSV pendiente'));
             filterRecords();
         }
-        init();
+        
+        if (empresaId) {
+            init();
+        }
     </script>
 </body>
 </html>

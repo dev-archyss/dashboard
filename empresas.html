@@ -3,320 +3,216 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestión de Empresas</title>
+  <title>Admin - Registro de Empresas</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
-    .card { background: white; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
-    .status-activa { background: #d1fae5; color: #065f46; }
-    .status-inactiva { background: #fee2e2; color: #991b1b; }
-    .status-suspendida { background: #fef3c2; color: #92400e; }
+    body { background: #0f172a; color: #f8fafc; font-family: sans-serif; }
+    .status-activa { color: #4ade80; font-weight: bold; }
+    .status-inactiva { color: #f87171; font-weight: bold; }
+    .status-suspendida { color: #fbbf24; font-weight: bold; }
+    input, select { background: #1e293b !important; color: white !important; border: 1px solid #334155 !important; }
   </style>
 </head>
-<body class="text-gray-800">
-  <div class="min-h-screen p-6">
-    <div class="max-w-7xl mx-auto">
-      <div class="flex justify-between items-center mb-8">
-        <h1 class="text-4xl font-bold text-white">Gestión de Empresas</h1>
-        <div class="flex gap-3">
-          <button onclick="window.location.href='/'" class="px-5 py-3 bg-white/20 text-white rounded-lg hover:bg-white/30">Volver</button>
-          <button id="btnNueva" class="px-6 py-3 bg-white text-purple-700 font-bold rounded-lg shadow-lg">+ Nueva Empresa</button>
+<body class="p-4 md:p-10">
+
+  <div id="lockScreen" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center">
+    <div class="bg-slate-900 p-8 rounded-xl border border-slate-800 shadow-2xl w-full max-w-sm text-center">
+      <div class="text-4xl mb-4">🔑</div>
+      <h2 class="text-xl font-bold mb-4 text-white">Acceso Administrativo</h2>
+      <input type="password" id="adminPass" class="w-full p-3 rounded mb-4 text-center text-white" placeholder="Introduce Clave Maestra">
+      <button onclick="window.verificarAcceso();" class="w-full bg-indigo-600 p-3 rounded font-bold hover:bg-indigo-500 transition">Desbloquear</button>
+      <p id="errorMsg" class="text-red-500 mt-2 hidden text-sm">Contraseña incorrecta</p>
+    </div>
+  </div>
+
+  <div id="adminPanel" class="hidden">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-slate-800 pb-5 gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-white">Consola de Empresas</h1>
+          <p class="text-slate-400">Control de licencias y acceso</p>
         </div>
+        <button onclick="window.abrirModal();" class="bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-lg font-bold shadow-lg transition">
+          + Nueva Empresa
+        </button>
       </div>
 
-      <div class="card p-8">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left">
-            <thead class="border-b-2 border-gray-200 text-gray-600 text-sm uppercase">
-              <tr>
-                <th class="pb-4">Empresa</th>
-                <th class="pb-4">Clave</th>
-                <th class="pb-4 text-center">Gramaje</th>
-                <th class="pb-4 text-center">Estatus</th>
-                <th class="pb-4 text-center">Vencimiento</th>
-                <th class="pb-4">Creada</th>
-                <th class="pb-4 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tbodyEmpresas" class="divide-y"></tbody>
-          </table>
-          <div id="emptyState" class="text-center py-16 text-gray-500 hidden">
-            <p class="text-xl">No hay empresas registradas</p>
-          </div>
-        </div>
+      <div class="bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-xl">
+        <table class="w-full text-left">
+          <thead class="bg-slate-800/50 text-slate-400 uppercase text-xs tracking-wider">
+            <tr>
+              <th class="p-4">Nombre de Empresa</th>
+              <th class="p-4">Clave de Acceso</th>
+              <th class="p-4 text-center">Gramaje Base</th>
+              <th class="p-4 text-center">Estatus</th>
+              <th class="p-4">Vencimiento</th>
+              <th class="p-4 text-right">Gestión</th>
+            </tr>
+          </thead>
+          <tbody id="listaEmpresas" class="divide-y divide-slate-800">
+            </tbody>
+        </table>
+        <div id="loading" class="p-10 text-center text-slate-500">Cargando datos de Supabase...</div>
       </div>
     </div>
+  </div>
 
-    <!-- MODAL -->
-    <div id="modal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden">
-      <div class="card p-8 w-full max-w-2xl relative">
-        <button id="btnCerrarModal" class="absolute top-4 right-6 text-3xl text-gray-400 hover:text-gray-600">×</button>
-        <h2 id="modalTitle" class="text-2xl font-bold mb-6">Nueva Empresa</h2>
-        <form id="formEmpresa">
-          <input type="hidden" id="empresaId">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label class="block text-sm font-medium mb-2">Nombre *</label>
-              <input type="text" id="nombre" required class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500">
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">Clave de Acceso *</label>
-              <input type="text" id="clave" required class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500">
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">Gramaje Base (g)</label>
-              <input type="number" step="0.01" min="0" id="gramaje" value="1000.00" 
-                     class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500">
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">Estatus</label>
-              <select id="estatus" class="w-full px-4 py-3 border rounded-lg">
-                <option value="activa">Activa</option>
-                <option value="inactiva">Inactiva</option>
-                <option value="suspendida">Suspendida</option>
-              </select>
-            </div>
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium mb-2">Fecha de Vencimiento</label>
-              <input type="date" id="vencimiento" class="w-full px-4 py-3 border rounded-lg">
-            </div>
+  <div id="modal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center p-4 z-[110]">
+    <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 w-full max-w-md shadow-2xl">
+      <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-white">Configurar Empresa</h2>
+      <form id="formEmpresa">
+        <input type="hidden" id="empId">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nombre Comercial</label>
+            <input type="text" id="nombre" required class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
           </div>
-          <div class="flex justify-end gap-4">
-            <button type="button" id="btnCancelar" class="px-6 py-3 border rounded-lg hover:bg-gray-50">Cancelar</button>
-            <button type="submit" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-lg shadow-lg">
-              <span id="btnSubmitText">Crear Empresa</span>
-            </button>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Clave de Acceso (Token)</label>
+            <input type="text" id="clave" required class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono">
           </div>
-        </form>
-      </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Gramaje Base</label>
+            <input type="number" id="gramaje" step="0.01" value="1000.00" class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Estado de Licencia</label>
+            <select id="estatus" class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="activa">Activa</option>
+              <option value="inactiva">Inactiva</option>
+              <option value="suspendida">Suspendida</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Fecha de Expiración</label>
+            <input type="date" id="vencimiento" class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-8">
+          <button type="button" onclick="window.cerrarModal();" class="px-5 py-2 text-slate-400 hover:text-white transition">Cancelar</button>
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 px-6 py-2 rounded-lg font-bold transition">Guardar Registro</button>
+        </div>
+      </form>
     </div>
+  </div>
 
-    <script>
-      const supabase = window.supabase.createClient(
-        'https://djjylikkocemrlsjxscr.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M'
-      );
+  <script>
+    // 1. Inicialización Única (Evita el error de re-declaración)
+    const supabaseClient = window.supabase.createClient(
+      "https://djjylikkocemrlsjxscr.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M"
+    );
 
-      // Verificar conexión a Supabase
-      console.log('Supabase configurado:', !!supabase);
+    const CLAVE_MAESTRA = "ADMIN2025";
 
-      // Verificar que la tabla existe y es accesible
-      async function verificarTabla() {
-        const { data, error } = await supabase.from('empresas').select('count', { count: 'exact', head: true });
-        if (error) {
-          console.error('Error accediendo a tabla:', error);
-        } else {
-          console.log('Tabla empresas accesible');
-        }
-      }
-      verificarTabla();
+    // 2. Funciones Globales
+    window.verificarAcceso = function() {
+      const pass = document.getElementById('adminPass').value;
+      if (pass === CLAVE_MAESTRA) {
+        document.getElementById('lockScreen').classList.add('hidden');
+        document.getElementById('adminPanel').classList.remove('hidden');
+        window.cargarEmpresas();
+      } else {
+        const err = document.getElementById('errorMsg');
+        err.classList.remove('hidden');
+        setTimeout(() => { err.classList.add('hidden'); }, 2000);
+      };
+    };
 
-      const modal = document.getElementById('modal');
+    window.cargarEmpresas = async function() {
+      document.getElementById('loading').classList.remove('hidden');
+      const { data, error } = await supabaseClient
+        .from('empresas')
+        .select('*')
+        .order('nombre', { ascending: true });
 
-      async function cargarEmpresas() {
-        const { data, error } = await supabase.from('empresas').select('*').order('created_at', { ascending: false });
-        if (error) { 
-          console.error('Error al cargar empresas:', error); 
-          return; 
-        }
-
-        const tbody = document.getElementById('tbodyEmpresas');
-        tbody.innerHTML = '';
-        if (!data || data.length === 0) {
-          document.getElementById('emptyState').classList.remove('hidden');
-          return;
-        }
-        document.getElementById('emptyState').classList.add('hidden');
-
-        data.forEach(e => {
-          const tr = document.createElement('tr');
-          tr.className = 'hover:bg-gray-50';
-          const statusClass = e.estatus === 'activa' ? 'status-activa' : e.estatus === 'inactiva' ? 'status-inactiva' : 'status-suspendida';
-          const vencimiento = e.fecha_vencimiento ? new Date(e.fecha_vencimiento).toLocaleDateString('es-ES') : '—';
-          const gramaje = e.gramaje_base_analisis ? parseFloat(e.gramaje_base_analisis).toFixed(2) : '1000.00';
-
-          tr.innerHTML = `
-            <td class="py-4 font-medium">${e.nombre}</td>
-            <td class="py-4 font-mono text-sm">${e.clave_acceso}</td>
-            <td class="py-4 text-center">${gramaje} g</td>
-            <td class="py-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-semibold ${statusClass}">${e.estatus}</span></td>
-            <td class="py-4 text-center">${vencimiento}</td>
-            <td class="py-4 text-sm text-gray-500">${new Date(e.created_at).toLocaleDateString('es-ES')}</td>
-            <td class="py-4 text-right">
-              <button onclick="editar('${e.id}')" class="text-blue-600 hover:underline mr-4">Editar</button>
-              <button onclick="eliminar('${e.id}', '${e.nombre}')" class="text-red-600 hover:underline">Eliminar</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }
-
-      // ABRIR MODAL
-      document.getElementById('btnNueva').onclick = () => {
-        document.getElementById('modalTitle').textContent = 'Nueva Empresa';
-        document.getElementById('btnSubmitText').textContent = 'Crear Empresa';
-        document.getElementById('formEmpresa').reset();
-        document.getElementById('empresaId').value = '';
-        document.getElementById('gramaje').value = '1000.00';
-        document.getElementById('estatus').value = 'activa';
-        document.getElementById('vencimiento').value = '';
-        modal.classList.remove('hidden');
+      if (error) {
+        console.error('Error:', error);
+        return;
       };
 
-      // CERRAR MODAL
-      const cerrar = () => modal.classList.add('hidden');
-      document.getElementById('btnCancelar').onclick = cerrar;
-      document.getElementById('btnCerrarModal').onclick = cerrar;
-      modal.onclick = e => e.target === modal && cerrar();
-
-      // GUARDAR (CREAR O EDITAR)
-      document.getElementById('formEmpresa').onsubmit = async e => {
-        e.preventDefault();
-
-        const id = document.getElementById('empresaId').value;
-        
-        // Obtener y formatear el gramaje con 2 decimales
-        const gramajeInput = document.getElementById('gramaje').value;
-        const gramajeFormateado = parseFloat(gramajeInput) ? 
-          parseFloat(parseFloat(gramajeInput).toFixed(2)) : 
-          1000.00;
-
-        const payload = {
-          nombre: document.getElementById('nombre').value.trim(),
-          clave_acceso: document.getElementById('clave').value.trim(),
-          gramaje_base_analisis: gramajeFormateado,
-          estatus: document.getElementById('estatus').value,
-          fecha_vencimiento: document.getElementById('vencimiento').value || null,
-          unidad_base_analisis: 'g'
-        };
-
-        console.log('Enviando a Supabase:', payload);
-
-        try {
-          let result;
-          
-          if (id) {
-            // EDITAR
-            result = await supabase.from('empresas').update(payload).eq('id', id);
-          } else {
-            // CREAR NUEVO
-            result = await supabase.from('empresas').insert([payload]);
-          }
-
-          if (result.error) {
-            console.error('ERROR COMPLETO:', result.error);
-            
-            // Mensaje más detallado
-            if (result.error.code === '23505') {
-              alert('ERROR: Ya existe una empresa con ese nombre');
-            } else if (result.error.code === '22P02') {
-              alert('ERROR: Formato de datos incorrecto. Verifica que el gramaje sea un número válido.');
-            } else {
-              alert('ERROR: ' + result.error.message);
-            }
-          } else {
-            console.log('ÉXITO:', result.data);
-            cerrar();
-            await cargarEmpresas();
-            alert(id ? 'Empresa actualizada correctamente' : 'Empresa creada correctamente');
-          }
-        } catch (error) {
-          console.error('Error inesperado:', error);
-          alert('Error inesperado: ' + error.message);
-        }
-      };
-
-      // EDITAR
-      window.editar = async id => {
-        try {
-          const { data, error } = await supabase
-            .from('empresas')
-            .select('*')
-            .eq('id', id)
-            .single();
-          
-          if (error) {
-            console.error('Error al cargar empresa:', error);
-            alert('No se pudo cargar la empresa');
-            return;
-          }
-
-          if (!data) {
-            alert('Empresa no encontrada');
-            return;
-          }
-
-          document.getElementById('modalTitle').textContent = 'Editar Empresa';
-          document.getElementById('btnSubmitText').textContent = 'Guardar Cambios';
-          document.getElementById('empresaId').value = data.id;
-          document.getElementById('nombre').value = data.nombre;
-          document.getElementById('clave').value = data.clave_acceso;
-          
-          // Formatear gramaje para el input
-          document.getElementById('gramaje').value = 
-            data.gramaje_base_analisis ? 
-            parseFloat(data.gramaje_base_analisis).toFixed(2) : 
-            '1000.00';
-          
-          document.getElementById('estatus').value = data.estatus || 'activa';
-          
-          // Formatear fecha para input type="date"
-          if (data.fecha_vencimiento) {
-            const fecha = new Date(data.fecha_vencimiento);
-            document.getElementById('vencimiento').value = 
-              fecha.toISOString().split('T')[0];
-          } else {
-            document.getElementById('vencimiento').value = '';
-          }
-          
-          modal.classList.remove('hidden');
-        } catch (error) {
-          console.error('Error:', error);
-          alert('Error al cargar los datos');
-        }
-      };
-
-      // ELIMINAR
-      window.eliminar = async (id, nombre) => {
-        if (confirm(`¿Eliminar permanentemente "${nombre}"?\nEsta acción no se puede deshacer.`)) {
-          const { error } = await supabase.from('empresas').delete().eq('id', id);
-          if (error) {
-            console.error('Error al eliminar:', error);
-            alert('Error al eliminar la empresa');
-          } else {
-            await cargarEmpresas();
-            alert('Empresa eliminada correctamente');
-          }
-        }
-      };
-
-      // Función de prueba para verificar conexión
-      async function testInsert() {
-        const testData = {
-          nombre: 'Empresa Test ' + Date.now(),
-          clave_acceso: 'TEST' + Date.now(),
-          gramaje_base_analisis: 1000.00,
-          unidad_base_analisis: 'g',
-          estatus: 'activa'
-        };
-        
-        const { data, error } = await supabase.from('empresas').insert([testData]);
-        console.log('Test insert:', { data, error });
-        if (!error) {
-          console.log('Test insert exitoso');
-          await cargarEmpresas();
-        }
-      }
-
-      // Descomenta para probar la inserción
-      // testInsert();
-
-      // INICIAR
-      document.addEventListener('DOMContentLoaded', () => {
-        cargarEmpresas();
+      document.getElementById('loading').classList.add('hidden');
+      const lista = document.getElementById('listaEmpresas');
+      lista.innerHTML = "";
+      
+      data.forEach(emp => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="p-4 font-bold text-white">${emp.nombre}</td>
+          <td class="p-4 font-mono text-indigo-400">${emp.clave_acceso}</td>
+          <td class="p-4 text-center">${parseFloat(emp.gramaje_base_analisis).toFixed(2)} ${emp.unidad_base_analisis}</td>
+          <td class="p-4 text-center"><span class="status-${emp.estatus} uppercase text-xs">${emp.estatus}</span></td>
+          <td class="p-4 text-slate-500 text-sm">${emp.fecha_vencimiento || 'Sin límite'}</td>
+          <td class="p-4 text-right">
+            <button onclick="window.cargarEdicion('${emp.id}');" class="text-indigo-400 hover:text-indigo-200 mr-4 font-medium">Configurar</button>
+            <button onclick="window.eliminarEmpresa('${emp.id}', '${emp.nombre}');" class="text-red-500 hover:text-red-300">Eliminar</button>
+          </td>
+        `;
+        lista.appendChild(tr);
       });
-    </script>
-  </body>
+    };
+
+    window.eliminarEmpresa = async function(id, nombre) {
+      if (confirm(`¿Eliminar permanentemente a ${nombre}?`)) {
+        await supabaseClient.from('empresas').delete().eq('id', id);
+        window.cargarEmpresas();
+      };
+    };
+
+    window.abrirModal = function() {
+      document.getElementById('formEmpresa').reset();
+      document.getElementById('empId').value = "";
+      document.getElementById('modalTitle').innerText = "Nueva Empresa";
+      document.getElementById('modal').classList.remove('hidden');
+    };
+
+    window.cerrarModal = function() {
+      document.getElementById('modal').classList.add('hidden');
+    };
+
+    window.cargarEdicion = async function(id) {
+      const { data } = await supabaseClient.from('empresas').select('*').eq('id', id).single();
+      if (data) {
+        document.getElementById('empId').value = data.id;
+        document.getElementById('nombre').value = data.nombre;
+        document.getElementById('clave').value = data.clave_acceso;
+        document.getElementById('gramaje').value = data.gramaje_base_analisis;
+        document.getElementById('estatus').value = data.estatus;
+        document.getElementById('vencimiento').value = data.fecha_vencimiento || '';
+        document.getElementById('modalTitle').innerText = "Editar Empresa";
+        document.getElementById('modal').classList.remove('hidden');
+      };
+    };
+
+    // 3. Manejo del Formulario
+    document.getElementById('formEmpresa').onsubmit = async function(e) {
+      e.preventDefault();
+      const id = document.getElementById('empId').value;
+      const payload = {
+        nombre: document.getElementById('nombre').value.trim(),
+        clave_acceso: document.getElementById('clave').value.trim(),
+        gramaje_base_analisis: parseFloat(document.getElementById('gramaje').value),
+        estatus: document.getElementById('estatus').value,
+        fecha_vencimiento: document.getElementById('vencimiento').value || null,
+        unidad_base_analisis: 'g'
+      };
+
+      let result;
+      if (id) {
+        result = await supabaseClient.from('empresas').update(payload).eq('id', id);
+      } else {
+        result = await supabaseClient.from('empresas').insert([payload]);
+      };
+
+      if (result.error) {
+        alert("Error: " + result.error.message);
+      } else {
+        window.cerrarModal();
+        window.cargarEmpresas();
+      };
+    };
+  </script>
+</body>
 </html>
