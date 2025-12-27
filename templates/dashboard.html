@@ -317,7 +317,7 @@
             if (!year) return;
         
             try {
-                const response = await fetch(`/api/weeks_with_visits?year=${year}`);
+                const response = await fetch(`/api/weeks_with_visits?year=${year}&empresa_id=${empresaId}`);
                 const data = await response.json();
                 let weeks = data.weeks || [];
                 weeks = weeks.sort((a, b) => b - a); 
@@ -727,7 +727,7 @@
         async function deleteRecords(ids) {
             const response = await fetch('/delete_records', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids })
+                body: JSON.stringify({ ids, empresa_id: empresaId })
             });
             const result = await response.json();
             if (result.success) {
