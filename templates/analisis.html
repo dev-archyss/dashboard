@@ -99,16 +99,10 @@
         <p class="text-slate-500 text-sm">Comparación de precios normalizados en USD · Por estado, zona y presentación</p>
       </div>
       <div class="flex gap-2">
-        <button onclick="window.location.href='/'" class="btn-ghost">← Volver al Dashboard</button>
+        <button onclick="window.location.href='/dashboard'" class="btn-ghost">← Volver al Dashboard</button>
         <button id="btnExportAnalisis" class="btn-primary">Exportar CSV</button>
       </div>
     </header>
-
-    <script>
-      const supabaseUrl = 'https://djjylikkocemrlsjxscr.supabase.co';
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
-      const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-    </script>
     
 
     <section class="card p-4 sm:p-6 mb-6">
