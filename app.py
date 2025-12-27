@@ -360,5 +360,8 @@ def delete_myproduct(product_id):
     return jsonify({"success": response.ok}), 204 if response.ok else 500
 
 
+# --- INICIO DINÁMICO PARA RENDER ---
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8020, debug=True)
+    # Render usa la variable PORT
+    port = int(os.environ.get("PORT", 8020))
+    app.run(host='0.0.0.0', port=port)
