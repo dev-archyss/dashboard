@@ -9,7 +9,10 @@ app = Flask(__name__)
 
 # Credenciales de Supabase
 SUPABASE_URL = "https://djjylikkocemrlsjxscr.supabase.co"
-SUPABASE_KEY = os.getenv('SUPABASE_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M")
+SUPABASE_KEY = os.getenv('SUPABASE_KEY') # No pongas el string largo aquí por seguridad
+
+if not SUPABASE_KEY:
+    print("WARNING: SUPABASE_KEY no encontrada en las variables de entorno.")
 
 headers = {
     "apikey": SUPABASE_KEY,
