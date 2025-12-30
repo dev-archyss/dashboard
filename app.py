@@ -209,26 +209,26 @@ def get_records():
                 verified_status = "Confirmado" if distance <= 150 else "No Confirmado"
 
         formatted_records.append({
-            "id": record.get("id"),
-            "created_at": record.get("created_at"),
-            "promoter_id": record.get("promoter_id"),
-            "promoter_name": promoter_name,
-            "clientes_asig": clientes_asig,
-            "dias_trabajo": dias_trabajo,
-            "estado": estado,
-            "zona": zona,
-            "trade": record.get("trade", "N/A"),
-            "visit_coords": visit_coords_str,
-            "client_coords": cliente_coords_str,
-            "distance": round(distance, 2),
-            "verified": verified_status,
-            "latitude": visit_lat,
-            "longitude": visit_lon,
-            "myitems": myitems,
-            "competitoritems": competitoritems,
-            "cliente_id": cliente_id,
-            "comments": record.get("comments", "N/A")
-        })
+    "id": record.get("id"),
+    "created_at": record.get("created_at"),
+    "promoter_id": record.get("promoter_id"),
+    "promoter_name": promoter_name,
+    "clientes_asig": clientes_asig,
+    "dias_trabajo": dias_trabajo,
+    "state": estado,           # ← Ahora devuelve "state"
+    "zone": zona,              # ← Ahora devuelve "zone"
+    "trade": record.get("trade", "N/A"),
+    "visit_coords": visit_coords_str,
+    "client_coords": cliente_coords_str,
+    "distance": round(distance, 2),
+    "verified": verified_status,
+    "latitude": visit_lat,
+    "longitude": visit_lon,
+    "myitems": myitems,
+    "competitoritems": competitoritems,
+    "cliente_id": cliente_id,
+    "comments": record.get("comments", "N/A")
+})
 
     return jsonify({
         "records": formatted_records,
