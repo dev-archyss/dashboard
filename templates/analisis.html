@@ -105,7 +105,7 @@
     </header>
     
 
-    <section class="card p-4 sm:p-6 mb-6">
+    <section class="card p-4 mb-6">
       <h2 class="text-lg font-bold text-slate-800 mb-4">Filtros</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <div class="flex flex-col gap-1">
@@ -116,7 +116,6 @@
           <label class="text-xs font-semibold text-slate-600">Hasta</label>
           <input id="fHasta" type="date" class="input" />
         </div>
-        <!-- NUEVO FILTRO EMPRESA -->
         <div class="flex flex-col gap-1">
           <label class="text-xs font-semibold text-slate-600">Empresa</label>
           <select id="fEmpresa" class="input">
@@ -151,7 +150,7 @@
           </div>
         </div>
         <div class="flex flex-col gap-1">
-          <label class="text-xs font-semibold text-slate-600">Nuestra Presentación</label>
+          <label class="text-xs font-semibold text-slate-600">Nuestra Pres.</label>
           <select id="fNuestraPres" class="input">
             <option value="">Todas</option>
           </select>
@@ -168,7 +167,7 @@
           <label class="text-xs font-semibold text-slate-600">Presentación Competencia</label>
           <div class="relative">
             <div id="selectedCompPres" class="flex flex-wrap gap-2 p-2 border border-dashed rounded-md min-h-[40px] border-slate-300 bg-slate-50">
-              <span class="text-xs text-slate-400 self-center">Haz clic en las opciones para agregarlas</span>
+              <span class="text-xs text-slate-400 self-center">Haz clic para seleccionar</span>
             </div>
             <div id="compPresList" class="hidden absolute top-full left-0 right-0 z-10 card p-3 mt-1 shadow-lg max-h-64 overflow-y-auto">
               <span class="text-sm font-semibold text-slate-700">Selecciona presentaciones:</span>
@@ -221,6 +220,20 @@
     </section>
 
     <script>
+      const { createClient } = supabase; 
+      const supabaseClient = createClient( 
+          'https://djjylikkocemrlsjxscr.supabase.co', 
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M' 
+      );
+
+      const empresaId = localStorage.getItem('empresa_id');
+      const empresaNombre = localStorage.getItem('empresa_nombre') || 'Desconocida';
+
+      if (!empresaId) {
+          alert('Debes iniciar sesión primero.');
+          window.location.href = 'login.html';
+      }
+
       const $ = id => document.getElementById(id);
       const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('es-ES') : '—';
       const fmtDateShort = iso => iso ? new Date(iso).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : '—';
@@ -243,10 +256,10 @@
         loadCatalogs();
       });
 
-      // === NUEVA FUNCIÓN PARA CARGAR EMPRESAS ===
+      // === CARGA DE EMPRESAS ===
       async function cargarEmpresas() {
         try {
-          const { data, error } = await supabase
+          const { data, error } = await supabaseClient
             .from('empresas')
             .select('id, nombre')
             .eq('estatus', 'activa')
@@ -300,7 +313,7 @@
 
       async function loadComercios(searchTerm = '') {
         try {
-          let query = supabase
+          let query = supabaseClient
             .from('web_precios')
             .select('trade, created_at')
             .not('trade', 'is', null)
@@ -390,7 +403,7 @@
       function renderSelectedCompPres() {
         const selectedContainer = $('selectedCompPres');
         if (selectedCompPres.size === 0) {
-          selectedContainer.innerHTML = `<span class="text-xs text-slate-400 self-center">Haz clic en las opciones para agregarlas</span>`;
+          selectedContainer.innerHTML = `<span class="text-xs text-slate-400 self-center">Haz clic para seleccionar</span>`;
         } else {
           selectedContainer.innerHTML = '';
           selectedCompPres.forEach(pres => {
@@ -414,7 +427,7 @@
 
       async function cargarTasas() {
         try {
-          const { data, error } = await supabase
+          const { data, error } = await supabaseClient
             .from('web_tasa')
             .select('fecha, tasa_bs_usd, tasa_cop_usd')
             .order('fecha', { ascending: false });
@@ -487,16 +500,16 @@
 
       async function loadCatalogs() {
         try {
-          await cargarEmpresas(); // ← Carga de empresas
+          await cargarEmpresas(); // Carga de empresas
 
-          const { data: estados } = await supabase.from('web_estados').select('id, nombre').order('nombre');
+          const { data: estados } = await supabaseClient.from('web_estados').select('id, nombre').order('nombre');
           estadosData = estados || [];
           $('fEstado').innerHTML = '<option value="">Todos</option>' + estadosData.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
 
-          const { data: promotores } = await supabase.from('web_promotores').select('promoter_name').order('promoter_name');
+          const { data: promotores } = await supabaseClient.from('web_promotores').select('promoter_name').order('promoter_name');
           $('fPromotor').innerHTML = '<option value="">Todos</option>' + (promotores || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
 
-          const { data: zonas } = await supabase.from('web_zonas').select('id, nombre, estado_id').order('nombre');
+          const { data: zonas } = await supabaseClient.from('web_zonas').select('id, nombre, estado_id').order('nombre');
           zonasData = zonas || [];
 
           await loadComercios();
@@ -521,9 +534,8 @@
       }
 
       async function cargarPresentaciones() {
-        // ... (sin cambios, código original)
         try {
-          const { data: precios, error } = await supabase.from('web_precios').select('myitems, competitoritems');
+          const { data: precios, error } = await supabaseClient.from('web_precios').select('myitems, competitoritems');
           if (error) throw error;
 
           todasPresentaciones = { nuestras: new Set(), competencia: new Set() };
@@ -553,9 +565,9 @@
           const prom = $('fPromotor').value;
           const nuestraPres = $('fNuestraPres').value;
           const tipoComercio = $('fTipoComercio').value;
-          const empresaId = $('fEmpresa').value; // ← NUEVO
+          const empresaSel = $('fEmpresa').value;
 
-          let query = supabase.from('web_precios').select('*');
+          let query = supabaseClient.from('web_precios').select('*');
           
           if (desde) query = query.gte('created_at', new Date(desde).toISOString());
           if (hasta) {
@@ -568,7 +580,7 @@
           if (prom) query = query.eq('promoter_name', prom);
           if (selectedComercio) query = query.eq('trade', selectedComercio);
           if (tipoComercio !== 'Todos') query = query.eq('p_mayorista', tipoComercio === 'Detal' ? 'No' : 'Si');
-          if (empresaId) query = query.eq('empresa_id', empresaId); // ← FILTRO POR EMPRESA
+          if (empresaSel) query = query.eq('empresa_id', empresaSel); // ← FILTRO POR EMPRESA
 
           const { data, error } = await query.order('created_at', { ascending: false });
           if (error) throw error;
@@ -625,8 +637,6 @@
           alert('Error procesando datos: ' + error.message);
         }
       }
-
-      // ... resto del código de renderAnalisis, drawChart, drawBarChart, drawLineChart, eventos de botones...
 
       function renderAnalisis(filas) {
         const tbody = $('tbodyAnalisis');
@@ -865,7 +875,7 @@
         $('fHasta').value = hoy.toISOString().slice(0, 10);
         $('fDesde').value = hoy.toISOString().slice(0, 10);
 
-        $('fEmpresa').value = ''; // ← Limpiar empresa
+        $('fEmpresa').value = ''; 
         $('fEstado').value = '';
         $('fZona').innerHTML = '<option value="">Todas</option>';
         $('fZona').value = '';
