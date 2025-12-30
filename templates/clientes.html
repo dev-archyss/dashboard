@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Control de Clientes  </title>
+  <title>Panel de Control de Clientes</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -20,7 +20,6 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Estilos personalizados para modal y colores */
     .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
     .modal-content { background-color: #D6EAF8; margin: 5% auto; padding: 20px; border-radius: 10px; width: 80%; max-width: 600px; }
     .close { color: #5A9BD4; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
@@ -105,7 +104,7 @@
   </div>
 
   <script>
-    // Declaraciones al inicio para evitar TDZ
+    // Variables globales
     let currentPage = 1;
     const clientsPerPage = 10;
     let searchTerm = '';
@@ -116,21 +115,33 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Cargar clientes con paginación y filtro en el servidor
+    // Obtener empresa_id y validar sesión
+    const empresaId = localStorage.getItem('empresa_id');
+
+    if (!empresaId) {
+      alert('No hay sesión activa. Serás redirigido al login.');
+      window.location.href = '/login.html'; // Cambia esta ruta si tu login tiene otro nombre
+    }
+
+    // Cargar clientes con paginación, filtro y restricción por empresa
     async function loadClients(page, term) {
-      let query = supabaseClient.from('web_clientes').select('*', { count: 'exact' });
+      let query = supabaseClient
+        .from('web_clientes')
+        .select('*', { count: 'exact' })
+        .eq('empresa_id', empresaId); // Solo clientes de esta empresa
 
       if (term) {
         const likeTerm = `%${term}%`;
         query = query.or(`trade_name.ilike.${likeTerm},code.ilike.${likeTerm},city.ilike.${likeTerm},phone.ilike.${likeTerm}`);
       }
 
-      query = query.order('id', { ascending: false }); // Orden descendente para mostrar nuevos primero
+      query = query.order('id', { ascending: false });
 
       const startIndex = (page - 1) * clientsPerPage;
       query = query.range(startIndex, startIndex + clientsPerPage - 1);
 
       const { data, error, count } = await query;
+
       if (error) {
         console.error('Error al cargar clientes:', error.message);
         alert('Error al cargar clientes: ' + error.message);
@@ -170,38 +181,40 @@
       });
     }
 
-    // Filtrar y cargar clientes
+    // Filtrar y cargar
     function filterAndLoadClients() {
       searchTerm = document.getElementById('searchInput').value.toLowerCase();
       currentPage = 1;
       loadClients(currentPage, searchTerm);
     }
 
-    // Cambiar página
+    // Paginación
     function changePage(direction) {
       const totalPages = Math.ceil(totalCount / clientsPerPage);
-      
       currentPage += direction;
       if (currentPage < 1) currentPage = 1;
       if (currentPage > totalPages) currentPage = totalPages;
-      
       loadClients(currentPage, searchTerm);
     }
 
-    // Actualizar controles de paginación
     function updatePagination() {
       const totalPages = Math.ceil(totalCount / clientsPerPage);
-      
       document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages || 1}`;
       document.getElementById('prevBtn').disabled = currentPage === 1;
       document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
     }
 
-    // Ver detalles del cliente en modal
+    // Ver detalles
     async function viewDetails(id) {
-      const { data: client } = await supabaseClient.from('web_clientes').select('*').eq('id', id).single();
+      const { data: client } = await supabaseClient
+        .from('web_clientes')
+        .select('*')
+        .eq('id', id)
+        .eq('empresa_id', empresaId)
+        .single();
+
       if (!client) return;
-      
+
       const modalBody = document.getElementById('modalBody');
       modalBody.innerHTML = `
         <p><strong>Código:</strong> ${client.code || 'N/A'}</p>
@@ -217,14 +230,19 @@
         <p><strong>Límite de Crédito:</strong> $${client.credit_limit || 0}</p>
         <p><strong>Orden Mínima:</strong> $${client.minimum_order || 0}</p>
         <p><strong>Última Actualización:</strong> ${new Date(client.last_update).toLocaleDateString() || 'N/A'}</p>
-        <!-- Agrega más campos según necesites -->
       `;
       document.getElementById('detailsModal').style.display = 'block';
     }
 
     // Editar cliente
     async function editClient(id) {
-      const { data: client } = await supabaseClient.from('web_clientes').select('*').eq('id', id).single();
+      const { data: client } = await supabaseClient
+        .from('web_clientes')
+        .select('*')
+        .eq('id', id)
+        .eq('empresa_id', empresaId)
+        .single();
+
       if (!client) return;
 
       document.getElementById('edit_id').value = client.id;
@@ -250,13 +268,17 @@
     document.getElementById('createForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Generar código automático de 4 dígitos único
-      const { data: codesData, error: codesError } = await supabaseClient.from('web_clientes').select('code');
+      // Generar código automático
+      const { data: codesData, error: codesError } = await supabaseClient
+        .from('web_clientes')
+        .select('code')
+        .eq('empresa_id', empresaId);
+
       if (codesError) {
-        console.error('Error al obtener códigos existentes:', codesError.message);
-        alert('Error al obtener códigos existentes: ' + codesError.message);
+        alert('Error al generar código: ' + codesError.message);
         return;
       }
+
       const existingCodes = codesData.map(c => parseInt(c.code, 10)).filter(n => !isNaN(n));
       const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
       const newCode = (maxCode + 1).toString().padStart(4, '0');
@@ -275,20 +297,22 @@
         active: true,
         credit_limit: 0,
         minimum_order: 0,
+        empresa_id: empresaId  // ¡GUARDAMOS EL ID DE LA EMPRESA!
       };
+
       const { error } = await supabaseClient.from('web_clientes').insert([newClient]);
+
       if (error) {
-        console.error('Error al crear cliente:', error.message);
         alert('Error al crear cliente: ' + error.message);
       } else {
         alert('Cliente creado exitosamente');
         document.getElementById('createForm').reset();
-        currentPage = 1; // Volver a la página 1 para ver el nuevo cliente (ya que orden es descendente)
+        currentPage = 1;
         loadClients(currentPage, searchTerm);
       }
     });
 
-    // Guardar cambios en edición
+    // Guardar edición
     document.getElementById('editForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const id = document.getElementById('edit_id').value;
@@ -305,10 +329,14 @@
         seller_name: document.getElementById('edit_seller_name').value,
       };
 
-      const { error } = await supabaseClient.from('web_clientes').update(updates).eq('id', id);
+      const { error } = await supabaseClient
+        .from('web_clientes')
+        .update(updates)
+        .eq('id', id)
+        .eq('empresa_id', empresaId);
+
       if (error) {
-        console.error('Error al actualizar cliente:', error.message);
-        alert('Error al actualizar cliente: ' + error.message);
+        alert('Error al actualizar: ' + error.message);
       } else {
         alert('Cliente actualizado exitosamente');
         closeModal('editModal');
@@ -319,9 +347,13 @@
     // Eliminar cliente
     async function deleteClient(id) {
       if (confirm('¿Estás seguro de eliminar este cliente?')) {
-        const { error } = await supabaseClient.from('web_clientes').delete().eq('id', id);
+        const { error } = await supabaseClient
+          .from('web_clientes')
+          .delete()
+          .eq('id', id)
+          .eq('empresa_id', empresaId);
+
         if (error) {
-          console.error('Error al eliminar:', error.message);
           alert('Error al eliminar');
         } else {
           alert('Cliente eliminado');
@@ -338,7 +370,7 @@
       if (event.target === editModal) closeModal('editModal');
     }
 
-    // Cargar clientes al cargar la página
+    // Cargar al iniciar
     window.onload = () => loadClients(currentPage, searchTerm);
   </script>
 </body>
