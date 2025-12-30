@@ -1,377 +1,382 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Control de Clientes</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            'azul-pastel': '#A7C7E7',
-            'azul-claro': '#D6EAF8',
-            'azul-oscuro-suave': '#5A9BD4',
-          }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control de Clientes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'azul-pastel': '#A7C7E7',
+                        'azul-claro': '#D6EAF8',
+                        'azul-oscuro-suave': '#5A9BD4',
+                    }
+                }
+            }
         }
-      }
-    }
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-    .modal-content { background-color: #D6EAF8; margin: 5% auto; padding: 20px; border-radius: 10px; width: 80%; max-width: 600px; }
-    .close { color: #5A9BD4; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-  </style>
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #D6EAF8; margin: 5% auto; padding: 20px; border-radius: 10px; width: 80%; max-width: 600px; }
+        .close { color: #5A9BD4; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+    </style>
 </head>
 <body class="bg-azul-claro p-6 font-sans">
-  <div class="max-w-6xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6 text-azul-oscuro-suave text-center">Panel de Control de Clientes</h1>
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6 text-azul-oscuro-suave text-center">Panel de Control de Clientes</h1>
 
-    <!-- Botones de navegación -->
-    <div class="flex justify-center space-x-4 mb-6">
-      <a href="analisis" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white">Análisis de Precio</a>
-      <a href="/dashboard" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white">Dashboard</a>
+        <!-- Botones de navegación -->
+        <div class="flex justify-center space-x-4 mb-6">
+            <a href="/analisis" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white">Análisis de Precio</a>
+            <a href="/dashboard" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white">Dashboard</a>
+        </div>
+
+        <!-- Formulario para crear cliente -->
+        <div class="mb-8 bg-white p-6 rounded-lg shadow-lg border border-azul-pastel">
+            <h2 class="text-2xl font-semibold mb-4 text-azul-oscuro-suave">Agregar Nuevo Cliente</h2>
+            <form id="createForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" id="trade_name" placeholder="Nombre comercial" class="p-3 border border-azul-pastel rounded-lg" required oninput="this.value = this.value.toUpperCase()">
+                <input type="text" id="address" placeholder="Dirección" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="text" id="city" placeholder="Ciudad" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="text" id="phone" placeholder="Teléfono" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="number" step="any" id="latitude" placeholder="Latitud" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="number" step="any" id="longitude" placeholder="Longitud" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="text" id="owner_full_name" placeholder="Nombre completo del propietario" class="p-3 border border-azul-pastel rounded-lg md:col-span-2">
+                <input type="text" id="route_name" placeholder="Ruta" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="text" id="seller_name" placeholder="Vendedor" class="p-3 border border-azul-pastel rounded-lg">
+                <button type="submit" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white md:col-span-2">Agregar Cliente</button>
+            </form>
+        </div>
+
+        <!-- Campo de búsqueda -->
+        <div class="mb-6">
+            <input type="text" id="searchInput" placeholder="Buscar por nombre, código, ciudad o teléfono..." class="w-full p-3 border border-azul-pastel rounded-lg text-lg" onkeyup="filterAndLoadClients()">
+            <p class="text-sm text-gray-600 mt-1">Escribe para filtrar la lista en tiempo real.</p>
+        </div>
+
+        <!-- Controles de paginación -->
+        <div class="mb-4 flex justify-between items-center bg-white p-4 rounded-lg shadow">
+            <button id="prevBtn" onclick="changePage(-1)" class="bg-azul-pastel text-azul-oscuro-suave px-4 py-2 rounded hover:bg-azul-oscuro-suave hover:text-white disabled:opacity-50" disabled>Anterior</button>
+            <span id="pageInfo" class="text-azul-oscuro-suave font-semibold">Página 1</span>
+            <button id="nextBtn" onclick="changePage(1)" class="bg-azul-pastel text-azul-oscuro-suave px-4 py-2 rounded hover:bg-azul-oscuro-suave hover:text-white">Siguiente</button>
+        </div>
+
+        <!-- Lista de clientes -->
+        <div id="clientsList" class="bg-white p-6 rounded-lg shadow-lg border border-azul-pastel min-h-64">
+            <h2 class="text-2xl font-semibold mb-4 text-azul-oscuro-suave">Lista de Clientes</h2>
+            <ul id="clients" class="space-y-3"></ul>
+            <p id="noResults" class="text-center text-gray-500 hidden">No se encontraron clientes.</p>
+        </div>
     </div>
 
-    <!-- Formulario para crear cliente -->
-    <div class="mb-8 bg-white p-6 rounded-lg shadow-lg border border-azul-pastel">
-      <h2 class="text-2xl font-semibold mb-4 text-azul-oscuro-suave">Agregar Nuevo Cliente</h2>
-      <form id="createForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input type="text" id="trade_name" placeholder="Nombre comercial" class="p-3 border border-azul-pastel rounded-lg" required oninput="this.value = this.value.toUpperCase()">
-        <input type="text" id="address" placeholder="Dirección" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="text" id="city" placeholder="Ciudad" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="text" id="phone" placeholder="Teléfono" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="number" step="any" id="latitude" placeholder="Latitud" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="number" step="any" id="longitude" placeholder="Longitud" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="text" id="owner_full_name" placeholder="Nombre completo del propietario" class="p-3 border border-azul-pastel rounded-lg md:col-span-2">
-        <input type="text" id="route_name" placeholder="Ruta" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="text" id="seller_name" placeholder="Vendedor" class="p-3 border border-azul-pastel rounded-lg">
-        <button type="submit" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white md:col-span-2">Agregar Cliente</button>
-      </form>
+    <!-- Modal para detalles del cliente -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('detailsModal')">&times;</span>
+            <h2 class="text-2xl font-bold mb-4 text-azul-oscuro-suave">Detalles del Cliente</h2>
+            <div id="modalBody" class="space-y-2 text-sm"></div>
+        </div>
     </div>
 
-    <!-- Campo de búsqueda -->
-    <div class="mb-6">
-      <input type="text" id="searchInput" placeholder="Buscar por nombre, código, ciudad o teléfono..." class="w-full p-3 border border-azul-pastel rounded-lg text-lg" onkeyup="filterAndLoadClients()">
-      <p class="text-sm text-gray-600 mt-1">Escribe para filtrar la lista en tiempo real.</p>
+    <!-- Modal para editar cliente -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editModal')">&times;</span>
+            <h2 class="text-2xl font-bold mb-4 text-azul-oscuro-suave">Editar Cliente</h2>
+            <form id="editForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="hidden" id="edit_id">
+                <input type="text" id="edit_trade_name" placeholder="Nombre comercial" class="p-3 border border-azul-pastel rounded-lg" required oninput="this.value = this.value.toUpperCase()">
+                <input type="text" id="edit_address" placeholder="Dirección" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="text" id="edit_city" placeholder="Ciudad" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="text" id="edit_phone" placeholder="Teléfono" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="number" step="any" id="edit_latitude" placeholder="Latitud" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="number" step="any" id="edit_longitude" placeholder="Longitud" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="text" id="edit_owner_full_name" placeholder="Nombre completo del propietario" class="p-3 border border-azul-pastel rounded-lg md:col-span-2">
+                <input type="text" id="edit_route_name" placeholder="Ruta" class="p-3 border border-azul-pastel rounded-lg">
+                <input type="text" id="edit_seller_name" placeholder="Vendedor" class="p-3 border border-azul-pastel rounded-lg">
+                <button type="submit" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white md:col-span-2">Guardar Cambios</button>
+            </form>
+        </div>
     </div>
 
-    <!-- Controles de paginación -->
-    <div class="mb-4 flex justify-between items-center bg-white p-4 rounded-lg shadow">
-      <button id="prevBtn" onclick="changePage(-1)" class="bg-azul-pastel text-azul-oscuro-suave px-4 py-2 rounded hover:bg-azul-oscuro-suave hover:text-white disabled:opacity-50" disabled>Anterior</button>
-      <span id="pageInfo" class="text-azul-oscuro-suave font-semibold">Página 1</span>
-      <button id="nextBtn" onclick="changePage(1)" class="bg-azul-pastel text-azul-oscuro-suave px-4 py-2 rounded hover:bg-azul-oscuro-suave hover:text-white">Siguiente</button>
-    </div>
+    <script>
+        // Variables globales
+        let currentPage = 1;
+        const clientsPerPage = 10;
+        let searchTerm = '';
+        let totalCount = 0;
 
-    <!-- Lista de clientes -->
-    <div id="clientsList" class="bg-white p-6 rounded-lg shadow-lg border border-azul-pastel min-h-64">
-      <h2 class="text-2xl font-semibold mb-4 text-azul-oscuro-suave">Lista de Clientes</h2>
-      <ul id="clients" class="space-y-3"></ul>
-      <p id="noResults" class="text-center text-gray-500 hidden">No se encontraron clientes.</p>
-    </div>
-  </div>
+        // Configuración de Supabase
+        const supabaseUrl = 'https://djjylikkocemrlsjxscr.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-  <!-- Modal para detalles del cliente -->
-  <div id="detailsModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal('detailsModal')">&times;</span>
-      <h2 class="text-2xl font-bold mb-4 text-azul-oscuro-suave">Detalles del Cliente</h2>
-      <div id="modalBody" class="space-y-2 text-sm"></div>
-    </div>
-  </div>
+        // Obtener empresa_id y validar sesión
+        const empresaId = localStorage.getItem('empresa_id');
 
-  <!-- Modal para editar cliente -->
-  <div id="editModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal('editModal')">&times;</span>
-      <h2 class="text-2xl font-bold mb-4 text-azul-oscuro-suave">Editar Cliente</h2>
-      <form id="editForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input type="hidden" id="edit_id">
-        <input type="text" id="edit_trade_name" placeholder="Nombre comercial" class="p-3 border border-azul-pastel rounded-lg" required oninput="this.value = this.value.toUpperCase()">
-        <input type="text" id="edit_address" placeholder="Dirección" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="text" id="edit_city" placeholder="Ciudad" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="text" id="edit_phone" placeholder="Teléfono" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="number" step="any" id="edit_latitude" placeholder="Latitud" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="number" step="any" id="edit_longitude" placeholder="Longitud" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="text" id="edit_owner_full_name" placeholder="Nombre completo del propietario" class="p-3 border border-azul-pastel rounded-lg md:col-span-2">
-        <input type="text" id="edit_route_name" placeholder="Ruta" class="p-3 border border-azul-pastel rounded-lg">
-        <input type="text" id="edit_seller_name" placeholder="Vendedor" class="p-3 border border-azul-pastel rounded-lg">
-        <button type="submit" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white md:col-span-2">Guardar Cambios</button>
-      </form>
-    </div>
-  </div>
-
-  <script>
-    // Variables globales
-    let currentPage = 1;
-    const clientsPerPage = 10;
-    let searchTerm = '';
-    let totalCount = 0;
-
-    // Configuración de Supabase
-    const supabaseUrl = 'https://djjylikkocemrlsjxscr.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-    // Obtener empresa_id y validar sesión
-    const empresaId = localStorage.getItem('empresa_id');
-
-    if (!empresaId) {
-      alert('No hay sesión activa. Serás redirigido al login.');
-      window.location.href = '/login.html'; // Cambia esta ruta si tu login tiene otro nombre
-    }
-
-    // Cargar clientes con paginación, filtro y restricción por empresa
-    async function loadClients(page, term) {
-      let query = supabaseClient
-        .from('web_clientes')
-        .select('*', { count: 'exact' })
-        .eq('empresa_id', empresaId); // Solo clientes de esta empresa
-
-      if (term) {
-        const likeTerm = `%${term}%`;
-        query = query.or(`trade_name.ilike.${likeTerm},code.ilike.${likeTerm},city.ilike.${likeTerm},phone.ilike.${likeTerm}`);
-      }
-
-      query = query.order('id', { ascending: false });
-
-      const startIndex = (page - 1) * clientsPerPage;
-      query = query.range(startIndex, startIndex + clientsPerPage - 1);
-
-      const { data, error, count } = await query;
-
-      if (error) {
-        console.error('Error al cargar clientes:', error.message);
-        alert('Error al cargar clientes: ' + error.message);
-        return;
-      }
-
-      totalCount = count || 0;
-      displayClients(data || []);
-      updatePagination();
-    }
-
-    // Mostrar clientes en la lista
-    function displayClients(clients) {
-      const clientsList = document.getElementById('clients');
-      const noResults = document.getElementById('noResults');
-      clientsList.innerHTML = '';
-      if (clients.length === 0) {
-        noResults.classList.remove('hidden');
-        return;
-      }
-      noResults.classList.add('hidden');
-      clients.forEach(client => {
-        const li = document.createElement('li');
-        li.className = 'border p-4 rounded-lg flex justify-between items-center bg-azul-claro';
-        li.innerHTML = `
-          <div>
-            <strong class="text-azul-oscuro-suave block">${client.trade_name || 'Sin nombre'}</strong>
-            <span class="text-gray-600">Código: ${client.code || 'N/A'} | Ciudad: ${client.city || 'N/A'} | Tel: ${client.phone || 'N/A'}</span>
-          </div>
-          <div class="space-x-2">
-            <button onclick="viewDetails(${client.id})" class="bg-azul-pastel text-azul-oscuro-suave px-3 py-1 rounded hover:bg-azul-oscuro-suave hover:text-white">Ver Detalles</button>
-            <button onclick="editClient(${client.id})" class="bg-yellow-300 text-gray-800 px-3 py-1 rounded hover:bg-yellow-400">Editar</button>
-            <button onclick="deleteClient(${client.id})" class="bg-red-300 text-gray-800 px-3 py-1 rounded hover:bg-red-400">Eliminar</button>
-          </div>
-        `;
-        clientsList.appendChild(li);
-      });
-    }
-
-    // Filtrar y cargar
-    function filterAndLoadClients() {
-      searchTerm = document.getElementById('searchInput').value.toLowerCase();
-      currentPage = 1;
-      loadClients(currentPage, searchTerm);
-    }
-
-    // Paginación
-    function changePage(direction) {
-      const totalPages = Math.ceil(totalCount / clientsPerPage);
-      currentPage += direction;
-      if (currentPage < 1) currentPage = 1;
-      if (currentPage > totalPages) currentPage = totalPages;
-      loadClients(currentPage, searchTerm);
-    }
-
-    function updatePagination() {
-      const totalPages = Math.ceil(totalCount / clientsPerPage);
-      document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages || 1}`;
-      document.getElementById('prevBtn').disabled = currentPage === 1;
-      document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
-    }
-
-    // Ver detalles
-    async function viewDetails(id) {
-      const { data: client } = await supabaseClient
-        .from('web_clientes')
-        .select('*')
-        .eq('id', id)
-        .eq('empresa_id', empresaId)
-        .single();
-
-      if (!client) return;
-
-      const modalBody = document.getElementById('modalBody');
-      modalBody.innerHTML = `
-        <p><strong>Código:</strong> ${client.code || 'N/A'}</p>
-        <p><strong>Nombre Comercial:</strong> ${client.trade_name || 'N/A'}</p>
-        <p><strong>Dirección:</strong> ${client.address || 'N/A'}</p>
-        <p><strong>Ciudad:</strong> ${client.city || 'N/A'}</p>
-        <p><strong>Teléfono:</strong> ${client.phone || 'N/A'}</p>
-        <p><strong>Propietario:</strong> ${client.owner_full_name || 'N/A'}</p>
-        <p><strong>Email:</strong> ${client.email || 'N/A'}</p>
-        <p><strong>Ruta:</strong> ${client.route_name || 'N/A'}</p>
-        <p><strong>Vendedor:</strong> ${client.seller_name || 'N/A'}</p>
-        <p><strong>Activo:</strong> ${client.active ? 'Sí' : 'No'}</p>
-        <p><strong>Límite de Crédito:</strong> $${client.credit_limit || 0}</p>
-        <p><strong>Orden Mínima:</strong> $${client.minimum_order || 0}</p>
-        <p><strong>Última Actualización:</strong> ${new Date(client.last_update).toLocaleDateString() || 'N/A'}</p>
-      `;
-      document.getElementById('detailsModal').style.display = 'block';
-    }
-
-    // Editar cliente
-    async function editClient(id) {
-      const { data: client } = await supabaseClient
-        .from('web_clientes')
-        .select('*')
-        .eq('id', id)
-        .eq('empresa_id', empresaId)
-        .single();
-
-      if (!client) return;
-
-      document.getElementById('edit_id').value = client.id;
-      document.getElementById('edit_trade_name').value = client.trade_name || '';
-      document.getElementById('edit_address').value = client.address || '';
-      document.getElementById('edit_city').value = client.city || '';
-      document.getElementById('edit_phone').value = client.phone || '';
-      document.getElementById('edit_latitude').value = client.latitude || '';
-      document.getElementById('edit_longitude').value = client.longitude || '';
-      document.getElementById('edit_owner_full_name').value = client.owner_full_name || '';
-      document.getElementById('edit_route_name').value = client.route_name || '';
-      document.getElementById('edit_seller_name').value = client.seller_name || '';
-
-      document.getElementById('editModal').style.display = 'block';
-    }
-
-    // Cerrar modal
-    function closeModal(modalId) {
-      document.getElementById(modalId).style.display = 'none';
-    }
-
-    // Crear nuevo cliente
-    document.getElementById('createForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      // Generar código automático
-      const { data: codesData, error: codesError } = await supabaseClient
-        .from('web_clientes')
-        .select('code')
-        .eq('empresa_id', empresaId);
-
-      if (codesError) {
-        alert('Error al generar código: ' + codesError.message);
-        return;
-      }
-
-      const existingCodes = codesData.map(c => parseInt(c.code, 10)).filter(n => !isNaN(n));
-      const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
-      const newCode = (maxCode + 1).toString().padStart(4, '0');
-
-      const newClient = {
-        code: newCode,
-        trade_name: document.getElementById('trade_name').value,
-        address: document.getElementById('address').value,
-        city: document.getElementById('city').value,
-        phone: document.getElementById('phone').value,
-        latitude: parseFloat(document.getElementById('latitude').value) || null,
-        longitude: parseFloat(document.getElementById('longitude').value) || null,
-        owner_full_name: document.getElementById('owner_full_name').value,
-        route_name: document.getElementById('route_name').value,
-        seller_name: document.getElementById('seller_name').value,
-        active: true,
-        credit_limit: 0,
-        minimum_order: 0,
-        empresa_id: empresaId  // ¡GUARDAMOS EL ID DE LA EMPRESA!
-      };
-
-      const { error } = await supabaseClient.from('web_clientes').insert([newClient]);
-
-      if (error) {
-        alert('Error al crear cliente: ' + error.message);
-      } else {
-        alert('Cliente creado exitosamente');
-        document.getElementById('createForm').reset();
-        currentPage = 1;
-        loadClients(currentPage, searchTerm);
-      }
-    });
-
-    // Guardar edición
-    document.getElementById('editForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const id = document.getElementById('edit_id').value;
-
-      const updates = {
-        trade_name: document.getElementById('edit_trade_name').value,
-        address: document.getElementById('edit_address').value,
-        city: document.getElementById('edit_city').value,
-        phone: document.getElementById('edit_phone').value,
-        latitude: parseFloat(document.getElementById('edit_latitude').value) || null,
-        longitude: parseFloat(document.getElementById('edit_longitude').value) || null,
-        owner_full_name: document.getElementById('edit_owner_full_name').value,
-        route_name: document.getElementById('edit_route_name').value,
-        seller_name: document.getElementById('edit_seller_name').value,
-      };
-
-      const { error } = await supabaseClient
-        .from('web_clientes')
-        .update(updates)
-        .eq('id', id)
-        .eq('empresa_id', empresaId);
-
-      if (error) {
-        alert('Error al actualizar: ' + error.message);
-      } else {
-        alert('Cliente actualizado exitosamente');
-        closeModal('editModal');
-        loadClients(currentPage, searchTerm);
-      }
-    });
-
-    // Eliminar cliente
-    async function deleteClient(id) {
-      if (confirm('¿Estás seguro de eliminar este cliente?')) {
-        const { error } = await supabaseClient
-          .from('web_clientes')
-          .delete()
-          .eq('id', id)
-          .eq('empresa_id', empresaId);
-
-        if (error) {
-          alert('Error al eliminar');
-        } else {
-          alert('Cliente eliminado');
-          loadClients(currentPage, searchTerm);
+        if (!empresaId) {
+            alert('No hay sesión activa. Serás redirigido al login.');
+            window.location.href = '/login.html';
         }
-      }
-    }
 
-    // Cerrar modal al hacer clic fuera
-    window.onclick = function(event) {
-      const detailsModal = document.getElementById('detailsModal');
-      const editModal = document.getElementById('editModal');
-      if (event.target === detailsModal) closeModal('detailsModal');
-      if (event.target === editModal) closeModal('editModal');
-    }
+        // Cargar clientes con paginación, filtro y restricción por empresa
+        async function loadClients(page, term) {
+            let query = supabaseClient
+                .from('web_clientes')
+                .select('*', { count: 'exact' })
+                .eq('empresa_id', empresaId); // ← Solo clientes de esta empresa
 
-    // Cargar al iniciar
-    window.onload = () => loadClients(currentPage, searchTerm);
-  </script>
+            if (term) {
+                const likeTerm = `%${term}%`;
+                query = query.or(`trade_name.ilike.${likeTerm},code.ilike.${likeTerm},city.ilike.${likeTerm},phone.ilike.${likeTerm}`);
+            }
+
+            query = query.order('id', { ascending: false });
+
+            const startIndex = (page - 1) * clientsPerPage;
+            query = query.range(startIndex, startIndex + clientsPerPage - 1);
+
+            const { data, error, count } = await query;
+
+            if (error) {
+                console.error('Error al cargar clientes:', error.message);
+                alert('Error al cargar clientes: ' + error.message);
+                return;
+            }
+
+            totalCount = count || 0;
+            displayClients(data || []);
+            updatePagination();
+        }
+
+        // Mostrar clientes en la lista
+        function displayClients(clients) {
+            const clientsList = document.getElementById('clients');
+            const noResults = document.getElementById('noResults');
+            clientsList.innerHTML = '';
+            if (clients.length === 0) {
+                noResults.classList.remove('hidden');
+                return;
+            }
+            noResults.classList.add('hidden');
+            clients.forEach(client => {
+                const li = document.createElement('li');
+                li.className = 'border p-4 rounded-lg flex justify-between items-center bg-azul-claro';
+                li.innerHTML = `
+                    <div>
+                        <strong class="text-azul-oscuro-suave block">${client.trade_name || 'Sin nombre'}</strong>
+                        <span class="text-gray-600">Código: ${client.code || 'N/A'} | Ciudad: ${client.city || 'N/A'} | Tel: ${client.phone || 'N/A'}</span>
+                    </div>
+                    <div class="space-x-2">
+                        <button onclick="viewDetails(${client.id})" class="bg-azul-pastel text-azul-oscuro-suave px-3 py-1 rounded hover:bg-azul-oscuro-suave hover:text-white">Ver Detalles</button>
+                        <button onclick="editClient(${client.id})" class="bg-yellow-300 text-gray-800 px-3 py-1 rounded hover:bg-yellow-400">Editar</button>
+                        <button onclick="deleteClient(${client.id})" class="bg-red-300 text-gray-800 px-3 py-1 rounded hover:bg-red-400">Eliminar</button>
+                    </div>
+                `;
+                clientsList.appendChild(li);
+            });
+        }
+
+        // Filtrar y cargar
+        function filterAndLoadClients() {
+            searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            currentPage = 1;
+            loadClients(currentPage, searchTerm);
+        }
+
+        // Paginación
+        function changePage(direction) {
+            const totalPages = Math.ceil(totalCount / clientsPerPage);
+            currentPage += direction;
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            loadClients(currentPage, searchTerm);
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(totalCount / clientsPerPage);
+            document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages || 1}`;
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+        }
+
+        // Ver detalles
+        async function viewDetails(id) {
+            const { data: client } = await supabaseClient
+                .from('web_clientes')
+                .select('*')
+                .eq('id', id)
+                .eq('empresa_id', empresaId)
+                .single();
+
+            if (!client) return;
+
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = `
+                <p><strong>Código:</strong> ${client.code || 'N/A'}</p>
+                <p><strong>Nombre Comercial:</strong> ${client.trade_name || 'N/A'}</p>
+                <p><strong>Dirección:</strong> ${client.address || 'N/A'}</p>
+                <p><strong>Ciudad:</strong> ${client.city || 'N/A'}</p>
+                <p><strong>Teléfono:</strong> ${client.phone || 'N/A'}</p>
+                <p><strong>Propietario:</strong> ${client.owner_full_name || 'N/A'}</p>
+                <p><strong>Email:</strong> ${client.email || 'N/A'}</p>
+                <p><strong>Ruta:</strong> ${client.route_name || 'N/A'}</p>
+                <p><strong>Vendedor:</strong> ${client.seller_name || 'N/A'}</p>
+                <p><strong>Activo:</strong> ${client.active ? 'Sí' : 'No'}</p>
+                <p><strong>Límite de Crédito:</strong> $${client.credit_limit || 0}</p>
+                <p><strong>Orden Mínima:</strong> $${client.minimum_order || 0}</p>
+                <p><strong>Última Actualización:</strong> ${client.last_update ? new Date(client.last_update).toLocaleDateString('es-ES') : 'N/A'}</p>
+            `;
+            document.getElementById('detailsModal').style.display = 'block';
+        }
+
+        // Editar cliente
+        async function editClient(id) {
+            const { data: client } = await supabaseClient
+                .from('web_clientes')
+                .select('*')
+                .eq('id', id)
+                .eq('empresa_id', empresaId)
+                .single();
+
+            if (!client) return;
+
+            document.getElementById('edit_id').value = client.id;
+            document.getElementById('edit_trade_name').value = client.trade_name || '';
+            document.getElementById('edit_address').value = client.address || '';
+            document.getElementById('edit_city').value = client.city || '';
+            document.getElementById('edit_phone').value = client.phone || '';
+            document.getElementById('edit_latitude').value = client.latitude || '';
+            document.getElementById('edit_longitude').value = client.longitude || '';
+            document.getElementById('edit_owner_full_name').value = client.owner_full_name || '';
+            document.getElementById('edit_route_name').value = client.route_name || '';
+            document.getElementById('edit_seller_name').value = client.seller_name || '';
+
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        // Cerrar modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Crear nuevo cliente
+        document.getElementById('createForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Generar código automático por empresa
+            const { data: codesData, error: codesError } = await supabaseClient
+                .from('web_clientes')
+                .select('code')
+                .eq('empresa_id', empresaId);
+
+            if (codesError) {
+                alert('Error al generar código: ' + codesError.message);
+                return;
+            }
+
+            const existingCodes = codesData
+                .map(c => parseInt(c.code, 10))
+                .filter(n => !isNaN(n));
+
+            const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+            const newCode = (maxCode + 1).toString().padStart(4, '0');
+
+            const newClient = {
+                code: newCode,
+                trade_name: document.getElementById('trade_name').value.trim().toUpperCase(),
+                address: document.getElementById('address').value || null,
+                city: document.getElementById('city').value || null,
+                phone: document.getElementById('phone').value || null,
+                latitude: parseFloat(document.getElementById('latitude').value) || null,
+                longitude: parseFloat(document.getElementById('longitude').value) || null,
+                owner_full_name: document.getElementById('owner_full_name').value || null,
+                route_name: document.getElementById('route_name').value || null,
+                seller_name: document.getElementById('seller_name').value || null,
+                active: true,
+                credit_limit: 0,
+                minimum_order: 0,
+                empresa_id: empresaId
+            };
+
+            const { error } = await supabaseClient.from('web_clientes').insert([newClient]);
+
+            if (error) {
+                alert('Error al crear cliente: ' + error.message);
+            } else {
+                alert('Cliente creado exitosamente con código: ' + newCode);
+                document.getElementById('createForm').reset();
+                currentPage = 1;
+                loadClients(currentPage, searchTerm);
+            }
+        });
+
+        // Guardar edición
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit_id').value;
+
+            const updates = {
+                trade_name: document.getElementById('edit_trade_name').value.trim().toUpperCase(),
+                address: document.getElementById('edit_address').value || null,
+                city: document.getElementById('edit_city').value || null,
+                phone: document.getElementById('edit_phone').value || null,
+                latitude: parseFloat(document.getElementById('edit_latitude').value) || null,
+                longitude: parseFloat(document.getElementById('edit_longitude').value) || null,
+                owner_full_name: document.getElementById('edit_owner_full_name').value || null,
+                route_name: document.getElementById('edit_route_name').value || null,
+                seller_name: document.getElementById('edit_seller_name').value || null,
+            };
+
+            const { error } = await supabaseClient
+                .from('web_clientes')
+                .update(updates)
+                .eq('id', id)
+                .eq('empresa_id', empresaId);
+
+            if (error) {
+                alert('Error al actualizar: ' + error.message);
+            } else {
+                alert('Cliente actualizado exitosamente');
+                closeModal('editModal');
+                loadClients(currentPage, searchTerm);
+            }
+        });
+
+        // Eliminar cliente
+        async function deleteClient(id) {
+            if (confirm('¿Estás seguro de eliminar este cliente? Esta acción no se puede deshacer.')) {
+                const { error } = await supabaseClient
+                    .from('web_clientes')
+                    .delete()
+                    .eq('id', id)
+                    .eq('empresa_id', empresaId);
+
+                if (error) {
+                    alert('Error al eliminar: ' + error.message);
+                } else {
+                    alert('Cliente eliminado');
+                    loadClients(currentPage, searchTerm);
+                }
+            }
+        }
+
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            const detailsModal = document.getElementById('detailsModal');
+            const editModal = document.getElementById('editModal');
+            if (event.target === detailsModal) closeModal('detailsModal');
+            if (event.target === editModal) closeModal('editModal');
+        }
+
+        // Cargar al iniciar
+        window.onload = () => {
+            loadClients(currentPage, searchTerm);
+        };
+    </script>
 </body>
 </html>

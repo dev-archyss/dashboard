@@ -59,7 +59,7 @@
     <div class="max-w-5xl mx-auto"> 
         <div class="header-bg p-6 rounded-xl shadow-xl mb-8">
             <h1 class="text-3xl font-extrabold text-white text-center tracking-wide">
-                GESTIÓN DE PRESENTACIONES DE PRODUCTOS
+                GESTIÓN DE PRESENTACIONES DE PRODUCTOS PROPIOS
             </h1>
         </div>
 
@@ -96,7 +96,7 @@
             </form>
         </div>
 
-        <h2 class="text-xl font-semibold mb-4 text-turquesa-oscuro">LISTA DE PRESENTACIONES</h2>
+        <h2 class="text-xl font-semibold mb-4 text-turquesa-oscuro">LISTA DE PRESENTACIONES DE LA EMPRESA</h2>
         <div class="bg-panel-claro p-4 rounded-xl shadow-lg table-container">
             <table id="productsTable" class="min-w-full divide-y divide-gray-200">
                 <thead>
@@ -114,6 +114,14 @@
     </div>
 
     <script>
+        // Validación de sesión
+        const empresaId = localStorage.getItem('empresa_id');
+
+        if (!empresaId) {
+            alert('Debes iniciar sesión primero.');
+            window.location.href = '/login.html';
+        }
+
         // API
         const API_URL = '/api/myproducts';
 
@@ -136,14 +144,14 @@
             return `${d} ${t}`;
         }
 
-        // Cargar productos
+        // Cargar productos filtrados por empresa_id
         async function loadProducts() {
             loadingMessage.classList.remove('hidden');
             tableBody.innerHTML = '';
             try {
-                const response = await fetch(API_URL);
+                const response = await fetch(`${API_URL}?empresa_id=${empresaId}`);
                 const data = await response.json();
-                renderTable(data.products);
+                renderTable(data.products || []);
             } catch (error) {
                 console.error('Error al cargar productos:', error);
                 loadingMessage.textContent = 'ERROR AL CARGAR LOS DATOS.';
@@ -155,8 +163,8 @@
         function renderTable(products) {
             tableBody.innerHTML = '';
             loadingMessage.classList.add('hidden');
-            if (!products || products.length === 0) {
-                loadingMessage.textContent = 'NO HAY PRESENTACIONES REGISTRADAS.';
+            if (products.length === 0) {
+                loadingMessage.textContent = 'NO HAY PRESENTACIONES REGISTRADAS PARA ESTA EMPRESA.';
                 loadingMessage.classList.remove('hidden');
                 return;
             }
@@ -178,7 +186,7 @@
             });
         }
 
-        // === ENVÍO DE FORMULARIO (CORREGIDO) ===
+        // === ENVÍO DE FORMULARIO ===
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('product_id').value;
@@ -189,7 +197,10 @@
                 return;
             }
             
-            const payload = { presentation };
+            const payload = { 
+                presentation,
+                empresa_id: empresaId  // ← Enviamos empresa_id
+            };
 
             try {
                 let response;
@@ -207,7 +218,6 @@
                     });
                 }
 
-                // ÉXITO: 200, 201, 204
                 if (response.ok || response.status === 201 || response.status === 204) {
                     alert(id ? 'PRESENTACIÓN ACTUALIZADA CON ÉXITO.' : 'PRESENTACIÓN CREADA CON ÉXITO.');
                     resetForm();
@@ -215,14 +225,13 @@
                     return;
                 }
 
-                // ERROR: intentar leer JSON solo si hay contenido
                 let errorMessage = 'ERROR DESCONOCIDO';
                 try {
                     const errorData = await response.json();
                     errorMessage = errorData.error || response.statusText;
 
                     if (errorMessage.includes('web_myproductos_presentation_key') || errorMessage.includes('unique constraint')) {
-                        errorMessage = "ERROR: EL NOMBRE DE LA PRESENTACIÓN YA EXISTE. DEBE SER ÚNICO.";
+                        errorMessage = "ERROR: EL NOMBRE DE LA PRESENTACIÓN YA EXISTE EN TU EMPRESA.";
                     }
                 } catch (jsonError) {
                     errorMessage = response.statusText || `ERROR HTTP ${response.status}`;
@@ -247,7 +256,8 @@
             document.querySelectorAll('#productsTableBody tr').forEach(row => {
                 row.classList.remove('bg-turquesa-claro', 'bg-opacity-20');
             });
-            document.getElementById(`row-${id}`).classList.add('bg-turquesa-claro', 'bg-opacity-20');
+            const row = document.getElementById(`row-${id}`);
+            if (row) row.classList.add('bg-turquesa-claro', 'bg-opacity-20');
             inputPresentation.focus();
         }
 
@@ -270,7 +280,7 @@
             if (!confirm(`¿ESTÁS SEGURO DE QUE QUIERES ELIMINAR ESTA PRESENTACIÓN?`)) return;
 
             try {
-                const response = await fetch(`${API_URL}/${id}`, {
+                const response = await fetch(`${API_URL}/${id}?empresa_id=${empresaId}`, {
                     method: 'DELETE',
                     headers: defaultHeaders
                 });
@@ -287,13 +297,17 @@
             }
         }
 
-        // Exportar funciones
+        // Exportar funciones globales
         window.editProduct = editProduct;
         window.deleteProduct = deleteProduct;
         window.resetForm = resetForm;
 
         // Cargar al iniciar
-        window.onload = loadProducts;
+        window.onload = () => {
+            if (empresaId) {
+                loadProducts();
+            }
+        };
     </script>
 </body>
 </html>

@@ -44,13 +44,12 @@
             line-height: 0.8;
         }
 
-        /* Estilo para los botones principales con degradado (CORREGIDO CON !IMPORTANT) */
+        /* Estilo para los botones principales con degradado */
         .btn-ambar {
-            background-image: linear-gradient(to right, var(--tw-color-ambar-base), var(--tw-color-ambar-oscuro)) !important; 
+            background-image: linear-gradient(to right, #F59E0B, #D97706) !important; 
             color: white !important;
             transition: all 0.2s;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            background-color: #D97706; /* Fallback color */
         }
 
         .btn-ambar:hover {
@@ -86,7 +85,7 @@
                 <input type="text" id="presentation" placeholder="Nombre/Descripción de la Presentación (*)" class="p-3 border border-gray-300 rounded-lg focus:ring-ambar-base focus:border-ambar-base transition" required>
                 
                 <div class="flex justify-end space-x-4"> 
-                    <button type="submit" id="submitButton" class="btn-ambar px-6 py-3 rounded-lg font-bold text-lg text-white bg-ambar-oscuro"> 
+                    <button type="submit" id="submitButton" class="btn-ambar px-6 py-3 rounded-lg font-bold text-lg text-white"> 
                         Crear Presentación 
                     </button>
                     <button type="button" id="cancelButton" class="bg-gray-400 text-white px-6 py-3 rounded-lg font-bold text-lg hover:bg-gray-500 transition duration-150 hidden" onclick="resetForm()">
@@ -103,7 +102,6 @@
             <p class="text-sm text-gray-600 mt-1">Escribe para filtrar la lista.</p>
         </div>
 
-
         <h2 class="text-2xl font-semibold mb-4 text-ambar-oscuro">Lista de Presentaciones de Competidores</h2>
         
         <div class="bg-panel-claro p-6 rounded-xl shadow-lg border border-gray-200 overflow-x-auto">
@@ -116,7 +114,7 @@
                     </tr>
                 </thead>
                 <tbody id="productsTableBody" class="bg-white divide-y divide-gray-100">
-                    </tbody>
+                </tbody>
             </table>
             <p id="loadingMessage" class="text-center text-gray-500 mt-4">Cargando presentaciones...</p>
             <p id="noResultsMessage" class="text-center text-gray-500 mt-4 hidden">No se encontraron presentaciones que coincidan con la búsqueda.</p>
@@ -124,12 +122,20 @@
     </div>
 
     <script>
+        // Validación de sesión
+        const empresaId = localStorage.getItem('empresa_id');
+
+        if (!empresaId) {
+            alert('Debes iniciar sesión primero.');
+            window.location.href = '/login.html';
+        }
+
         const API_URL = '/api/competitorproducts'; 
         const form = document.getElementById('productForm');
         const tableBody = document.getElementById('productsTableBody');
         const submitButton = document.getElementById('submitButton');
         const cancelButton = document.getElementById('cancelButton');
-        const formTitle = document.getElementById('formTitle'); // Ahora funciona
+        const formTitle = document.getElementById('formTitle');
         const loadingMessage = document.getElementById('loadingMessage');
         const noResultsMessage = document.getElementById('noResultsMessage');
         const inputPresentation = document.getElementById('presentation');
@@ -149,17 +155,18 @@
             });
         }
 
+        // Cargar productos filtrados por empresa_id
         async function loadProducts() {
             loadingMessage.classList.remove('hidden');
             tableBody.innerHTML = '';
             try {
-                const response = await fetch(API_URL);
+                const response = await fetch(`${API_URL}?empresa_id=${empresaId}`);
                 const data = await response.json();
                 allProducts = data.products || []; 
                 renderTable(allProducts);
             } catch (error) {
                 console.error('Error al cargar productos:', error);
-                alert('Error al cargar productos. Asegúrate que el backend de Flask esté corriendo.');
+                alert('Error al cargar productos. Asegúrate que el backend esté corriendo.');
                 loadingMessage.textContent = 'Error al cargar productos.';
             } finally {
                 loadingMessage.classList.add('hidden');
@@ -183,7 +190,7 @@
                 if (searchInput.value.trim() !== '') {
                     noResultsMessage.classList.remove('hidden');
                 } else {
-                    loadingMessage.textContent = 'No hay presentaciones de competidores registradas.';
+                    loadingMessage.textContent = 'No hay presentaciones de competidores registradas para esta empresa.';
                     loadingMessage.classList.remove('hidden');
                 }
                 return;
@@ -205,12 +212,13 @@
                 const actionsCell = row.insertCell();
                 actionsCell.className = 'px-3 py-2 whitespace-nowrap text-center text-sm font-medium space-x-1'; 
                 actionsCell.innerHTML = `
-                    <button onclick="editProduct('${product.id}', '${product.presentation}')" class="text-blue-600 hover:text-blue-800 transition duration-150">Editar</button>
+                    <button onclick="editProduct('${product.id}', '${product.presentation.replace(/'/g, "\\'")}')" class="text-blue-600 hover:text-blue-800 transition duration-150">Editar</button>
                     <button onclick="deleteProduct('${product.id}')" class="text-red-600 hover:text-red-800 transition duration-150">Eliminar</button>
                 `;
             });
         }
         
+        // Envío del formulario (crear/editar)
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('product_id').value;
@@ -221,7 +229,10 @@
                 return;
             }
             
-            const payload = { presentation };
+            const payload = { 
+                presentation,
+                empresa_id: empresaId  // ← Enviamos empresa_id
+            };
 
             try {
                 let response;
@@ -244,11 +255,11 @@
                     resetForm();
                     loadProducts(); 
                 } else {
-                    const errorData = await response.json();
+                    const errorData = await response.json().catch(() => ({}));
                     let errorMessage = errorData.error || response.statusText;
                     
-                    if (errorMessage.includes('web_competidor_presentation_key')) {
-                        errorMessage = "Error: El nombre de la presentación de competidor ya existe. Debe ser único.";
+                    if (errorMessage.includes('web_competidor_presentation_key') || errorMessage.includes('unique constraint')) {
+                        errorMessage = "Error: El nombre de la presentación ya existe en tu empresa. Debe ser único.";
                     }
                     
                     alert(`Error: ${errorMessage}`);
@@ -259,52 +270,54 @@
             }
         });
 
-        // FUNCIONES DE EDICIÓN/CANCELACIÓN
+        // Editar
         function editProduct(id, presentation) {
             document.getElementById('product_id').value = id;
             inputPresentation.value = presentation;
 
-            // 👈 CAMBIA EL TITULO Y EL TEXTO DEL BOTÓN
             formTitle.textContent = 'Editar Presentación de Competidor';
             submitButton.textContent = 'Guardar Cambios';
-            cancelButton.classList.remove('hidden'); // MUESTRA CANCELAR
+            cancelButton.classList.remove('hidden');
             
-            document.getElementById(`row-${id}`).classList.add('bg-ambar-claro', 'bg-opacity-20');
+            document.querySelectorAll('#productsTableBody tr').forEach(row => {
+                row.classList.remove('bg-ambar-claro', 'bg-opacity-20');
+            });
+            const row = document.getElementById(`row-${id}`);
+            if (row) row.classList.add('bg-ambar-claro', 'bg-opacity-20');
         }
 
+        // Cancelar / Resetear
         function resetForm() {
             const currentId = document.getElementById('product_id').value;
             if (currentId) {
-                const activeRow = document.getElementById(`row-${currentId}`);
-                if (activeRow) {
-                    activeRow.classList.remove('bg-ambar-claro', 'bg-opacity-20');
-                }
+                const row = document.getElementById(`row-${currentId}`);
+                if (row) row.classList.remove('bg-ambar-claro', 'bg-opacity-20');
             }
             document.getElementById('product_id').value = '';
             form.reset();
-            // 👈 REVierte el TITULO y el TEXTO DEL BOTÓN
             formTitle.textContent = 'Añadir Nueva Presentación de Competidor';
             submitButton.textContent = 'Crear Presentación';
-            cancelButton.classList.add('hidden'); // OCULTA CANCELAR
+            cancelButton.classList.add('hidden');
         }
         
+        // Eliminar
         async function deleteProduct(id) {
             if (!confirm(`¿Estás seguro de que quieres eliminar esta presentación de competidor? Esta acción es irreversible.`)) {
                 return;
             }
 
             try {
-                const response = await fetch(`${API_URL}/${id}`, {
+                const response = await fetch(`${API_URL}/${id}?empresa_id=${empresaId}`, {
                     method: 'DELETE',
                     headers: defaultHeaders
                 });
 
-                if (response.status === 204) {
+                if (response.status === 204 || response.ok) {
                     alert('Presentación de competidor eliminada con éxito.');
                     loadProducts();
                 } else {
-                    const errorData = await response.json();
-                    alert(`Error al eliminar: ${errorData.error || response.statusText}`);
+                    const errorData = await response.json().catch(() => ({}));
+                    alert(`Error al eliminar: ${errorData.error || 'No se pudo eliminar'}`);
                 }
             } catch (error) {
                 console.error('Error al eliminar producto:', error);
@@ -312,7 +325,17 @@
             }
         }
 
-        window.onload = loadProducts;
+        // Funciones globales
+        window.editProduct = editProduct;
+        window.deleteProduct = deleteProduct;
+        window.resetForm = resetForm;
+
+        // Cargar al iniciar
+        window.onload = () => {
+            if (empresaId) {
+                loadProducts();
+            }
+        };
     </script>
 </body>
 </html>

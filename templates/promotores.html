@@ -64,8 +64,8 @@
         <select id="zona_id" class="p-3 border border-verde-vivo rounded-lg" disabled>
           <option value="">Seleccione una zona</option>
         </select>
-        <input type="number" id="clientes_asig" placeholder="Clientes asignados" class="p-3 border border-verde-vivo rounded-lg" min="0" required>
-        <input type="number" id="dias_trabajo" placeholder="Días de trabajo" class="p-3 border border-verde-vivo rounded-lg" min="0" required>
+        <input type="number" id="clientes_asig" placeholder="Clientes asignados" class="p-3 border border-verde-vivo rounded-lg" min="0" value="0" required>
+        <input type="number" id="dias_trabajo" placeholder="Días de trabajo" class="p-3 border border-verde-vivo rounded-lg" min="0" value="5" required>
         <button type="submit" class="bg-verde-vivo text-verde-oscuro p-3 rounded-lg hover:bg-verde-oscuro hover:text-white md:col-span-2">Agregar Promotor</button>
       </form>
     </div>
@@ -108,7 +108,6 @@
       <form id="editForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input type="hidden" id="edit_id">
 
-        <!-- Campo promoter_id editable -->
         <div class="md:col-span-2">
           <label class="block text-sm font-medium text-verde-oscuro mb-1">ID del Promotor</label>
           <div class="flex">
@@ -138,7 +137,7 @@
   </div>
 
   <script>
-    // Declaraciones
+    // Variables globales
     let allPromoters = [];
     let allEstados = [];
     let allZonas = [];
@@ -151,7 +150,15 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Cargar estados
+    // Obtener empresa_id desde localStorage
+    const empresaId = localStorage.getItem('empresa_id');
+
+    if (!empresaId) {
+      alert('No hay sesión activa. Serás redirigido al login.');
+      window.location.href = '/login.html'; // Ajusta la ruta si es necesario
+    }
+
+    // Cargar estados (globales)
     async function loadEstados(selectId = 'estado_id') {
       const { data, error } = await supabaseClient.from('web_estados').select('*').order('nombre', { ascending: true });
       if (error) {
@@ -170,10 +177,10 @@
       });
     }
 
-    // Cargar zonas por estado
+    // Cargar zonas por estado (globales)
     async function loadZonas(estadoId, selectId = 'zona_id') {
       const zonaSelect = document.getElementById(selectId);
-      zonaSelect.innerHTML = '<option value="">Seleccione una zona</option><option value="add_new">+ Agregar nueva zona</option>';
+      zonaSelect.innerHTML = '<option value="">Seleccione una zona</option>';
       if (!estadoId) {
         zonaSelect.disabled = true;
         return;
@@ -190,17 +197,22 @@
         const option = document.createElement('option');
         option.value = zona.id;
         option.textContent = zona.nombre;
-        zonaSelect.insertBefore(option, zonaSelect.lastChild);
+        zonaSelect.appendChild(option);
       });
     }
 
-    // Cargar promotores
+    // Cargar promotores (filtrados por empresa_id)
     async function loadPromoters() {
-      const { data, error } = await supabaseClient.from('web_promotores').select(`
-        *,
-        web_estados!web_promotores_estado_id_fkey(nombre),
-        web_zonas!web_promotores_zona_id_fkey(nombre)
-      `).order('promoter_id', { ascending: true });
+      const { data, error } = await supabaseClient
+        .from('web_promotores')
+        .select(`
+          *,
+          web_estados!web_promotores_estado_id_fkey(nombre),
+          web_zonas!web_promotores_zona_id_fkey(nombre)
+        `)
+        .eq('empresa_id', empresaId)
+        .order('promoter_id', { ascending: true });
+
       if (error) {
         console.error('Error al cargar promotores:', error);
         alert('Error al cargar promotores: ' + error.message);
@@ -217,7 +229,6 @@
       updatePagination();
     }
 
-    // Obtener promotores para página actual
     function getCurrentPagePromoters() {
       const filtered = allPromoters.filter(promoter => {
         const term = searchTerm.toLowerCase();
@@ -228,7 +239,6 @@
       return filtered.slice(startIndex, startIndex + promotersPerPage);
     }
 
-    // Mostrar promotores
     function displayPromoters(promoters) {
       const promotersList = document.getElementById('promoters');
       const noResults = document.getElementById('noResults');
@@ -258,7 +268,6 @@
       });
     }
 
-    // Filtrar
     function filterAndLoadPromoters() {
       searchTerm = document.getElementById('searchInput').value;
       currentPage = 1;
@@ -266,7 +275,6 @@
       updatePagination();
     }
 
-    // Cambiar página
     function changePage(direction) {
       const totalFiltered = allPromoters.filter(promoter => {
         const term = searchTerm.toLowerCase();
@@ -283,7 +291,6 @@
       updatePagination();
     }
 
-    // Actualizar paginación
     function updatePagination() {
       const totalFiltered = allPromoters.filter(promoter => {
         const term = searchTerm.toLowerCase();
@@ -292,18 +299,22 @@
       }).length;
       const totalPages = Math.ceil(totalFiltered / promotersPerPage);
       
-      document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages}`;
+      document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages || 1}`;
       document.getElementById('prevBtn').disabled = currentPage === 1;
       document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
     }
 
-    // Ver detalles
     async function viewDetails(id) {
-      const { data: promoter } = await supabaseClient.from('web_promotores').select(`
-        *,
-        web_estados!web_promotores_estado_id_fkey(nombre),
-        web_zonas!web_promotores_zona_id_fkey(nombre)
-      `).eq('id', id).single();
+      const { data: promoter } = await supabaseClient
+        .from('web_promotores')
+        .select(`
+          *,
+          web_estados!web_promotores_estado_id_fkey(nombre),
+          web_zonas!web_promotores_zona_id_fkey(nombre)
+        `)
+        .eq('id', id)
+        .eq('empresa_id', empresaId)
+        .single();
       if (!promoter) return;
       
       const modalBody = document.getElementById('modalBody');
@@ -318,13 +329,17 @@
       document.getElementById('detailsModal').style.display = 'block';
     }
 
-    // Editar promotor
     async function editPromoter(id) {
-      const { data: promoter } = await supabaseClient.from('web_promotores').select(`
-        *,
-        web_estados!web_promotores_estado_id_fkey(nombre),
-        web_zonas!web_promotores_zona_id_fkey(nombre)
-      `).eq('id', id).single();
+      const { data: promoter } = await supabaseClient
+        .from('web_promotores')
+        .select(`
+          *,
+          web_estados!web_promotores_estado_id_fkey(nombre),
+          web_zonas!web_promotores_zona_id_fkey(nombre)
+        `)
+        .eq('id', id)
+        .eq('empresa_id', empresaId)
+        .single();
       if (!promoter) return;
 
       await loadEstados('edit_estado_id');
@@ -343,7 +358,6 @@
       document.getElementById('editModal').style.display = 'block';
     }
 
-    // Cerrar modal
     function closeModal(modalId) {
       document.getElementById(modalId).style.display = 'none';
     }
@@ -360,27 +374,14 @@
 
       const promoterId = `promotor_${suffix}`;
       const estadoId = document.getElementById('estado_id').value;
-      let zonaId = document.getElementById('zona_id').value;
+      const zonaId = document.getElementById('zona_id').value;
 
-      if (!estadoId) {
-        alert('Por favor, seleccione un estado');
+      if (!estadoId || !zonaId) {
+        alert('Estado y zona son obligatorios');
         return;
       }
 
-      if (!zonaId) {
-        alert('Por favor, seleccione una zona o agregue una nueva');
-        return;
-      }
-
-      if (zonaId === 'add_new') {
-        const newZonaName = prompt('Ingrese el nombre de la nueva zona:');
-        if (!newZonaName) return;
-        const { data, error } = await supabaseClient.from('web_zonas').insert([{ nombre: newZonaName, estado_id: estadoId }]).select().single();
-        if (error) { alert('Error al crear zona: ' + error.message); return; }
-        zonaId = data.id;
-      }
-
-      // Verificar duplicado
+      // Verificar duplicado global (aunque esté en otra empresa)
       const { data: existing } = await supabaseClient
         .from('web_promotores')
         .select('id')
@@ -388,7 +389,7 @@
         .maybeSingle();
 
       if (existing) {
-        alert(`El ID "${promoterId}" ya está en uso. Usa otro sufijo.`);
+        alert(`El ID "${promoterId}" ya está en uso. Elige otro sufijo.`);
         return;
       }
 
@@ -396,9 +397,10 @@
         promoter_id: promoterId,
         promoter_name: document.getElementById('promoter_name').value,
         estado_id: estadoId,
-        zona_id: zonaId || null,
-        clientes_asig: Math.max(0, parseInt(document.getElementById('clientes_asig').value)) || 0,
-        dias_trabajo: Math.max(0, parseInt(document.getElementById('dias_trabajo').value)) || 0,
+        zona_id: zonaId,
+        clientes_asig: parseInt(document.getElementById('clientes_asig').value) || 0,
+        dias_trabajo: parseInt(document.getElementById('dias_trabajo').value) || 0,
+        empresa_id: empresaId  // ← GUARDAMOS LA EMPRESA
       };
 
       const { error } = await supabaseClient.from('web_promotores').insert([newPromoter]);
@@ -412,7 +414,7 @@
       }
     });
 
-    // Guardar cambios en edición
+    // Editar promotor
     document.getElementById('editForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const id = document.getElementById('edit_id').value;
@@ -423,20 +425,11 @@
       }
       const promoterId = `promotor_${suffix}`;
       const estadoId = document.getElementById('edit_estado_id').value;
-      let zonaId = document.getElementById('edit_zona_id').value;
+      const zonaId = document.getElementById('edit_zona_id').value;
 
       if (!estadoId || !zonaId) {
         alert('Estado y zona son obligatorios');
         return;
-      }
-
-      if (zonaId === 'add_new') {
-        const newZonaName = prompt('Ingrese el nombre de la nueva zona:');
-        if (!newZonaName) return;
-        const { data, error } = await supabaseClient.from('web_zonas').insert([{ nombre: newZonaName, estado_id: estadoId }]).select().single();
-        if (error) { alert('Error al crear zona: ' + error.message); return; }
-        zonaId = data.id;
-        await loadZonas(estadoId, 'edit_zona_id');
       }
 
       // Verificar duplicado (excepto el actual)
@@ -456,12 +449,17 @@
         promoter_id: promoterId,
         promoter_name: document.getElementById('edit_promoter_name').value.toUpperCase(),
         estado_id: estadoId,
-        zona_id: zonaId || null,
-        clientes_asig: Math.max(0, parseInt(document.getElementById('edit_clientes_asig').value)) || 0,
-        dias_trabajo: Math.max(0, parseInt(document.getElementById('edit_dias_trabajo').value)) || 0,
+        zona_id: zonaId,
+        clientes_asig: parseInt(document.getElementById('edit_clientes_asig').value) || 0,
+        dias_trabajo: parseInt(document.getElementById('edit_dias_trabajo').value) || 0,
       };
 
-      const { error } = await supabaseClient.from('web_promotores').update(updates).eq('id', id);
+      const { error } = await supabaseClient
+        .from('web_promotores')
+        .update(updates)
+        .eq('id', id)
+        .eq('empresa_id', empresaId);
+
       if (error) {
         alert('Error al actualizar: ' + error.message);
       } else {
@@ -474,7 +472,12 @@
     // Eliminar promotor
     async function deletePromoter(id) {
       if (confirm('¿Estás seguro de eliminar este promotor?')) {
-        const { error } = await supabaseClient.from('web_promotores').delete().eq('id', id);
+        const { error } = await supabaseClient
+          .from('web_promotores')
+          .delete()
+          .eq('id', id)
+          .eq('empresa_id', empresaId);
+
         if (error) {
           alert('Error al eliminar');
         } else {
@@ -484,15 +487,7 @@
       }
     }
 
-    // Cerrar modal fuera
-    window.onclick = function(event) {
-      const detailsModal = document.getElementById('detailsModal');
-      const editModal = document.getElementById('editModal');
-      if (event.target === detailsModal) closeModal('detailsModal');
-      if (event.target === editModal) closeModal('editModal');
-    }
-
-    // Filtrar zonas al cambiar estado
+    // Eventos de cambio de estado
     document.getElementById('estado_id').addEventListener('change', (e) => {
       loadZonas(e.target.value);
     });
@@ -500,7 +495,15 @@
       loadZonas(e.target.value, 'edit_zona_id');
     });
 
-    // Init
+    // Cerrar modal al hacer clic fuera
+    window.onclick = function(event) {
+      const detailsModal = document.getElementById('detailsModal');
+      const editModal = document.getElementById('editModal');
+      if (event.target === detailsModal) closeModal('detailsModal');
+      if (event.target === editModal) closeModal('editModal');
+    }
+
+    // Inicialización
     window.onload = () => {
       loadEstados();
       loadPromoters();
