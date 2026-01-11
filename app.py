@@ -219,8 +219,8 @@ def get_records():
     "promoter_name": promoter_name,
     "clientes_asig": clientes_asig,
     "dias_trabajo": dias_trabajo,
-    "state": estado,           # ← Ahora devuelve "state"
-    "zone": zona,              # ← Ahora devuelve "zone"
+    "state": estado,
+    "zone": zona,
     "trade": record.get("trade", "N/A"),
     "visit_coords": visit_coords_str,
     "client_coords": cliente_coords_str,
@@ -231,7 +231,9 @@ def get_records():
     "myitems": myitems,
     "competitoritems": competitoritems,
     "cliente_id": cliente_id,
-    "comments": record.get("comments", "N/A")
+    "comments": record.get("comments", "N/A"),
+    
+    # ← Estas dos líneas son las que faltaban ↓
     "before_photos": record.get("before_photos", []),
     "after_photos": record.get("after_photos", [])
 })
