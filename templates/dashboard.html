@@ -519,12 +519,36 @@
             document.body.appendChild(lb);
         }
 
+        function normalizePhotos(photos) {
+            if (!photos) return [];
+
+            // Si viene como string JSON
+            if (typeof photos === 'string') {
+                try {
+                    const parsed = JSON.parse(photos);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch {
+                    return [];
+                }
+            }
+
+            // Si ya es array
+            if (Array.isArray(photos)) {
+                return photos;
+            }
+
+            return [];
+        }
+
         function showDetails(record) {
             if (!record) {
                 modalDetailsContent.innerHTML = '<p class="text-red-600 text-center py-8">No se pudo cargar el registro</p>';
                 detailsModal.style.display = 'flex';
                 return;
             }
+
+            const beforePhotos = normalizePhotos(record.before_photos);
+            const afterPhotos = normalizePhotos(record.after_photos);
 
             let html = `
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 text-gray-700">
@@ -563,10 +587,17 @@
                     <div>
                         <p class="text-xl font-semibold mb-4 text-gray-800">Fotos Antes</p>
                         <div class="photo-grid">
-                            ${record.before_photos?.length > 0 
-                                ? record.before_photos.map(path => {
-                                    const url = `https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/before/${path}?width=0`;
-                                    return `<img src="${url}" class="photo-thumb" onclick="showLightbox('${url}')" alt="Foto Antes">`;
+                            ${beforePhotos.length > 0
+                                ? beforePhotos.map(filename => {
+                                    const url = `https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/before/${filename}`;
+                                    return `
+                                        <img 
+                                            src="${url}" 
+                                            class="photo-thumb"
+                                            onclick="showLightbox('${url}')"
+                                            loading="lazy"
+                                        >
+                                    `;
                                 }).join('')
                                 : '<p class="text-gray-600 italic text-center py-10">No hay fotos antes registradas</p>'
                             }
@@ -576,10 +607,17 @@
                     <div>
                         <p class="text-xl font-semibold mb-4 text-gray-800">Fotos Después</p>
                         <div class="photo-grid">
-                            ${record.after_photos?.length > 0 
-                                ? record.after_photos.map(path => {
-                                    const url = `https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/after/${path}?width=0`;
-                                    return `<img src="${url}" class="photo-thumb" onclick="showLightbox('${url}')" alt="Foto Después">`;
+                            ${afterPhotos.length > 0
+                                ? afterPhotos.map(filename => {
+                                    const url = `https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/after/${filename}`;
+                                    return `
+                                        <img 
+                                            src="${url}" 
+                                            class="photo-thumb"
+                                            onclick="showLightbox('${url}')"
+                                            loading="lazy"
+                                        >
+                                    `;
                                 }).join('')
                                 : '<p class="text-gray-600 italic text-center py-10">No hay fotos después registradas</p>'
                             }
