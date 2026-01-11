@@ -565,7 +565,7 @@
                         <div class="photo-grid">
                             ${record.before_photos?.length > 0 
                                 ? record.before_photos.map(path => {
-                                    const url = `https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/before/${path}`;
+                                    const url = `https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/before/${path}?width=0`;
                                     return `<img src="${url}" class="photo-thumb" onclick="showLightbox('${url}')" alt="Foto Antes">`;
                                 }).join('')
                                 : '<p class="text-gray-600 italic text-center py-10">No hay fotos antes registradas</p>'
@@ -578,7 +578,7 @@
                         <div class="photo-grid">
                             ${record.after_photos?.length > 0 
                                 ? record.after_photos.map(path => {
-                                    const url = `https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/after/${path}`;
+                                    const url = `https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/after/${path}?width=0`;
                                     return `<img src="${url}" class="photo-thumb" onclick="showLightbox('${url}')" alt="Foto Después">`;
                                 }).join('')
                                 : '<p class="text-gray-600 italic text-center py-10">No hay fotos después registradas</p>'
