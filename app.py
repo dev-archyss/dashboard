@@ -113,6 +113,10 @@ def productos_competencia():
 def productos():
     return render_template('productos.html')
 
+@app.route('/stock')
+def stock():
+    return render_template('stock.html')
+
 # ----------------------------------------------------------------------
 # --- Rutas API ---
 # ----------------------------------------------------------------------
