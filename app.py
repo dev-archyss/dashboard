@@ -232,6 +232,8 @@ def get_records():
     "competitoritems": competitoritems,
     "cliente_id": cliente_id,
     "comments": record.get("comments", "N/A")
+    "before_photos": record.get("before_photos", []),
+    "after_photos": record.get("after_photos", [])
 })
 
     return jsonify({
