@@ -541,14 +541,30 @@
         }
 
         function showDetails(record) {
+            console.log('=== DEBUG: Abriendo modal para registro ===');
+            console.log('ID del registro:', record.id);
+            console.log('Datos completos del record:', record);
+
             if (!record) {
+                console.log('ERROR: No hay registro válido');
                 modalDetailsContent.innerHTML = '<p class="text-red-600 text-center py-8">No se pudo cargar el registro</p>';
                 detailsModal.style.display = 'flex';
                 return;
             }
 
+            // Logs específicos para fotos
+            console.log('Valor crudo de before_photos:', record.before_photos);
+            console.log('Tipo de before_photos:', typeof record.before_photos);
+            console.log('Valor crudo de after_photos:', record.after_photos);
+            console.log('Tipo de after_photos:', typeof record.after_photos);
+
             const beforePhotos = normalizePhotos(record.before_photos);
             const afterPhotos = normalizePhotos(record.after_photos);
+
+            console.log('Fotos antes normalizadas (debería ser array):', beforePhotos);
+            console.log('Cantidad fotos antes:', beforePhotos.length);
+            console.log('Fotos después normalizadas:', afterPhotos);
+            console.log('Cantidad fotos después:', afterPhotos.length);
 
             let html = `
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 text-gray-700">
@@ -590,12 +606,14 @@
                             ${beforePhotos.length > 0
                                 ? beforePhotos.map(filename => {
                                     const url = `https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/before/${filename}`;
+                                    console.log('Generando URL para foto antes:', url);
                                     return `
                                         <img 
                                             src="${url}" 
                                             class="photo-thumb"
                                             onclick="showLightbox('${url}')"
                                             loading="lazy"
+                                            onerror="this.onerror=null; this.src='https://via.placeholder.com/160?text=Error';"
                                         >
                                     `;
                                 }).join('')
@@ -610,12 +628,14 @@
                             ${afterPhotos.length > 0
                                 ? afterPhotos.map(filename => {
                                     const url = `https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/after/${filename}`;
+                                    console.log('Generando URL para foto después:', url);
                                     return `
                                         <img 
                                             src="${url}" 
                                             class="photo-thumb"
                                             onclick="showLightbox('${url}')"
                                             loading="lazy"
+                                            onerror="this.onerror=null; this.src='https://via.placeholder.com/160?text=Error';"
                                         >
                                     `;
                                 }).join('')
@@ -669,6 +689,8 @@
 
             modalDetailsContent.innerHTML = html;
             detailsModal.style.display = 'flex';
+
+            console.log('=== Modal renderizado - fin de showDetails ===');
         }
 
         function updateSelected() {
