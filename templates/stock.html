@@ -9,8 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* Reutilizamos los mismos estilos que el dashboard principal para consistencia */
-        .badge {         .table-header-sticky th { position: sticky; top: 0; background: #f9fafb; z-index: 10; }
-        }
+        .badge { /* ... mismo que antes ... */ }
         .low-stock { background-color: #fee2e2 !important; }
         .table-header-sticky th { position: sticky; top: 0; background: #f9fafb; z-index: 10; }
     </style>
@@ -126,7 +125,7 @@
     </div>
 
     <script>
-        const supabase = supabase.createClient(
+        const supabaseClient = supabase.createClient(
             'https://djjylikkocemrlsjxscr.supabase.co',
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M'
         );
@@ -143,7 +142,7 @@
         document.querySelector('.close-btn').onclick = () => stockModal.style.display = 'none';
 
         async function loadStockData() {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('web_precios')
                 .select(`
                     id, created_at, promoter_id, trade, state, zone,
@@ -241,7 +240,7 @@
         }
 
         async function showVisitDetail(visitId) {
-            const { data } = await supabase.from('web_precios')
+            const { data } = await supabaseClient.from('web_precios')
                 .select('*, web_promotores(promoter_name)')
                 .eq('id', visitId)
                 .single();
