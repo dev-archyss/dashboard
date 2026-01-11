@@ -20,7 +20,7 @@
             padding: 0.3rem 0.6rem;
             font-size: 0.75rem;
             font-weight: 600;
-            border-radius: 9999px; 
+            border-radius: 9999px;
             text-transform: uppercase;
             white-space: nowrap;
         }
@@ -32,42 +32,33 @@
         .modal {
             display: none;
             position: fixed;
+            inset: 0;
             z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.6);
+            background-color: rgba(0,0,0,0.7);
             justify-content: center;
             align-items: center;
+            padding: 1rem;
         }
         .modal-content {
-            background-color: white;
-            padding: 30px;
-            border-radius: 12px;
+            background: white;
+            border-radius: 16px;
             max-width: 95%;
-            max-height: 90%;
-            width: 900px;
+            max-height: 92vh;
+            width: 1000px;
             overflow-y: auto;
             position: relative;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
         }
         .close-btn {
             position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 28px;
+            top: 16px;
+            right: 20px;
+            font-size: 32px;
             font-weight: bold;
             cursor: pointer;
-            color: #4B5563;
-            background-color: #ADD8E6;
-            color: black;
-            border: none;
-            padding: 5px 10px;
+            color: #6B7280;
         }
-        .close-btn:hover {
-            background-color: #87CEEB;
-        }
+        .close-btn:hover { color: #111827; }
         .table-header-sticky th {
             position: sticky;
             top: 0;
@@ -76,52 +67,57 @@
         }
         .photo-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 16px;
             margin-top: 12px;
         }
         .photo-thumb {
             width: 100%;
-            height: auto;
-            border-radius: 8px;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 12px;
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-            transition: transform 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
         }
-        .photo-thumb:hover { transform: scale(1.08); }
+        .photo-thumb:hover {
+            transform: scale(1.06);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
         .lightbox {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.95);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 2000;
         }
         .lightbox img {
-            max-width: 90%;
+            max-width: 90vw;
             max-height: 90vh;
-            border-radius: 8px;
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(255,255,255,0.2);
         }
     </style>
 </head>
 <body class="bg-gray-50 font-sans leading-normal tracking-normal">
+
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <h1 class="text-3xl font-extrabold mb-6 text-center text-gray-800">Dashboard de Visitas (Geolocalización y Precios) DEMO</h1>
         <div class="text-center mb-4 text-lg font-semibold text-indigo-700">
             Empresa: <span id="empresaNombreDisplay">Cargando...</span>
         </div>
-        <div class="flex justify-center space-x-4 mb-6">
+        <div class="flex justify-center space-x-4 mb-6 flex-wrap gap-3">
             <a href="/analisis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-chart-bar mr-2"></i>Análisis de Precio</a>
             <a href="/clientes" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-users mr-2"></i>Panel de Clientes</a>
             <a href="/promotores" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-user-tie mr-2"></i>Panel de Promotores</a>
-            <a href="/competencia" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-user-tie mr-2"></i>Panel de Productos Competencia</a>
-            <a href="/productos" 
-            class="bg-[#059669] hover:bg-[#047754] text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all">
-                <i class="fas fa-user-tie mr-2"></i>Panel de Productos Propios
-            </a>
-            <a href="/gps" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-map-marker-alt mr-2"></i>Seguimiento por GPS</a>
+            <a href="/competencia" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-boxes-stacked mr-2"></i>Productos Competencia</a>
+            <a href="/productos" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-box mr-2"></i>Productos Propios</a>
+            <a href="/gps" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-map-marker-alt mr-2"></i>Seguimiento GPS</a>
+            <a href="/stock" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-warehouse mr-2"></i>Control de Stock</a>
         </div>
+
         <div class="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-100">
             <h2 class="text-2xl font-semibold text-gray-700 mb-4">Filtros</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
@@ -190,6 +186,7 @@
                 </button>
             </div>
         </div>
+
         <div class="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-100">
             <h2 class="text-2xl font-semibold text-gray-700 mb-4">Meta de Visitas Semanal</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -215,6 +212,7 @@
             <div id="promoterProgressContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             </div>
         </div>
+
         <div class="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-100">
             <h2 class="text-2xl font-semibold text-gray-700 mb-4">Detalle de Visitas</h2>
             <div class="overflow-x-auto max-h-[70vh] relative">
@@ -255,10 +253,10 @@
 
     <!-- Modal -->
     <div id="detailsModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content p-8">
             <span class="close-btn">×</span>
-            <h3 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">Detalles del Registro</h3>
-            <div id="modalDetailsContent" class="space-y-6"></div>
+            <h2 class="text-3xl font-bold mb-6 text-gray-900 border-b pb-4">Detalles del Registro</h2>
+            <div id="modalDetailsContent" class="space-y-8"></div>
         </div>
     </div>
 
@@ -493,28 +491,33 @@
             allRecords = await fetchRecordsFromAPI(apiFilters);
             filteredRecords = allRecords.filter(record => {
                 const isPromoterMatch = promoterName === 'all' || record.promoter_name === promoterName;
-                const isStateMatch = stateName === 'Todos los estados' || record.estado === stateName;
-                const isZoneMatch = zoneName === 'Todas las zonas' || record.zona === zoneName;
+                const isStateMatch = stateName === 'Todos los estados' || record.state === stateName;
+                const isZoneMatch = zoneName === 'Todas las zonas' || record.zone === zoneName;
                 let isConfirmationMatch = true;
                 if (confirmationValue !== 'all') {
-                    const hasVisitCoords = record.visit_coords !== null && record.visit_coords !== 'N/A';
-                    const hasClientCoords = record.client_coords !== null && record.client_coords !== 'N/A';
+                    const hasVisitCoords = record.latitude && record.longitude;
+                    const hasClientCoords = record.client_coords && record.client_coords !== 'N/A';
                     if (confirmationValue === 'verificado' && (!hasVisitCoords || !hasClientCoords || record.distance >= 150)) {
                         isConfirmationMatch = false;
                     } else if (confirmationValue === 'no_verificado' && (hasVisitCoords && hasClientCoords && record.distance < 150)) {
                         isConfirmationMatch = false;
-                    } else if (confirmationValue === 'desconocido' && (!record.verified || !record.verified.includes('Desconocido'))) {
-                        isConfirmationMatch = false;
-                    } else if (confirmationValue === 'cliente_sin_coordenadas' && hasClientCoords) {
-                        isConfirmationMatch = false;
-                    } else if (confirmationValue === 'sin_coordenadas' && hasVisitCoords) {
-                        isConfirmationMatch = false;
+                    } else if (confirmationValue === 'desconocido' && record.client_coords === 'N/A') {
+                        isConfirmationMatch = true;
                     }
                 }
                 return isPromoterMatch && isStateMatch && isZoneMatch && isConfirmationMatch;
             });
             currentPage = 1;
             updateDashboard(promoterName);
+        }
+
+        function updateSelected() {
+            selectedRecords.clear();
+            document.querySelectorAll('.selectRecord').forEach(cb => {
+                if (cb.checked) selectedRecords.add(cb.dataset.id);
+            });
+            document.getElementById('deleteSelected').disabled = selectedRecords.size === 0;
+            document.getElementById('selectedCount').textContent = selectedRecords.size;
         }
 
         function updateTable() {
@@ -533,45 +536,49 @@
                 const hora = isNaN(date) ? '' : date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                 const distanceText = record.distance > 0 ? `${record.distance} m` : 'N/A';
                 const row = document.createElement('tr');
-                row.className = "hover:bg-gray-100";
+                row.className = "hover:bg-gray-100 cursor-pointer";
                 row.innerHTML = `
                     <td class="py-3 px-4"><input type="checkbox" class="selectRecord" data-id="${record.id}" ${selectedRecords.has(record.id) ? 'checked' : ''}></td>
                     <td class="py-3 px-4">${fecha} <span class="text-xs text-gray-500 block">${hora}</span></td>
-                    <td class="py-3 px-4">${record.promoter_name}</td>
+                    <td class="py-3 px-4">${record.promoter_name || '—'}</td>
                     <td class="py-3 px-4 font-semibold">${record.trade || '—'}</td>
-                    <td class="py-3 px-4 text-sm">${record.estado || '—'}</td>
-                    <td class="py-3 px-4 text-sm">${record.zona || '—'}</td>
+                    <td class="py-3 px-4 text-sm">${record.state || '—'}</td>
+                    <td class="py-3 px-4 text-sm">${record.zone || '—'}</td>
                     <td class="py-3 px-4 text-sm">${distanceText}</td>
-                    <td class="py-3 px-4 text-sm">${record.latitude}, ${record.longitude}</td>
+                    <td class="py-3 px-4 text-sm">${record.latitude || '—'}, ${record.longitude || '—'}</td>
                     <td class="py-3 px-4 text-blue-600 text-sm">${record.client_coords || 'N/A'}</td>
                     <td class="py-3 px-4">${confirmationBadge}</td>
                     <td class="py-3 px-4 space-x-2 whitespace-nowrap">
-                        <button class="view-details-btn text-indigo-500 hover:text-indigo-700 transition-colors" title="Ver Detalles" data-id="${record.id}">
-                            <i class="fas fa-eye text-lg"></i>
-                        </button>
-                        <button class="edit-btn text-blue-500 hover:text-blue-700 transition-colors" title="Editar Registro" data-id="${record.id}">
-                            <i class="fas fa-edit text-lg"></i>
-                        </button>
-                        <button class="delete-btn text-red-500 hover:text-red-700 transition-colors" title="Eliminar Registro" data-id="${record.id}">
-                            <i class="fas fa-trash-alt text-lg"></i>
+                        <button class="view-details-btn text-indigo-600 hover:text-indigo-800 transition-colors" title="Ver Detalles" data-id="${record.id}">
+                            <i class="fas fa-eye text-xl"></i>
                         </button>
                     </td>
                 `;
                 tableBody.appendChild(row);
             });
+
+            document.querySelectorAll('#priceRecordsTable tr:not(:first-child)').forEach(row => {
+                row.addEventListener('click', (e) => {
+                    if (!e.target.closest('input, button')) {
+                        const recordId = row.querySelector('.view-details-btn')?.dataset.id;
+                        const record = filteredRecords.find(r => r.id == recordId);
+                        if (record) showDetails(record);
+                    }
+                });
+            });
+
             document.querySelectorAll('.selectRecord').forEach(cb => cb.addEventListener('change', updateSelected));
-            document.querySelectorAll('.view-details-btn').forEach(btn => btn.addEventListener('click', e => {
-                const record = filteredRecords.find(r => r.id == e.currentTarget.dataset.id);
-                if (record) showDetails(record);
-            }));
-            document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', e => {
-                if (confirm(`¿Eliminar registro ${e.currentTarget.dataset.id}?`)) deleteRecords([e.currentTarget.dataset.id]);
-            }));
-            document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', e => {
-                const recordId = e.currentTarget.dataset.id;
-                alert(`Funcionalidad de edición para el registro ID: ${recordId} aún no implementada.`);
-            }));
+            document.querySelectorAll('.view-details-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const recordId = e.currentTarget.dataset.id;
+                    const record = filteredRecords.find(r => r.id == recordId);
+                    if (record) showDetails(record);
+                });
+            });
+
             document.getElementById('selectAll').checked = filteredRecords.every(r => selectedRecords.has(r.id));
+            updateSelected();
         }
 
         function updateConfirmationRate() {
@@ -665,7 +672,9 @@
             updateWeeklyProgress(promoterName); 
         }
 
-        function updateMetrics() { document.getElementById('totalRecords').textContent = filteredRecords.length; }
+        function updateMetrics() { 
+            document.getElementById('totalRecords').textContent = filteredRecords.length; 
+        }
 
         function updatePaginationInfo() {
             const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
