@@ -5,52 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Sistema de Captura de Precios</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            min-height: 100vh;
-        }
-        .card {
-            background: white;
-            border-radius: 1.5rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            overflow: hidden;
-        }
-        .btn-primary {
-            background: linear-gradient(to right, #4f46e5, #7c3aed);
-            transition: all 0.3s ease;
-        }
-        .btn-primary:hover {
-            background: linear-gradient(to right, #4338ca, #6d28d9);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
-        }
-        .btn-primary:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .spinner {
-            display: inline-block;
-            width: 1rem;
-            height: 1rem;
-            border: 2px solid #ffffff;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 0.5rem;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .input-focus:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
-            border-color: #6366f1;
-        }
+        /* tus estilos sin cambios */
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); min-height: 100vh; }
+        .card { background: white; border-radius: 1.5rem; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); overflow: hidden; }
+        .btn-primary { background: linear-gradient(to right, #4f46e5, #7c3aed); transition: all 0.3s ease; }
+        .btn-primary:hover { background: linear-gradient(to right, #4338ca, #6d28d9); transform: translateY(-2px); box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4); }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+        .spinner { display: inline-block; width: 1rem; height: 1rem; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 0.5rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .input-focus:focus { outline: none; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3); border-color: #6366f1; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -66,32 +31,20 @@
                     <label for="empresaNombre" class="block text-sm font-semibold text-gray-700 mb-2">
                         Nombre de la Empresa
                     </label>
-                    <input 
-                        type="text" 
-                        id="empresaNombre" 
-                        placeholder="Ingresa el nombre exacto de tu empresa" 
-                        required
-                        autocomplete="organization"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-xl input-focus transition">
+                    <input type="text" id="empresaNombre" placeholder="Ingresa el nombre exacto de tu empresa" required autocomplete="organization"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl input-focus transition">
                 </div>
 
                 <div>
                     <label for="claveAcceso" class="block text-sm font-semibold text-gray-700 mb-2">
                         Clave de Acceso
                     </label>
-                    <input 
-                        type="password" 
-                        id="claveAcceso" 
-                        placeholder="Tu clave secreta" 
-                        required
-                        autocomplete="current-password"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-xl input-focus transition">
+                    <input type="password" id="claveAcceso" placeholder="Tu clave secreta" required autocomplete="current-password"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl input-focus transition">
                 </div>
 
-                <button 
-                    type="submit" 
-                    id="btnSubmit"
-                    class="w-full btn-primary text-white font-bold py-4 rounded-xl flex items-center justify-center text-lg">
+                <button type="submit" id="btnSubmit"
+                        class="w-full btn-primary text-white font-bold py-4 rounded-xl flex items-center justify-center text-lg">
                     <span id="btnText">Iniciar Sesión</span>
                     <span id="btnSpinner" class="spinner hidden"></span>
                 </button>
@@ -112,18 +65,12 @@
     </div>
 
     <script>
-       const { createClient } = supabase; 
-       const supabaseClient = createClient( 
-        'https://djjylikkocemrlsjxscr.supabase.co',
-         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M'
-         );
-
-
         const form = document.getElementById('loginForm');
         const btnSubmit = document.getElementById('btnSubmit');
         const btnText = document.getElementById('btnText');
         const btnSpinner = document.getElementById('btnSpinner');
-        const errorMsg = document.getElementById('errorMsg').querySelector('p');
+        const errorDiv = document.getElementById('errorMsg');
+        const errorMsg = errorDiv.querySelector('p');
         const successMsg = document.getElementById('successMsg');
 
         form.addEventListener('submit', async (e) => {
@@ -132,7 +79,7 @@
             const nombre = document.getElementById('empresaNombre').value.trim();
             const clave = document.getElementById('claveAcceso').value.trim();
 
-            errorMsg.parentElement.classList.add('hidden');
+            errorDiv.classList.add('hidden');
             successMsg.classList.add('hidden');
             errorMsg.textContent = '';
 
@@ -146,57 +93,41 @@
             btnSpinner.classList.remove('hidden');
 
             try {
-                const { data, error } = await supabaseClient
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, clave })
+                });
 
-                    .from('empresas')
-                    .select('id, nombre, clave_acceso, estatus, fecha_vencimiento, gramaje_base_analisis, unidad_base_analisis')
-                    .eq('nombre', nombre)
-                    .single();
+                const data = await response.json();
 
-                if (error || !data) {
-                    mostrarError(error?.code === 'PGRST116' ? 'Empresa no encontrada. Verifica el nombre exacto.' : 'Error de conexión.');
+                if (!data.success) {
+                    mostrarError(data.error || 'Error al intentar conectar');
                     resetearBoton();
                     return;
                 }
 
-                if (data.clave_acceso !== clave) {
-                    mostrarError('Clave de acceso incorrecta.');
-                    resetearBoton();
-                    return;
-                }
-
-                if (data.estatus !== 'activa') {
-                    mostrarError(`La empresa está ${data.estatus}. Contacta al administrador.`);
-                    resetearBoton();
-                    return;
-                }
-
-                if (data.fecha_vencimiento && new Date() > new Date(data.fecha_vencimiento)) {
-                    mostrarError('La licencia de tu empresa ha expirado.');
-                    resetearBoton();
-                    return;
-                }
-
-                localStorage.setItem('empresa_id', data.id);
-                localStorage.setItem('empresa_nombre', data.nombre);
-                localStorage.setItem('gramaje_base_analisis', data.gramaje_base_analisis || 1000);
-                localStorage.setItem('unidad_base_analisis', data.unidad_base_analisis || 'g');
+                // Opcional: guardar en localStorage si lo necesitas en otras páginas
+                localStorage.setItem('empresa_id', data.empresa_id || '');
+                localStorage.setItem('empresa_nombre', data.empresa_nombre || '');
 
                 successMsg.classList.remove('hidden');
                 btnText.textContent = 'Acceso concedido';
 
-                setTimeout(() => window.location.href = '/dashboard', 1500);
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 1500);
 
             } catch (err) {
                 console.error(err);
-                mostrarError('Error inesperado. Revisa la consola.');
+                mostrarError('Error de conexión. Intenta de nuevo.');
                 resetearBoton();
             }
         });
 
         function mostrarError(mensaje) {
             errorMsg.textContent = mensaje;
-            errorMsg.parentElement.classList.remove('hidden');
+            errorDiv.classList.remove('hidden');
         }
 
         function resetearBoton() {
@@ -205,8 +136,8 @@
             btnSpinner.classList.add('hidden');
         }
 
-        document.getElementById('empresaNombre').addEventListener('input', () => errorMsg.parentElement.classList.add('hidden'));
-        document.getElementById('claveAcceso').addEventListener('input', () => errorMsg.parentElement.classList.add('hidden'));
+        document.getElementById('empresaNombre').addEventListener('input', () => errorDiv.classList.add('hidden'));
+        document.getElementById('claveAcceso').addEventListener('input', () => errorDiv.classList.add('hidden'));
     </script>
 </body>
 </html>
