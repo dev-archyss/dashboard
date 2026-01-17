@@ -7,15 +7,13 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# ¡Obligatorio para usar session!
+# Configuración de Seguridad para sesiones
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'tu-clave-secreta-super-larga-y-segura-2025-xyz123')
 
 # Credenciales de Supabase
 SUPABASE_URL = "https://djjylikkocemrlsjxscr.supabase.co"
-SUPABASE_KEY = os.getenv('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M')  # No pongas el string largo aquí por seguridad
-
-if not SUPABASE_KEY:
-    print("WARNING: SUPABASE_KEY no encontrada en las variables de entorno.")
+# Nota: Se usa el string proporcionado como fallback si la variable de entorno no existe
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M')
 
 headers = {
     "apikey": SUPABASE_KEY,
@@ -65,6 +63,7 @@ def fetch_table(table_name, params=None, empresa_id=None):
     return all_data
 
 def calculate_distance(lat1, lon1, lat2, lon2):
+    """Cálculo de distancia entre dos puntos (Haversine)"""
     R = 6371000
     d_lat = radians(lat2 - lat1)
     d_lon = radians(lon2 - lon1)
@@ -73,6 +72,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     return R * c
 
 def get_week_date_range(year, week_number):
+    """Obtiene el rango de fechas para una semana ISO específica"""
     jan4 = datetime(year, 1, 4)
     jan4_weekday = jan4.weekday()
     monday_week1 = jan4 - timedelta(days=jan4_weekday)
@@ -80,10 +80,8 @@ def get_week_date_range(year, week_number):
     end_of_week = start_of_week + timedelta(days=6)
     return start_of_week.strftime('%Y-%m-%d'), end_of_week.strftime('%Y-%m-%d')
 
-# ----------------------------------------------------------------------
-# --- Obtener empresa logueada (usada en planograma) ---
-# ----------------------------------------------------------------------
 def get_current_empresa():
+    """Valida la sesión actual y devuelve datos de la empresa"""
     empresa_id = session.get('empresa_id')
     if not empresa_id:
         return None
@@ -97,9 +95,15 @@ def get_current_empresa():
 # ----------------------------------------------------------------------
 # --- Rutas de Vistas (HTML) ---
 # ----------------------------------------------------------------------
+
 @app.route('/')
 def login():
     return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 @app.route('/dashboard')
 def dashboard():
@@ -154,14 +158,62 @@ def planograma():
     empresa = get_current_empresa()
     if not empresa:
         return redirect(url_for('login'))
-    
     return render_template('planograma.html', 
                            empresa_nombre=empresa['nombre'],
                            empresa_id=empresa['id'])
 
 # ----------------------------------------------------------------------
+# --- Lógica de Login (CORREGIDA) ---
+# ----------------------------------------------------------------------
+
+@app.route('/login', methods=['POST'])
+def do_login():
+    data = request.get_json()
+    nombre = data.get('nombre', '').strip()
+    clave = data.get('clave', '').strip()
+    
+    if not nombre or not clave:
+        return jsonify({"success": False, "error": "Completa ambos campos"}), 400
+
+    # Consulta a Supabase
+    url = f"{SUPABASE_URL}/rest/v1/empresas?nombre=eq.{nombre}&select=id,nombre,clave_acceso,estatus,fecha_vencimiento"
+    
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            return jsonify({"success": False, "error": "Error de conexión con la base de datos"}), 500
+        
+        empresas = response.json()
+        if not empresas:
+            return jsonify({"success": False, "error": "Empresa no encontrada"}), 401
+
+        empresa = empresas[0]
+
+        # Validación manual de clave
+        if empresa.get('clave_acceso') == clave:
+            if empresa.get('estatus') != 'activa':
+                return jsonify({"success": False, "error": "La cuenta no está activa"}), 403
+            
+            # Guardar en sesión
+            session.clear()
+            session['empresa_id'] = empresa['id']
+            session['empresa_nombre'] = empresa['nombre']
+            
+            return jsonify({
+                "success": True, 
+                "empresa_id": empresa['id'],
+                "empresa_nombre": empresa['nombre']
+            })
+        else:
+            return jsonify({"success": False, "error": "Clave incorrecta"}), 401
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ----------------------------------------------------------------------
 # --- Rutas API para Planograma ---
 # ----------------------------------------------------------------------
+
 @app.route('/api/planograma', methods=['GET'])
 def api_get_planograma():
     empresa = get_current_empresa()
@@ -179,28 +231,6 @@ def api_get_planograma():
         "url": public_url
     })
 
-@app.route('/login', methods=['POST'])
-def do_login():
-    data = request.get_json()
-    nombre = data.get('nombre', '').strip()
-    clave = data.get('clave', '').strip()
-    
-    print(f"Intento de login - Nombre recibido: '{nombre}'")  # ← Agrega esto
-    print(f"Longitud del nombre: {len(nombre)}")               # ← Ayuda a ver espacios ocultos
-    
-    if not nombre or not clave:
-        return jsonify({"success": False, "error": "Completa ambos campos"}), 400
-
-    url = f"{SUPABASE_URL}/rest/v1/empresas?nombre=eq.{nombre}&select=id,nombre,clave_acceso,estatus,fecha_vencimiento"
-    print(f"Consultando URL: {url}")  # ← Ver la URL exacta que se envía
-    
-    response = requests.get(url, headers=headers)
-    print(f"Status Supabase: {response.status_code}")
-    print(f"Respuesta Supabase: {response.text[:200]}...")  # ← Muestra los primeros 200 chars
-    
-    if response.status_code != 200 or not response.json():
-        return jsonify({"success": False, "error": "Empresa no encontrada. Verifica el nombre exacto."}), 401
-
 @app.route('/api/planograma/upload', methods=['POST'])
 def api_upload_planograma():
     empresa = get_current_empresa()
@@ -208,7 +238,6 @@ def api_upload_planograma():
         return jsonify({"success": False, "error": "No hay sesión activa"}), 401
 
     empresa_id = empresa['id']
-
     if 'file' not in request.files:
         return jsonify({"success": False, "error": "No se envió ningún archivo"}), 400
 
@@ -234,35 +263,25 @@ def api_upload_planograma():
         upload_response = requests.put(storage_url, headers=storage_headers, data=file.read())
 
         if upload_response.status_code not in (200, 201):
-            return jsonify({
-                "success": False,
-                "error": f"Error al subir archivo: {upload_response.text}"
-            }), 500
+            return jsonify({"success": False, "error": "Error al subir al storage"}), 500
 
         # Actualizar campo en tabla empresas
         update_url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{empresa_id}"
-        update_payload = {"planogram_image": file_name}
-        update_response = requests.patch(update_url, headers=headers, json=update_payload)
+        update_response = requests.patch(update_url, headers=headers, json={"planogram_image": file_name})
 
         if update_response.status_code not in (200, 204):
-            return jsonify({
-                "success": False,
-                "error": "Archivo subido pero no se pudo actualizar la base de datos"
-            }), 500
+            return jsonify({"success": False, "error": "Error al actualizar base de datos"}), 500
 
         public_url = f"{SUPABASE_URL}/storage/v1/object/public/visits_photos/{file_name}"
-        return jsonify({
-            "success": True,
-            "message": "Planograma actualizado correctamente",
-            "url": public_url
-        })
+        return jsonify({"success": True, "url": public_url})
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------------------------------------------------
-# --- Rutas API existentes (sin cambios) ---
+# --- API Registros (REFACTORIZADO COMPLETO) ---
 # ----------------------------------------------------------------------
+
 @app.route('/api/records', methods=['GET'])
 def get_records():
     empresa_id = request.args.get('empresa_id')
@@ -287,8 +306,10 @@ def get_records():
         params.append(("created_at", f"lte.{date_to}T23:59:59+00:00"))
     elif date_from:
         params.append(("created_at", f"gte.{date_from}T00:00:00+00:00"))
+    
     if date_to:
         params.append(("created_at", f"lte.{date_to}T23:59:59+00:00"))
+        
     if promoter_id and promoter_id != 'all':
         params.append(("promoter_id", f"eq.{promoter_id}"))
 
@@ -303,74 +324,44 @@ def get_records():
     formatted_records = []
     for record in records_raw:
         promoter_info = record.get('web_promotores') or {}
-        promoter_name = promoter_info.get('promoter_name', "Sin Promotor")
-        clientes_asig = promoter_info.get('clientes_asig', 0)
-        dias_trabajo = promoter_info.get('dias_trabajo', 0)
-
-        estado = record.get("state", "N/A")
-        zona = record.get("zone", "N/A")
-        myitems = record.get("myitems", {})
-        competitoritems = record.get("competitoritems", {})
-
-        cliente_data = None
-        cliente_id = record.get("cliente_id")
-        if cliente_id is not None:
-            try:
-                cliente_id_int = int(cliente_id)
-                cliente_data = clientes_by_id.get(cliente_id_int)
-            except (ValueError, TypeError):
-                pass
-
+        
+        # Datos de coordenadas de la visita
         try:
             visit_lat = float(record.get("latitude")) if record.get("latitude") not in [None, "None"] else None
             visit_lon = float(record.get("longitude")) if record.get("longitude") not in [None, "None"] else None
-        except (ValueError, TypeError):
+        except:
             visit_lat = visit_lon = None
 
-        visit_coords_str = f"{visit_lat}, {visit_lon}" if visit_lat and visit_lon else "N/A"
-
-        cliente_coords_str = "N/A"
+        # Datos del cliente asociado
+        cliente_id = record.get("cliente_id")
+        cliente_data = clientes_by_id.get(int(cliente_id)) if cliente_id else None
+        
         distance = 0
         verified_status = "Cliente Desconocido"
+        cliente_coords_str = "N/A"
 
         if cliente_data:
-            try:
-                cliente_lat = float(cliente_data.get("latitude", 0))
-                cliente_lon = float(cliente_data.get("longitude", 0))
-            except (ValueError, TypeError):
-                cliente_lat = cliente_lon = 0
-
-            if cliente_lat != 0 and cliente_lon != 0:
-                cliente_coords_str = f"{cliente_lat}, {cliente_lon}"
-
-            if visit_lat is None or visit_lon is None:
-                verified_status = "Visita sin Coordenadas"
-            elif cliente_lat == 0 or cliente_lon == 0:
-                verified_status = "Cliente sin Coordenadas"
-            else:
-                distance = calculate_distance(visit_lat, visit_lon, cliente_lat, cliente_lon)
+            c_lat = float(cliente_data.get("latitude", 0))
+            c_lon = float(cliente_data.get("longitude", 0))
+            if c_lat != 0: cliente_coords_str = f"{c_lat}, {c_lon}"
+            
+            if visit_lat and c_lat != 0:
+                distance = calculate_distance(visit_lat, visit_lon, c_lat, c_lon)
                 verified_status = "Confirmado" if distance <= 150 else "No Confirmado"
+            elif not visit_lat:
+                verified_status = "Sin GPS Visita"
 
         formatted_records.append({
             "id": record.get("id"),
             "created_at": record.get("created_at"),
-            "promoter_id": record.get("promoter_id"),
-            "promoter_name": promoter_name,
-            "clientes_asig": clientes_asig,
-            "dias_trabajo": dias_trabajo,
-            "state": estado,
-            "zone": zona,
+            "promoter_name": promoter_info.get('promoter_name', "Sin Nombre"),
+            "state": record.get("state", "N/A"),
+            "zone": record.get("zone", "N/A"),
             "trade": record.get("trade", "N/A"),
-            "visit_coords": visit_coords_str,
-            "client_coords": cliente_coords_str,
             "distance": round(distance, 2),
             "verified": verified_status,
-            "latitude": visit_lat,
-            "longitude": visit_lon,
-            "myitems": myitems,
-            "competitoritems": competitoritems,
-            "cliente_id": cliente_id,
-            "comments": record.get("comments", "N/A"),
+            "myitems": record.get("myitems", {}),
+            "competitoritems": record.get("competitoritems", {}),
             "before_photos": record.get("before_photos", []),
             "after_photos": record.get("after_photos", [])
         })
@@ -378,7 +369,6 @@ def get_records():
     return jsonify({
         "records": formatted_records,
         "promoters": promotores,
-        "total_promoters_in_db": len(promotores),
         "estados": estados,
         "zonas": zonas
     })
@@ -386,125 +376,80 @@ def get_records():
 @app.route('/api/weeks_with_visits', methods=['GET'])
 def get_weeks_with_visits():
     empresa_id = request.args.get('empresa_id')
-    if not empresa_id:
-        return jsonify({"error": "empresa_id es requerido"}), 400
-
+    if not empresa_id: return jsonify({"error": "empresa_id requerido"}), 400
+    
     year = request.args.get('year', str(datetime.now().year))
-
     params = [
         ("select", "created_at"),
         ("empresa_id", f"eq.{empresa_id}"),
-        ("created_at", f"gte.{year}-01-01T00:00:00+00:00"),
-        ("created_at", f"lte.{year}-12-31T23:59:59+00:00"),
-        ("order", "created_at.desc")
+        ("created_at", f"gte.{year}-01-01T00:00:00+00:00")
     ]
-
-    records_raw = fetch_table("web_precios", params=params)
+    records = fetch_table("web_precios", params=params)
     weeks = set()
-
-    for r in records_raw:
-        created_at = r.get('created_at')
-        if created_at:
-            try:
-                dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                week_num = dt.isocalendar()[1]
-                weeks.add(week_num)
-            except ValueError:
-                pass
-
+    for r in records:
+        dt = datetime.fromisoformat(r['created_at'].replace('Z', '+00:00'))
+        weeks.add(dt.isocalendar()[1])
     return jsonify({"weeks": sorted(list(weeks), reverse=True)})
-
 
 @app.route('/delete_records', methods=['POST'])
 def delete_records():
     data = request.json or {}
     ids = data.get("ids", [])
     empresa_id = data.get("empresa_id")
-
-    if not empresa_id:
-        return jsonify({"success": False, "error": "empresa_id es requerido"}), 400
-    if not ids:
-        return jsonify({"success": False, "error": "No IDs provided"}), 400
-
-    # Filtro adicional por empresa para mayor seguridad
-    id_list_str = ",".join(map(str, ids))
-    delete_url = f"{SUPABASE_URL}/rest/v1/web_precios?id=in.({id_list_str})&empresa_id=eq.{empresa_id}"
-
-    response = requests.delete(delete_url, headers=headers)
-    return jsonify({"success": response.status_code in [200, 204]})
-
+    if not empresa_id or not ids: return jsonify({"success": False}), 400
+    
+    id_list = ",".join(map(str, ids))
+    url = f"{SUPABASE_URL}/rest/v1/web_precios?id=in.({id_list})&empresa_id=eq.{empresa_id}"
+    res = requests.delete(url, headers=headers)
+    return jsonify({"success": res.ok})
 
 # ----------------------------------------------------------------------
 # --- Rutas CRUD Productos Competencia ---
 # ----------------------------------------------------------------------
-@app.route('/api/competitorproducts', methods=['POST'])
-def create_competitor_product():
-    product_data = request.json
-    payload = {"presentation": product_data.get("presentation")}
-    if not payload["presentation"]:
-        return jsonify({"success": False, "error": "Presentation is required"}), 400
 
-    try:
-        response = requests.post(f"{SUPABASE_URL}/rest/v1/web_competidor", headers=headers, json=payload)
-        response.raise_for_status()
-        return jsonify({"success": True, "data": response.json() if response.content else {}}), 201
-    except requests.exceptions.RequestException as e:
-        error_msg = e.response.json().get('message', str(e)) if e.response else str(e)
-        return jsonify({"success": False, "error": error_msg}), 400
-
-@app.route('/api/competitorproducts', methods=['GET'])
-def get_competitor_products():
-    products = fetch_table("web_competidor", params=[("select", "id,presentation,created_at"), ("order", "presentation.asc")])
-    return jsonify({"products": products})
-
-@app.route('/api/competitorproducts/<int:product_id>', methods=['PATCH'])
-def update_competitor_product(product_id):
+@app.route('/api/competitorproducts', methods=['GET', 'POST'])
+def handle_competitor_products():
+    if request.method == 'GET':
+        products = fetch_table("web_competidor", params=[("order", "presentation.asc")])
+        return jsonify({"products": products})
+    
     data = request.json
-    update_payload = {k: v for k, v in data.items() if k == "presentation"}
-    if not update_payload:
-        return jsonify({"success": False, "error": "No data to update"}), 400
-    response = requests.patch(f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}", headers=headers, json=update_payload)
-    return jsonify({"success": response.ok})
+    res = requests.post(f"{SUPABASE_URL}/rest/v1/web_competidor", headers=headers, json={"presentation": data.get("presentation")})
+    return jsonify({"success": res.ok}), 201
 
-@app.route('/api/competitorproducts/<int:product_id>', methods=['DELETE'])
-def delete_competitor_product(product_id):
-    response = requests.delete(f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}", headers=headers)
-    return jsonify({"success": response.ok}), 204 if response.ok else 500
-
+@app.route('/api/competitorproducts/<int:product_id>', methods=['PATCH', 'DELETE'])
+def update_delete_competitor(product_id):
+    url = f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}"
+    if request.method == 'PATCH':
+        res = requests.patch(url, headers=headers, json=request.json)
+    else:
+        res = requests.delete(url, headers=headers)
+    return jsonify({"success": res.ok})
 
 # ----------------------------------------------------------------------
 # --- Rutas CRUD Productos Propios ---
 # ----------------------------------------------------------------------
-@app.route('/api/myproducts', methods=['POST'])
-def create_myproduct():
+
+@app.route('/api/myproducts', methods=['GET', 'POST'])
+def handle_my_products():
+    if request.method == 'GET':
+        products = fetch_table("web_myproductos", params=[("order", "presentation.asc")])
+        return jsonify({"products": products})
+    
     data = request.json
-    payload = {"presentation": data.get("presentation")}
-    if not payload["presentation"]:
-        return jsonify({"success": False, "error": "Presentation is required"}), 400
-    response = requests.post(f"{SUPABASE_URL}/rest/v1/web_myproductos", headers=headers, json=payload)
-    return jsonify({"success": response.ok, "data": response.json() if response.content else {}}), 201 if response.ok else 400
+    res = requests.post(f"{SUPABASE_URL}/rest/v1/web_myproductos", headers=headers, json={"presentation": data.get("presentation")})
+    return jsonify({"success": res.ok}), 201
 
-@app.route('/api/myproducts', methods=['GET'])
-def get_myproducts():
-    products = fetch_table("web_myproductos", params=[("select", "id,presentation,created_at"), ("order", "presentation.asc")])
-    return jsonify({"products": products})
-
-@app.route('/api/myproducts/<int:product_id>', methods=['PATCH'])
-def update_myproduct(product_id):
-    data = request.json
-    update_payload = {k: v for k, v in data.items() if k == "presentation"}
-    if not update_payload:
-        return jsonify({"success": False, "error": "No data to update"}), 400
-    response = requests.patch(f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{product_id}", headers=headers, json=update_payload)
-    return jsonify({"success": response.ok})
-
-@app.route('/api/myproducts/<int:product_id>', methods=['DELETE'])
-def delete_myproduct(product_id):
-    response = requests.delete(f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{product_id}", headers=headers)
-    return jsonify({"success": response.ok}), 204 if response.ok else 500
-
+@app.route('/api/myproducts/<int:product_id>', methods=['PATCH', 'DELETE'])
+def update_delete_myproduct(product_id):
+    url = f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{product_id}"
+    if request.method == 'PATCH':
+        res = requests.patch(url, headers=headers, json=request.json)
+    else:
+        res = requests.delete(url, headers=headers)
+    return jsonify({"success": res.ok})
 
 # --- INICIO ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8020))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)

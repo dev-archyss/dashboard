@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* tus estilos sin cambios */
         body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); min-height: 100vh; }
         .card { background: white; border-radius: 1.5rem; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); overflow: hidden; }
         .btn-primary { background: linear-gradient(to right, #4f46e5, #7c3aed); transition: all 0.3s ease; }
@@ -22,29 +21,24 @@
     <div class="w-full max-w-md card">
         <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white text-center">
             <h1 class="text-3xl font-extrabold">Sistema de Captura de Precios</h1>
-            <p class="mt-2 opacity-90">Acceso exclusivo para empresas registradas</p>
+            <p class="mt-2 opacity-90">Acceso exclusivo para empresas</p>
         </div>
 
         <div class="p-8">
             <form id="loginForm" class="space-y-6">
                 <div>
-                    <label for="empresaNombre" class="block text-sm font-semibold text-gray-700 mb-2">
-                        Nombre de la Empresa
-                    </label>
-                    <input type="text" id="empresaNombre" placeholder="Ingresa el nombre exacto de tu empresa" required autocomplete="organization"
+                    <label for="empresaNombre" class="block text-sm font-semibold text-gray-700 mb-2">Nombre de la Empresa</label>
+                    <input type="text" id="empresaNombre" placeholder="Ej: JUMPI" required 
                            class="w-full px-4 py-3 border border-gray-300 rounded-xl input-focus transition">
                 </div>
 
                 <div>
-                    <label for="claveAcceso" class="block text-sm font-semibold text-gray-700 mb-2">
-                        Clave de Acceso
-                    </label>
-                    <input type="password" id="claveAcceso" placeholder="Tu clave secreta" required autocomplete="current-password"
+                    <label for="claveAcceso" class="block text-sm font-semibold text-gray-700 mb-2">Clave de Acceso</label>
+                    <input type="password" id="claveAcceso" placeholder="••••••••" required 
                            class="w-full px-4 py-3 border border-gray-300 rounded-xl input-focus transition">
                 </div>
 
-                <button type="submit" id="btnSubmit"
-                        class="w-full btn-primary text-white font-bold py-4 rounded-xl flex items-center justify-center text-lg">
+                <button type="submit" id="btnSubmit" class="w-full btn-primary text-white font-bold py-4 rounded-xl flex items-center justify-center text-lg">
                     <span id="btnText">Iniciar Sesión</span>
                     <span id="btnSpinner" class="spinner hidden"></span>
                 </button>
@@ -55,11 +49,7 @@
             </div>
 
             <div id="successMsg" class="mt-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg hidden">
-                <p class="font-medium text-center">¡Bienvenido! Redirigiendo al dashboard...</p>
-            </div>
-
-            <div class="mt-8 text-center text-xs text-gray-500">
-                <p>¿Problemas de acceso? Contacta a soporte técnico.</p>
+                <p class="font-medium text-center">¡Bienvenido! Redirigiendo...</p>
             </div>
         </div>
     </div>
@@ -75,19 +65,12 @@
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-
             const nombre = document.getElementById('empresaNombre').value.trim();
             const clave = document.getElementById('claveAcceso').value.trim();
 
+            // Reset UI
             errorDiv.classList.add('hidden');
             successMsg.classList.add('hidden');
-            errorMsg.textContent = '';
-
-            if (!nombre || !clave) {
-                mostrarError('Por favor, completa ambos campos.');
-                return;
-            }
-
             btnSubmit.disabled = true;
             btnText.textContent = 'Validando...';
             btnSpinner.classList.remove('hidden');
@@ -101,26 +84,18 @@
 
                 const data = await response.json();
 
-                if (!data.success) {
-                    mostrarError(data.error || 'Error al intentar conectar');
+                if (data.success) {
+                    localStorage.setItem('empresa_id', data.empresa_id);
+                    localStorage.setItem('empresa_nombre', data.empresa_nombre);
+                    successMsg.classList.remove('hidden');
+                    btnText.textContent = 'Acceso concedido';
+                    setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
+                } else {
+                    mostrarError(data.error || 'Credenciales incorrectas');
                     resetearBoton();
-                    return;
                 }
-
-                // Opcional: guardar en localStorage si lo necesitas en otras páginas
-                localStorage.setItem('empresa_id', data.empresa_id || '');
-                localStorage.setItem('empresa_nombre', data.empresa_nombre || '');
-
-                successMsg.classList.remove('hidden');
-                btnText.textContent = 'Acceso concedido';
-
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 1500);
-
             } catch (err) {
-                console.error(err);
-                mostrarError('Error de conexión. Intenta de nuevo.');
+                mostrarError('Error de conexión con el servidor');
                 resetearBoton();
             }
         });
@@ -135,9 +110,6 @@
             btnText.textContent = 'Iniciar Sesión';
             btnSpinner.classList.add('hidden');
         }
-
-        document.getElementById('empresaNombre').addEventListener('input', () => errorDiv.classList.add('hidden'));
-        document.getElementById('claveAcceso').addEventListener('input', () => errorDiv.classList.add('hidden'));
     </script>
 </body>
 </html>
