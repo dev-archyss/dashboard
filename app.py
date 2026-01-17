@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 import requests
 import os
 from math import radians, sin, cos, sqrt, atan2
@@ -7,9 +7,12 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
+# ¡Obligatorio para usar session!
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'tu-clave-secreta-super-larga-y-segura-2025-xyz123')
+
 # Credenciales de Supabase
 SUPABASE_URL = "https://djjylikkocemrlsjxscr.supabase.co"
-SUPABASE_KEY = os.getenv('SUPABASE_KEY') # No pongas el string largo aquí por seguridad
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')  # No pongas el string largo aquí por seguridad
 
 if not SUPABASE_KEY:
     print("WARNING: SUPABASE_KEY no encontrada en las variables de entorno.")
@@ -33,7 +36,6 @@ def fetch_table(table_name, params=None, empresa_id=None):
 
     query_params = params or []
 
-    # Aplicar filtro de empresa si la tabla lo tiene y se proporciona empresa_id
     if empresa_id is not None:
         query_params.append(("empresa_id", f"eq.{empresa_id}"))
 
@@ -79,6 +81,20 @@ def get_week_date_range(year, week_number):
     return start_of_week.strftime('%Y-%m-%d'), end_of_week.strftime('%Y-%m-%d')
 
 # ----------------------------------------------------------------------
+# --- Obtener empresa logueada (usada en planograma) ---
+# ----------------------------------------------------------------------
+def get_current_empresa():
+    empresa_id = session.get('empresa_id')
+    if not empresa_id:
+        return None
+    
+    url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{empresa_id}&select=id,nombre,planogram_image"
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200 and response.json():
+        return response.json()[0]
+    return None
+
+# ----------------------------------------------------------------------
 # --- Rutas de Vistas (HTML) ---
 # ----------------------------------------------------------------------
 @app.route('/')
@@ -87,40 +103,144 @@ def login():
 
 @app.route('/dashboard')
 def dashboard():
+    if 'empresa_id' not in session:
+        return redirect(url_for('login'))
     return render_template('dashboard.html')
 
 @app.route('/gps')
 def gps():
+    if 'empresa_id' not in session:
+        return redirect(url_for('login'))
     return render_template('gps.html')
 
 @app.route('/clientes')
 def clientes():
+    if 'empresa_id' not in session:
+        return redirect(url_for('login'))
     return render_template('clientes.html')
 
 @app.route('/analisis')
 def analisis():
+    if 'empresa_id' not in session:
+        return redirect(url_for('login'))
     return render_template('analisis.html')
 
 @app.route('/promotores')
 def promotores():
+    if 'empresa_id' not in session:
+        return redirect(url_for('login'))
     return render_template('promotores.html')
 
 @app.route('/competencia')
 def productos_competencia():
+    if 'empresa_id' not in session:
+        return redirect(url_for('login'))
     return render_template('competencia.html')
 
 @app.route('/productos')
 def productos():
+    if 'empresa_id' not in session:
+        return redirect(url_for('login'))
     return render_template('productos.html')
 
 @app.route('/stock')
 def stock():
+    if 'empresa_id' not in session:
+        return redirect(url_for('login'))
     return render_template('stock.html')
 
-# ----------------------------------------------------------------------
-# --- Rutas API ---
-# ----------------------------------------------------------------------
+@app.route('/planograma')
+def planograma():
+    empresa = get_current_empresa()
+    if not empresa:
+        return redirect(url_for('login'))
+    
+    return render_template('planograma.html', 
+                           empresa_nombre=empresa['nombre'],
+                           empresa_id=empresa['id'])
 
+# ----------------------------------------------------------------------
+# --- Rutas API para Planograma ---
+# ----------------------------------------------------------------------
+@app.route('/api/planograma', methods=['GET'])
+def api_get_planograma():
+    empresa = get_current_empresa()
+    if not empresa:
+        return jsonify({"success": False, "error": "No hay sesión activa"}), 401
+
+    planogram_image = empresa.get('planogram_image')
+    if not planogram_image:
+        return jsonify({"success": True, "has_planograma": False})
+
+    public_url = f"{SUPABASE_URL}/storage/v1/object/public/visits_photos/{planogram_image}"
+    return jsonify({
+        "success": True,
+        "has_planograma": True,
+        "url": public_url
+    })
+
+@app.route('/api/planograma/upload', methods=['POST'])
+def api_upload_planograma():
+    empresa = get_current_empresa()
+    if not empresa:
+        return jsonify({"success": False, "error": "No hay sesión activa"}), 401
+
+    empresa_id = empresa['id']
+
+    if 'file' not in request.files:
+        return jsonify({"success": False, "error": "No se envió ningún archivo"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"success": False, "error": "Nombre de archivo vacío"}), 400
+
+    allowed_extensions = {'.jpg', '.jpeg', '.png'}
+    if not any(file.filename.lower().endswith(ext) for ext in allowed_extensions):
+        return jsonify({"success": False, "error": "Formato no permitido. Usa JPG o PNG"}), 400
+
+    try:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        file_ext = os.path.splitext(file.filename)[1]
+        file_name = f"planogramas/{empresa_id}/planograma_{timestamp}{file_ext}"
+
+        # Subir archivo a Supabase Storage
+        storage_url = f"{SUPABASE_URL}/storage/v1/object/visits_photos/{file_name}"
+        storage_headers = {
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": file.content_type or "image/jpeg"
+        }
+        upload_response = requests.put(storage_url, headers=storage_headers, data=file.read())
+
+        if upload_response.status_code not in (200, 201):
+            return jsonify({
+                "success": False,
+                "error": f"Error al subir archivo: {upload_response.text}"
+            }), 500
+
+        # Actualizar campo en tabla empresas
+        update_url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{empresa_id}"
+        update_payload = {"planogram_image": file_name}
+        update_response = requests.patch(update_url, headers=headers, json=update_payload)
+
+        if update_response.status_code not in (200, 204):
+            return jsonify({
+                "success": False,
+                "error": "Archivo subido pero no se pudo actualizar la base de datos"
+            }), 500
+
+        public_url = f"{SUPABASE_URL}/storage/v1/object/public/visits_photos/{file_name}"
+        return jsonify({
+            "success": True,
+            "message": "Planograma actualizado correctamente",
+            "url": public_url
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ----------------------------------------------------------------------
+# --- Rutas API existentes (sin cambios) ---
+# ----------------------------------------------------------------------
 @app.route('/api/records', methods=['GET'])
 def get_records():
     empresa_id = request.args.get('empresa_id')
@@ -156,7 +276,6 @@ def get_records():
     estados = fetch_table("web_estados", empresa_id=empresa_id)
     zonas = fetch_table("web_zonas", empresa_id=empresa_id)
 
-    # Diccionario rápido de clientes por id
     clientes_by_id = {int(c["id"]): c for c in clientes if "id" in c}
 
     formatted_records = []
@@ -180,7 +299,6 @@ def get_records():
             except (ValueError, TypeError):
                 pass
 
-        # Coordenadas de visita
         try:
             visit_lat = float(record.get("latitude")) if record.get("latitude") not in [None, "None"] else None
             visit_lon = float(record.get("longitude")) if record.get("longitude") not in [None, "None"] else None
@@ -189,7 +307,6 @@ def get_records():
 
         visit_coords_str = f"{visit_lat}, {visit_lon}" if visit_lat and visit_lon else "N/A"
 
-        # Coordenadas de cliente
         cliente_coords_str = "N/A"
         distance = 0
         verified_status = "Cliente Desconocido"
@@ -213,30 +330,28 @@ def get_records():
                 verified_status = "Confirmado" if distance <= 150 else "No Confirmado"
 
         formatted_records.append({
-    "id": record.get("id"),
-    "created_at": record.get("created_at"),
-    "promoter_id": record.get("promoter_id"),
-    "promoter_name": promoter_name,
-    "clientes_asig": clientes_asig,
-    "dias_trabajo": dias_trabajo,
-    "state": estado,
-    "zone": zona,
-    "trade": record.get("trade", "N/A"),
-    "visit_coords": visit_coords_str,
-    "client_coords": cliente_coords_str,
-    "distance": round(distance, 2),
-    "verified": verified_status,
-    "latitude": visit_lat,
-    "longitude": visit_lon,
-    "myitems": myitems,
-    "competitoritems": competitoritems,
-    "cliente_id": cliente_id,
-    "comments": record.get("comments", "N/A"),
-    
-    # ← Estas dos líneas son las que faltaban ↓
-    "before_photos": record.get("before_photos", []),
-    "after_photos": record.get("after_photos", [])
-})
+            "id": record.get("id"),
+            "created_at": record.get("created_at"),
+            "promoter_id": record.get("promoter_id"),
+            "promoter_name": promoter_name,
+            "clientes_asig": clientes_asig,
+            "dias_trabajo": dias_trabajo,
+            "state": estado,
+            "zone": zona,
+            "trade": record.get("trade", "N/A"),
+            "visit_coords": visit_coords_str,
+            "client_coords": cliente_coords_str,
+            "distance": round(distance, 2),
+            "verified": verified_status,
+            "latitude": visit_lat,
+            "longitude": visit_lon,
+            "myitems": myitems,
+            "competitoritems": competitoritems,
+            "cliente_id": cliente_id,
+            "comments": record.get("comments", "N/A"),
+            "before_photos": record.get("before_photos", []),
+            "after_photos": record.get("after_photos", [])
+        })
 
     return jsonify({
         "records": formatted_records,
@@ -245,7 +360,6 @@ def get_records():
         "estados": estados,
         "zonas": zonas
     })
-
 
 @app.route('/api/weeks_with_visits', methods=['GET'])
 def get_weeks_with_visits():
