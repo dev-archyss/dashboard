@@ -181,17 +181,47 @@ def api_get_planograma():
 
 @app.route('/login', methods=['POST'])
 def do_login():
-    nombre = request.form['nombre']
-    clave = request.form['clave']
+    data = request.get_json()  # Usamos JSON porque tu frontend envía fetch con JSON
+    nombre = data.get('nombre', '').strip()
+    clave = data.get('clave', '').strip()
     
-    # Tu lógica de validación contra Supabase
-    # Suponiendo que encuentras la empresa...
-    empresa = {...}  # obtienes id y nombre
+    if not nombre or not clave:
+        return jsonify({"success": False, "error": "Completa ambos campos"}), 400
+
+    # Buscar empresa por nombre exacto
+    url = f"{SUPABASE_URL}/rest/v1/empresas?nombre=eq.{nombre}&select=id,nombre,clave_acceso,estatus,fecha_vencimiento"
+    response = requests.get(url, headers=headers)
     
+    if response.status_code != 200 or not response.json():
+        return jsonify({"success": False, "error": "Empresa no encontrada. Verifica el nombre exacto."}), 401
+    
+    empresa = response.json()[0]
+    
+    # Comparación directa de la clave (texto plano, como pediste)
+    if empresa.get('clave_acceso') != clave:
+        return jsonify({"success": False, "error": "Clave de acceso incorrecta."}), 401
+    
+    # Validaciones adicionales
+    if empresa.get('estatus') != 'activa':
+        return jsonify({"success": False, "error": f"La empresa está {empresa['estatus']}. Contacta al administrador."}), 403
+    
+    if empresa.get('fecha_vencimiento'):
+        try:
+            venc = datetime.fromisoformat(empresa['fecha_vencimiento'])
+            if datetime.now() > venc:
+                return jsonify({"success": False, "error": "La licencia de tu empresa ha expirado."}), 403
+        except:
+            pass  # Si falla el parseo, no bloqueamos por vencimiento
+    
+    # Guardar en sesión
     session['empresa_id'] = empresa['id']
     session['empresa_nombre'] = empresa['nombre']
     
-    return redirect(url_for('dashboard'))
+    return jsonify({
+        "success": True,
+        "message": "Login correcto",
+        "redirect": url_for('dashboard')
+    })
 
 @app.route('/api/planograma/upload', methods=['POST'])
 def api_upload_planograma():
@@ -427,7 +457,7 @@ def delete_records():
 
 
 # ----------------------------------------------------------------------
-# --- Rutas CRUD Productos Competencia (sin cambios, pero ahora solo ven datos globales o por empresa si lo deseas) ---
+# --- Rutas CRUD Productos Competencia ---
 # ----------------------------------------------------------------------
 @app.route('/api/competitorproducts', methods=['POST'])
 def create_competitor_product():
@@ -496,8 +526,7 @@ def delete_myproduct(product_id):
     return jsonify({"success": response.ok}), 204 if response.ok else 500
 
 
-# --- INICIO DINÁMICO PARA RENDER ---
+# --- INICIO ---
 if __name__ == "__main__":
-    # Render usa la variable PORT
     port = int(os.environ.get("PORT", 8020))
     app.run(host='0.0.0.0', port=port)
