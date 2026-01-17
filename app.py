@@ -12,7 +12,7 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'tu-clave-secreta-super-larga-y-s
 
 # Credenciales de Supabase
 SUPABASE_URL = "https://djjylikkocemrlsjxscr.supabase.co"
-SUPABASE_KEY = os.getenv('SUPABASE_KEY')  # No pongas el string largo aquí por seguridad
+SUPABASE_KEY = os.getenv('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M')  # No pongas el string largo aquí por seguridad
 
 if not SUPABASE_KEY:
     print("WARNING: SUPABASE_KEY no encontrada en las variables de entorno.")
@@ -178,6 +178,20 @@ def api_get_planograma():
         "has_planograma": True,
         "url": public_url
     })
+
+@app.route('/login', methods=['POST'])
+def do_login():
+    nombre = request.form['nombre']
+    clave = request.form['clave']
+    
+    # Tu lógica de validación contra Supabase
+    # Suponiendo que encuentras la empresa...
+    empresa = {...}  # obtienes id y nombre
+    
+    session['empresa_id'] = empresa['id']
+    session['empresa_nombre'] = empresa['nombre']
+    
+    return redirect(url_for('dashboard'))
 
 @app.route('/api/planograma/upload', methods=['POST'])
 def api_upload_planograma():
