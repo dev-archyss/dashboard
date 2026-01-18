@@ -1,0 +1,89 @@
+<nav class="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50 transition-colors duration-300 backdrop-blur-md bg-opacity-90 dark:bg-opacity-90">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <!-- Logo y Empresa -->
+            <div class="flex items-center gap-3 min-w-fit">
+                <div class="bg-gradient-to-br from-indigo-600 to-purple-600 text-white p-2 rounded-lg shadow-lg shadow-indigo-500/30">
+                    <i class="fas fa-bolt text-lg"></i>
+                </div>
+                <div class="hidden md:block">
+                    <h1 class="text-lg font-bold text-gray-800 dark:text-white leading-tight tracking-tight">Sparking Dashboard</h1>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium truncate max-w-[150px]" id="navEmpresaNombre">Cargando...</p>
+                </div>
+            </div>
+
+            <!-- Links de Navegación (Desktop) -->
+            <div class="hidden xl:flex space-x-1 items-center ml-4 overflow-x-auto no-scrollbar">
+                <a href="/dashboard" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="/analisis" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-chart-pie"></i> Análisis</a>
+                <a href="/clientes" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-store"></i> Clientes</a>
+                <a href="/promotores" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-user-tie"></i> Promotores</a>
+                <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-2"></div>
+                <a href="/productos" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-box-open"></i> Productos</a>
+                <a href="/competencia" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-tag"></i> Competencia</a>
+                <a href="/stock" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-boxes"></i> Stock</a>
+                <a href="/planograma" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-image"></i> Planograma</a>
+                <a href="/gps" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-map-marked-alt"></i> GPS</a>
+            </div>
+
+            <!-- Botones Derecha -->
+            <div class="flex items-center gap-3">
+                <button onclick="toggleTheme()" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-700 transition-colors focus:outline-none" title="Cambiar Tema">
+                    <i class="fas fa-moon hidden dark:block"></i>
+                    <i class="fas fa-sun block dark:hidden"></i>
+                </button>
+                <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="xl:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-slate-700 focus:outline-none">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <a href="/logout" class="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Cerrar Sesión">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menú Móvil -->
+    <div id="mobile-menu" class="hidden xl:hidden bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 shadow-lg absolute w-full left-0">
+        <div class="px-4 pt-2 pb-4 space-y-1 grid grid-cols-2 gap-2">
+            <a href="/dashboard" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Dashboard</a>
+            <a href="/analisis" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Análisis</a>
+            <a href="/clientes" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Clientes</a>
+            <a href="/promotores" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Promotores</a>
+            <a href="/productos" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Productos</a>
+            <a href="/competencia" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Competencia</a>
+            <a href="/stock" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Stock</a>
+            <a href="/planograma" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Planograma</a>
+            <a href="/gps" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">GPS</a>
+        </div>
+    </div>
+</nav>
+
+<script>
+    // Lógica del Tema (Oscuro/Claro)
+    function initTheme() {
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }
+    initTheme();
+    function toggleTheme() {
+        if (document.documentElement.classList.contains('dark')) {
+            document.documentElement.classList.remove('dark'); localStorage.theme = 'light';
+        } else {
+            document.documentElement.classList.add('dark'); localStorage.theme = 'dark';
+        }
+    }
+    // Resaltar enlace activo y cargar nombre empresa
+    document.addEventListener('DOMContentLoaded', () => {
+        const path = window.location.pathname;
+        document.querySelectorAll('.nav-link').forEach(link => {
+            if(link.getAttribute('href') === path) link.classList.add('bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-900/50', 'dark:text-indigo-300');
+            else link.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:text-indigo-600', 'dark:text-gray-300', 'dark:hover:bg-slate-700');
+        });
+        const empresaNombre = localStorage.getItem('empresa_nombre') || 'Empresa';
+        const navDisplay = document.getElementById('navEmpresaNombre');
+        if (navDisplay) navDisplay.textContent = empresaNombre;
+    });
+</script>
