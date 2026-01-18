@@ -7,67 +7,56 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'azul-pastel': '#A7C7E7',
-                        'azul-claro': '#D6EAF8',
-                        'azul-oscuro-suave': '#5A9BD4',
-                    }
-                }
-            }
+            darkMode: 'class'
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: #D6EAF8; margin: 5% auto; padding: 20px; border-radius: 10px; width: 80%; max-width: 600px; }
-        .close { color: #5A9BD4; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-content { margin: 5% auto; padding: 20px; border-radius: 10px; width: 80%; max-width: 600px; }
+        .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
-<body class="bg-azul-claro p-6 font-sans">
-    <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold mb-6 text-azul-oscuro-suave text-center">Panel de Control de Clientes</h1>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
+    {% include 'navbar.html' %}
 
-        <!-- Botones de navegación -->
-        <div class="flex justify-center space-x-4 mb-6">
-            <a href="/analisis" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white">Análisis de Precio</a>
-            <a href="/dashboard" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white">Dashboard</a>
-        </div>
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <h1 class="text-3xl font-bold mb-6 text-indigo-600 dark:text-indigo-400 text-center">Panel de Control de Clientes</h1>
 
         <!-- Formulario para crear cliente -->
-        <div class="mb-8 bg-white p-6 rounded-lg shadow-lg border border-azul-pastel">
-            <h2 class="text-2xl font-semibold mb-4 text-azul-oscuro-suave">Agregar Nuevo Cliente</h2>
+        <div class="mb-8 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700">
+            <h2 class="text-2xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Agregar Nuevo Cliente</h2>
             <form id="createForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input type="text" id="trade_name" placeholder="Nombre comercial" class="p-3 border border-azul-pastel rounded-lg" required oninput="this.value = this.value.toUpperCase()">
-                <input type="text" id="address" placeholder="Dirección" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="text" id="city" placeholder="Ciudad" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="text" id="phone" placeholder="Teléfono" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="number" step="any" id="latitude" placeholder="Latitud" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="number" step="any" id="longitude" placeholder="Longitud" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="text" id="owner_full_name" placeholder="Nombre completo del propietario" class="p-3 border border-azul-pastel rounded-lg md:col-span-2">
-                <input type="text" id="route_name" placeholder="Ruta" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="text" id="seller_name" placeholder="Vendedor" class="p-3 border border-azul-pastel rounded-lg">
-                <button type="submit" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white md:col-span-2">Agregar Cliente</button>
+                <input type="text" id="trade_name" placeholder="Nombre comercial" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" required oninput="this.value = this.value.toUpperCase()">
+                <input type="text" id="address" placeholder="Dirección" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="city" placeholder="Ciudad" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="phone" placeholder="Teléfono" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="number" step="any" id="latitude" placeholder="Latitud" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="number" step="any" id="longitude" placeholder="Longitud" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="owner_full_name" placeholder="Nombre completo del propietario" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg md:col-span-2">
+                <input type="text" id="route_name" placeholder="Ruta" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="seller_name" placeholder="Vendedor" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <button type="submit" class="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 md:col-span-2 font-semibold shadow-md">Agregar Cliente</button>
             </form>
         </div>
 
         <!-- Campo de búsqueda -->
         <div class="mb-6">
-            <input type="text" id="searchInput" placeholder="Buscar por nombre, código, ciudad o teléfono..." class="w-full p-3 border border-azul-pastel rounded-lg text-lg" onkeyup="filterAndLoadClients()">
-            <p class="text-sm text-gray-600 mt-1">Escribe para filtrar la lista en tiempo real.</p>
+            <input type="text" id="searchInput" placeholder="Buscar por nombre, código, ciudad o teléfono..." class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-lg" onkeyup="filterAndLoadClients()">
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Escribe para filtrar la lista en tiempo real.</p>
         </div>
 
         <!-- Controles de paginación -->
-        <div class="mb-4 flex justify-between items-center bg-white p-4 rounded-lg shadow">
-            <button id="prevBtn" onclick="changePage(-1)" class="bg-azul-pastel text-azul-oscuro-suave px-4 py-2 rounded hover:bg-azul-oscuro-suave hover:text-white disabled:opacity-50" disabled>Anterior</button>
-            <span id="pageInfo" class="text-azul-oscuro-suave font-semibold">Página 1</span>
-            <button id="nextBtn" onclick="changePage(1)" class="bg-azul-pastel text-azul-oscuro-suave px-4 py-2 rounded hover:bg-azul-oscuro-suave hover:text-white">Siguiente</button>
+        <div class="mb-4 flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-lg shadow border border-gray-200 dark:border-slate-700">
+            <button id="prevBtn" onclick="changePage(-1)" class="bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600 disabled:opacity-50" disabled>Anterior</button>
+            <span id="pageInfo" class="text-indigo-600 dark:text-indigo-400 font-semibold">Página 1</span>
+            <button id="nextBtn" onclick="changePage(1)" class="bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">Siguiente</button>
         </div>
 
         <!-- Lista de clientes -->
-        <div id="clientsList" class="bg-white p-6 rounded-lg shadow-lg border border-azul-pastel min-h-64">
-            <h2 class="text-2xl font-semibold mb-4 text-azul-oscuro-suave">Lista de Clientes</h2>
+        <div id="clientsList" class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 min-h-64">
+            <h2 class="text-2xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Lista de Clientes</h2>
             <ul id="clients" class="space-y-3"></ul>
             <p id="noResults" class="text-center text-gray-500 hidden">No se encontraron clientes.</p>
         </div>
@@ -75,30 +64,30 @@
 
     <!-- Modal para detalles del cliente -->
     <div id="detailsModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content bg-white dark:bg-slate-800 dark:text-white">
             <span class="close" onclick="closeModal('detailsModal')">&times;</span>
-            <h2 class="text-2xl font-bold mb-4 text-azul-oscuro-suave">Detalles del Cliente</h2>
+            <h2 class="text-2xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">Detalles del Cliente</h2>
             <div id="modalBody" class="space-y-2 text-sm"></div>
         </div>
     </div>
 
     <!-- Modal para editar cliente -->
     <div id="editModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content bg-white dark:bg-slate-800 dark:text-white">
             <span class="close" onclick="closeModal('editModal')">&times;</span>
-            <h2 class="text-2xl font-bold mb-4 text-azul-oscuro-suave">Editar Cliente</h2>
+            <h2 class="text-2xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">Editar Cliente</h2>
             <form id="editForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input type="hidden" id="edit_id">
-                <input type="text" id="edit_trade_name" placeholder="Nombre comercial" class="p-3 border border-azul-pastel rounded-lg" required oninput="this.value = this.value.toUpperCase()">
-                <input type="text" id="edit_address" placeholder="Dirección" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="text" id="edit_city" placeholder="Ciudad" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="text" id="edit_phone" placeholder="Teléfono" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="number" step="any" id="edit_latitude" placeholder="Latitud" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="number" step="any" id="edit_longitude" placeholder="Longitud" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="text" id="edit_owner_full_name" placeholder="Nombre completo del propietario" class="p-3 border border-azul-pastel rounded-lg md:col-span-2">
-                <input type="text" id="edit_route_name" placeholder="Ruta" class="p-3 border border-azul-pastel rounded-lg">
-                <input type="text" id="edit_seller_name" placeholder="Vendedor" class="p-3 border border-azul-pastel rounded-lg">
-                <button type="submit" class="bg-azul-pastel text-azul-oscuro-suave p-3 rounded-lg hover:bg-azul-oscuro-suave hover:text-white md:col-span-2">Guardar Cambios</button>
+                <input type="text" id="edit_trade_name" placeholder="Nombre comercial" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" required oninput="this.value = this.value.toUpperCase()">
+                <input type="text" id="edit_address" placeholder="Dirección" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="edit_city" placeholder="Ciudad" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="edit_phone" placeholder="Teléfono" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="number" step="any" id="edit_latitude" placeholder="Latitud" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="number" step="any" id="edit_longitude" placeholder="Longitud" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="edit_owner_full_name" placeholder="Nombre completo del propietario" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg md:col-span-2">
+                <input type="text" id="edit_route_name" placeholder="Ruta" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="edit_seller_name" placeholder="Vendedor" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <button type="submit" class="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 md:col-span-2 font-semibold">Guardar Cambios</button>
             </form>
         </div>
     </div>
@@ -165,14 +154,14 @@
             noResults.classList.add('hidden');
             clients.forEach(client => {
                 const li = document.createElement('li');
-                li.className = 'border p-4 rounded-lg flex justify-between items-center bg-azul-claro';
+                li.className = 'border dark:border-slate-700 p-4 rounded-lg flex justify-between items-center bg-gray-50 dark:bg-slate-700/50';
                 li.innerHTML = `
                     <div>
-                        <strong class="text-azul-oscuro-suave block">${client.trade_name || 'Sin nombre'}</strong>
-                        <span class="text-gray-600">Código: ${client.code || 'N/A'} | Ciudad: ${client.city || 'N/A'} | Tel: ${client.phone || 'N/A'}</span>
+                        <strong class="text-indigo-600 dark:text-indigo-400 block">${client.trade_name || 'Sin nombre'}</strong>
+                        <span class="text-gray-600 dark:text-gray-400">Código: ${client.code || 'N/A'} | Ciudad: ${client.city || 'N/A'} | Tel: ${client.phone || 'N/A'}</span>
                     </div>
                     <div class="space-x-2">
-                        <button onclick="viewDetails(${client.id})" class="bg-azul-pastel text-azul-oscuro-suave px-3 py-1 rounded hover:bg-azul-oscuro-suave hover:text-white">Ver Detalles</button>
+                        <button onclick="viewDetails(${client.id})" class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 px-3 py-1 rounded hover:bg-indigo-200 dark:hover:bg-indigo-800">Ver Detalles</button>
                         <button onclick="editClient(${client.id})" class="bg-yellow-300 text-gray-800 px-3 py-1 rounded hover:bg-yellow-400">Editar</button>
                         <button onclick="deleteClient(${client.id})" class="bg-red-300 text-gray-800 px-3 py-1 rounded hover:bg-red-400">Eliminar</button>
                     </div>

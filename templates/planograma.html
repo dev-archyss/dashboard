@@ -5,25 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Planograma - {{ empresa_nombre }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    {% include 'navbar.html' %}
+
     <div class="container mx-auto p-6 max-w-4xl">
-        <h1 class="text-3xl font-bold text-indigo-700 mb-6">
+        <h1 class="text-3xl font-bold text-indigo-700 dark:text-indigo-400 mb-6">
             Gestión de Planograma - {{ empresa_nombre }}
         </h1>
 
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4">Subir / Actualizar Planograma</h2>
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-8 border border-gray-200 dark:border-slate-700">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Subir / Actualizar Planograma</h2>
             
             <form id="uploadForm" enctype="multipart/form-data" class="space-y-4">
                 <div>
-                    <label class="block text-gray-700 font-medium mb-2">
+                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-2">
                         Selecciona imagen (JPG/PNG)
                     </label>
                     <input type="file" 
                            id="planogramaFile" 
                            accept="image/jpeg,image/png" 
-                           class="w-full p-2 border rounded">
+                           class="w-full p-2 border dark:border-slate-600 dark:bg-slate-700 rounded">
                 </div>
 
                 <button type="submit" 
@@ -36,16 +40,12 @@
             <div id="uploadMessage" class="mt-4 text-sm"></div>
         </div>
 
-        <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-semibold mb-4">Planograma Actual</h2>
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 border border-gray-200 dark:border-slate-700">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Planograma Actual</h2>
             
             <div id="planogramaContainer" class="text-center">
                 <p class="text-gray-500">Cargando...</p>
             </div>
-        </div>
-
-        <div class="mt-8">
-            <a href="/dashboard" class="text-indigo-600 hover:underline">← Volver al Dashboard</a>
         </div>
     </div>
 

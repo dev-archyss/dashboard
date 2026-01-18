@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
+        /* Scrollbar oculta para el menú */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         :root {
             --color-primary: #4F46E5;
             --azul-pastel: #A7C7E7;
@@ -71,56 +74,57 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 font-sans leading-normal tracking-normal">
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans leading-normal tracking-normal transition-colors duration-300">
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    {% include 'navbar.html' %}
+
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
-        <h1 class="text-3xl font-extrabold mb-6 text-center text-gray-800">Seguimiento por GPS</h1>
-        <div class="flex justify-center space-x-4 mb-6">
-            <a href="/dashboard" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all"><i class="fas fa-arrow-left mr-2"></i>Regresar al Dashboard</a>
-        </div>
-        <div class="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-100">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Filtros</h2>
+        <h1 class="text-3xl font-extrabold mb-6 text-center text-gray-800 dark:text-white">Seguimiento por GPS</h1>
+        
+        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-100 dark:border-slate-700">
+            <h2 class="text-2xl font-semibold text-gray-700 dark:text-white mb-4">Filtros</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-                <div class="bg-indigo-50 p-3 rounded-lg shadow-inner text-center col-span-1">
+                <div class="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg shadow-inner text-center col-span-1">
                     <p class="text-xl font-bold text-indigo-600" id="totalPromoters">0</p>
-                    <p class="text-sm text-indigo-400">Promotores</p>
+                    <p class="text-sm text-indigo-400 dark:text-indigo-300">Promotores</p>
                 </div>
-                <div class="bg-green-50 p-3 rounded-lg shadow-inner text-center col-span-1">
+                <div class="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg shadow-inner text-center col-span-1">
                     <p class="text-xl font-bold text-green-600" id="totalRecords">0</p>
-                    <p class="text-sm text-green-400">Visitas Filtradas</p>
+                    <p class="text-sm text-green-400 dark:text-green-300">Visitas Filtradas</p>
                 </div>
-                <div class="bg-blue-50 p-3 rounded-lg shadow-inner text-center col-span-1">
+                <div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg shadow-inner text-center col-span-1">
                     <p class="text-xl font-bold text-blue-600" id="confirmationRate">0%</p>
-                    <p class="text-sm text-blue-400">Confirmación %</p>
+                    <p class="text-sm text-blue-400 dark:text-blue-300">Confirmación %</p>
                 </div>
                 <div class="col-span-2 sm:col-span-1">
-                    <label for="dateFrom" class="block text-gray-700 font-medium mb-1 text-sm">Fecha Desde:</label>
-                    <input type="date" id="dateFrom" class="w-full border rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <label for="dateFrom" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Fecha Desde:</label>
+                    <input type="date" id="dateFrom" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div class="col-span-2 sm:col-span-1">
-                    <label for="dateTo" class="block text-gray-700 font-medium mb-1 text-sm">Fecha Hasta:</label>
-                    <input type="date" id="dateTo" class="w-full border rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <label for="dateTo" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Fecha Hasta:</label>
+                    <input type="date" id="dateTo" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div class="col-span-2 md:col-span-1">
-                    <label for="promoter" class="block text-gray-700 font-medium mb-1 text-sm">Promotor:</label>
-                    <select id="promoter" class="w-full border rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <label for="promoter" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Promotor:</label>
+                    <select id="promoter" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="all">Todos los promotores</option>
                     </select>
                 </div>
                 <div class="col-span-2 md:col-span-1">
-                    <label for="state" class="block text-gray-700 font-medium mb-1 text-sm">Estado:</label>
-                    <select id="state" class="w-full border rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <label for="state" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Estado:</label>
+                    <select id="state" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="all">Todos los estados</option>
                     </select>
                 </div>
                 <div class="col-span-2 md:col-span-1">
-                    <label for="zone" class="block text-gray-700 font-medium mb-1 text-sm">Zona:</label>
-                    <select id="zone" class="w-full border rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500" disabled>
+                    <label for="zone" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Zona:</label>
+                    <select id="zone" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500" disabled>
                         <option value="all">Todas las zonas</option>
                     </select>
                 </div>
                 <div class="col-span-2 md:col-span-1">
-                    <label for="confirmation" class="block text-gray-700 font-medium mb-1 text-sm">Confirmación:</label>
-                    <select id="confirmation" class="w-full border rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <label for="confirmation" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Confirmación:</label>
+                    <select id="confirmation" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="all">Todos</option>
                         <option value="verificado">Confirmados</option>
                         <option value="no_verificado">No Confirmados</option>
@@ -136,8 +140,8 @@
                 </button>
             </div>
         </div>
-        <div class="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-100">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Mapa Interactivo de Visitas</h2>
+        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-100 dark:border-slate-700">
+            <h2 class="text-2xl font-semibold text-gray-700 dark:text-white mb-4">Mapa Interactivo de Visitas</h2>
             <div id="map" style="height: 600px;"></div>
         </div>
     </div>
