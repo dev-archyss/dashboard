@@ -136,33 +136,33 @@
                 </div>
                 <div class="col-span-2 sm:col-span-1">
                     <label for="dateFrom" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Fecha Desde:</label>
-                    <input type="date" id="dateFrom" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="date" id="dateFrom" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div class="col-span-2 sm:col-span-1">
                     <label for="dateTo" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Fecha Hasta:</label>
-                    <input type="date" id="dateTo" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="date" id="dateTo" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div class="col-span-2 md:col-span-1">
                     <label for="promoter" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Promotor:</label>
-                    <select id="promoter" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <select id="promoter" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="all">Todos los promotores</option>
                     </select>
                 </div>
                 <div class="col-span-2 md:col-span-1">
                     <label for="state" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Estado:</label>
-                    <select id="state" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <select id="state" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="all">Todos los estados</option>
                     </select>
                 </div>
                 <div class="col-span-2 md:col-span-1">
                     <label for="zone" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Zona:</label>
-                    <select id="zone" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500" disabled>
+                    <select id="zone" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500" disabled>
                         <option value="all">Todas las zonas</option>
                     </select>
                 </div>
                 <div class="col-span-2 md:col-span-1">
                     <label for="confirmation" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Confirmación:</label>
-                    <select id="confirmation" class="w-full border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <select id="confirmation" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="all">Todos</option>
                         <option value="verificado">Confirmados</option>
                         <option value="no_verificado">No Confirmados</option>
@@ -173,10 +173,10 @@
                 </div>
             </div>
             <div class="flex flex-wrap gap-3 justify-end border-t pt-4">
-                <button id="exportCSV" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all">
+                <button id="exportCSV" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all w-auto">
                     <i class="fas fa-file-csv mr-2"></i> Exportar CSV
                 </button>
-                <button id="deleteSelected" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all" disabled>
+                <button id="deleteSelected" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all w-auto" disabled>
                     <i class="fas fa-trash-alt mr-2"></i> Eliminar Seleccionados (<span id="selectedCount">0</span>)
                 </button>
             </div>
@@ -927,7 +927,41 @@
             document.getElementById('deleteSelected').addEventListener('click', () => {
                 if (selectedRecords.size > 0) deleteRecords(Array.from(selectedRecords));
             });
-            document.getElementById('exportCSV').addEventListener('click', () => alert('Exportar CSV pendiente'));
+            document.getElementById('exportCSV').addEventListener('click', () => {
+                if (filteredRecords.length === 0) {
+                    alert('No hay registros para exportar');
+                    return;
+                }
+
+                const headers = [
+                    'ID', 'Fecha', 'Promotor', 'Comercio', 'Estado', 'Zona', 
+                    'Distancia (m)', 'Latitud Visita', 'Longitud Visita', 
+                    'Coords Cliente', 'Confirmación', 'Comentarios'
+                ];
+
+                const rows = filteredRecords.map(r => {
+                    const date = r.created_at ? new Date(r.created_at).toLocaleString('es-ES') : 'N/A';
+                    const confirm = r.verified || 'N/A';
+                    const escape = (text) => `"${(text || '').toString().replace(/"/g, '""')}"`;
+                    
+                    return [
+                        r.id, escape(date), escape(r.promoter_name), escape(r.trade),
+                        escape(r.state), escape(r.zone), r.distance,
+                        r.latitude || '', r.longitude || '',
+                        escape(r.client_coords), escape(confirm), escape(r.comments)
+                    ].join(',');
+                });
+
+                const csvContent = [headers.join(','), ...rows].join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', `dashboard_visitas_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
             filterRecords();
         }
 

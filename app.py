@@ -115,7 +115,7 @@ def dashboard():
 def gps():
     if 'empresa_id' not in session:
         return redirect(url_for('login'))
-    return render_template('gps.html')
+    return render_template('GPS.html')
 
 @app.route('/clientes')
 def clientes():
@@ -161,6 +161,12 @@ def planograma():
     return render_template('planograma.html', 
                            empresa_nombre=empresa['nombre'],
                            empresa_id=empresa['id'])
+
+@app.route('/caras')
+def caras():
+    if 'empresa_id' not in session:
+        return redirect(url_for('login'))
+    return render_template('caras.html')
 
 # ----------------------------------------------------------------------
 # --- Lógica de Login (CORREGIDA) ---

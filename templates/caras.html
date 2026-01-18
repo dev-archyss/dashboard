@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Caras en Anaquel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    {% include 'navbar.html' %}
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <h1 class="text-3xl font-extrabold mb-6 text-center text-gray-800 dark:text-white">Análisis de Caras en Anaquel</h1>
+
+        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-100 dark:border-slate-700">
+            <h2 class="text-2xl font-semibold text-gray-700 dark:text-white mb-4">Filtros</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Fecha Desde:</label>
+                    <input type="date" id="dateFrom" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2">
+                </div>
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Fecha Hasta:</label>
+                    <input type="date" id="dateTo" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2">
+                </div>
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Promotor:</label>
+                    <select id="promoter" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2">
+                        <option value="all">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Estado:</label>
+                    <select id="state" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2">
+                        <option value="all">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Zona:</label>
+                    <select id="zone" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2" disabled>
+                        <option value="all">Todas</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button id="exportCSV" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-all">
+                    <i class="fas fa-file-csv mr-2"></i> Exportar CSV
+                </button>
+                <button id="applyFilters" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-all">
+                    Aplicar Filtros
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700">
+                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Total Caras Antes vs Después</h3>
+                <canvas id="totalFacesChart"></canvas>
+            </div>
+            <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700">
+                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Ganancia/Pérdida Neta</h3>
+                <div class="flex items-center justify-center h-64">
+                    <div class="text-center">
+                        <p class="text-6xl font-extrabold" id="netChangeDisplay">0</p>
+                        <p class="text-gray-500 dark:text-gray-400 mt-2 text-lg">Caras Ganadas/Perdidas</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Detalle por Producto</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                    <thead class="bg-gray-100 dark:bg-slate-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Producto</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Caras Antes</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Caras Después</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Diferencia</th>
+                        </tr>
+                    </thead>
+                    <tbody id="facesTableBody" class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr><td colspan="4" class="text-center py-4 text-gray-500">Cargando datos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient(
+            'https://djjylikkocemrlsjxscr.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M'
+        );
+        const empresaId = localStorage.getItem('empresa_id');
+        if (!empresaId) window.location.href = '/';
+
+        let chartInstance = null;
+        let allZonas = [];
+        let currentStats = {};
+
+        async function loadCatalogs() {
+            // Cargar Promotores
+            const { data: promotores } = await supabaseClient
+                .from('web_promotores')
+                .select('promoter_name')
+                .eq('empresa_id', empresaId)
+                .order('promoter_name');
+            
+            const promoterSelect = document.getElementById('promoter');
+            promoterSelect.innerHTML = '<option value="all">Todos</option>';
+            if (promotores) {
+                const unique = [...new Set(promotores.map(p => p.promoter_name))].sort();
+                unique.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    promoterSelect.appendChild(opt);
+                });
+            }
+
+            // Cargar Estados
+            const { data: estados } = await supabaseClient
+                .from('web_estados')
+                .select('*')
+                .eq('empresa_id', empresaId)
+                .order('nombre');
+            
+            const stateSelect = document.getElementById('state');
+            stateSelect.innerHTML = '<option value="all">Todos</option>';
+            if (estados) {
+                estados.forEach(e => {
+                    const opt = document.createElement('option');
+                    opt.value = e.id; 
+                    opt.textContent = e.nombre;
+                    stateSelect.appendChild(opt);
+                });
+            }
+
+            // Cargar Zonas
+            const { data: zonas } = await supabaseClient
+                .from('web_zonas')
+                .select('*')
+                .eq('empresa_id', empresaId)
+                .order('nombre');
+            allZonas = zonas || [];
+
+            stateSelect.addEventListener('change', updateZoneFilter);
+        }
+
+        async function loadData() {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const promoterId = document.getElementById('promoter').value;
+            const stateSelect = document.getElementById('state');
+            const stateValue = stateSelect.value;
+            const stateName = stateSelect.options[stateSelect.selectedIndex]?.text;
+            const zone = document.getElementById('zone').value;
+
+            let query = supabaseClient.from('web_precios')
+                .select('myitems, web_promotores!inner(promoter_name, promoter_id)')
+                .eq('empresa_id', empresaId)
+                .gte('created_at', dateFrom + 'T00:00:00')
+                .lte('created_at', dateTo + 'T23:59:59');
+
+            if (promoterId !== 'all') {
+                query = query.eq('web_promotores.promoter_name', promoterId);
+            }
+
+            if (stateValue !== 'all') {
+                query = query.eq('state', stateName);
+            }
+
+            if (zone !== 'all') {
+                query = query.eq('zone', zone);
+            }
+
+            const { data, error } = await query;
+            if (error) { console.error(error); return; }
+
+            processData(data);
+        }
+
+        function updateZoneFilter() {
+            const stateSelect = document.getElementById('state');
+            const zoneSelect = document.getElementById('zone');
+            const selectedStateId = stateSelect.value;
+            
+            zoneSelect.innerHTML = '<option value="all">Todas</option>';
+            
+            if (selectedStateId === 'all') {
+                zoneSelect.disabled = true;
+                return;
+            }
+            
+            zoneSelect.disabled = false;
+            const filteredZonas = allZonas.filter(z => z.estado_id == selectedStateId);
+            filteredZonas.forEach(z => {
+                const opt = document.createElement('option');
+                opt.value = z.nombre; 
+                opt.textContent = z.nombre;
+                zoneSelect.appendChild(opt);
+            });
+        }
+
+        function processData(records) {
+            let totalBefore = 0;
+            let totalAfter = 0;
+            const productStats = {};
+            currentStats = {};
+
+            records.forEach(record => {
+                const items = record.myitems || [];
+                items.forEach(item => {
+                    const before = parseInt(item.faces_before) || 0;
+                    const after = parseInt(item.faces_after) || 0;
+                    const name = item.presentation || 'Desconocido';
+
+                    totalBefore += before;
+                    totalAfter += after;
+
+                    if (!productStats[name]) productStats[name] = { before: 0, after: 0 };
+                    productStats[name].before += before;
+                    productStats[name].after += after;
+                });
+            });
+            
+            currentStats = productStats;
+
+            // Update KPI
+            const netChange = totalAfter - totalBefore;
+            const netDisplay = document.getElementById('netChangeDisplay');
+            netDisplay.textContent = (netChange > 0 ? '+' : '') + netChange;
+            netDisplay.className = `text-6xl font-extrabold ${netChange >= 0 ? 'text-green-600' : 'text-red-600'}`;
+
+            // Update Chart
+            const ctx = document.getElementById('totalFacesChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Antes', 'Después'],
+                    datasets: [{
+                        label: 'Total Caras',
+                        data: [totalBefore, totalAfter],
+                        backgroundColor: ['#9CA3AF', '#4F46E5']
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            // Update Table
+            const tbody = document.getElementById('facesTableBody');
+            tbody.innerHTML = '';
+            Object.keys(productStats).sort().forEach(prod => {
+                const stats = productStats[prod];
+                const diff = stats.after - stats.before;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${prod}</td>
+                    <td class="px-6 py-4 text-center text-sm text-gray-600 dark:text-gray-300">${stats.before}</td>
+                    <td class="px-6 py-4 text-center text-sm text-gray-600 dark:text-gray-300">${stats.after}</td>
+                    <td class="px-6 py-4 text-center text-sm font-bold ${diff >= 0 ? 'text-green-600' : 'text-red-600'}">${diff > 0 ? '+' : ''}${diff}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        document.getElementById('applyFilters').onclick = loadData;
+        
+        document.getElementById('exportCSV').addEventListener('click', () => {
+            if (Object.keys(currentStats).length === 0) {
+                alert('No hay datos para exportar');
+                return;
+            }
+            
+            const headers = ['Producto', 'Caras Antes', 'Caras Después', 'Diferencia'];
+            const rows = Object.keys(currentStats).sort().map(prod => {
+                const stats = currentStats[prod];
+                const diff = stats.after - stats.before;
+                return [`"${prod}"`, stats.before, stats.after, diff].join(',');
+            });
+            
+            const csvContent = [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `analisis_caras_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+        
+        (async () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateFrom').value = today;
+            document.getElementById('dateTo').value = today;
+            await loadCatalogs();
+            loadData();
+        })();
+    </script>
+</body>
+</html>

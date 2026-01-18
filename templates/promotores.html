@@ -7,127 +7,122 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            'verde-vivo': '#34D399',
-            'verde-claro': '#D1FAE5',
-            'verde-oscuro': '#059669',
-          }
-        }
-      }
+      darkMode: 'class'
     }
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-    .modal-content { background-color: #D1FAE5; margin: 5% auto; padding: 20px; border-radius: 10px; width: 80%; max-width: 600px; }
-    .close { color: #059669; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+    .modal-content { margin: 5% auto; padding: 20px; border-radius: 10px; width: 80%; max-width: 600px; }
+    .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
-  <script>tailwind.config = { darkMode: 'class' }</script>
   {% include 'navbar.html' %}
 
-  <div class="max-w-6xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6 text-emerald-600 dark:text-emerald-400 text-center mt-6">Panel de Administración de Promotores</h1>
+  <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <h1 class="text-3xl font-bold mb-6 text-indigo-600 dark:text-indigo-400 text-center">Panel de Administración de Promotores</h1>
 
     <!-- Formulario para crear promotor -->
     <div class="mb-8 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700">
-      <h2 class="text-2xl font-semibold mb-4 text-emerald-600 dark:text-emerald-400">Agregar Nuevo Promotor</h2>
+      <h2 class="text-2xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Agregar Nuevo Promotor</h2>
       <form id="createForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Campo promoter_id con prefijo fijo -->
         <div class="md:col-span-2">
-          <label class="block text-sm font-medium text-verde-oscuro mb-1">ID del Promotor</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID del Promotor</label>
           <div class="flex">
-            <span class="inline-flex items-center px-3 text-gray-600 bg-gray-100 border border-r-0 border-verde-vivo rounded-l-lg">promotor_</span>
+            <span class="inline-flex items-center px-3 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 border border-r-0 border-gray-300 dark:border-slate-600 rounded-l-lg">promotor_</span>
             <input 
               type="text" 
               id="promoter_suffix" 
               placeholder="lara, barquisimeto, valencia..." 
-              class="flex-1 p-3 border border-verde-vivo rounded-r-lg focus:outline-none focus:ring-2 focus:ring-verde-vivo" 
+              class="flex-1 p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" 
               required 
               oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9_]/g, '')"
             >
           </div>
-          <p class="text-xs text-gray-500 mt-1">Solo letras minúsculas, números y guiones bajos.</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Solo letras minúsculas, números y guiones bajos.</p>
         </div>
 
-        <input type="text" id="promoter_name" placeholder="Nombre del promotor" class="p-3 border border-verde-vivo rounded-lg" required oninput="this.value = this.value.toUpperCase()">
-        <select id="estado_id" class="p-3 border border-verde-vivo rounded-lg" required>
+        <input type="text" id="promoter_name" placeholder="Nombre del promotor" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" required oninput="this.value = this.value.toUpperCase()">
+        <input type="password" id="promoter_password" placeholder="Contraseña de acceso" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" required>
+        
+        <select id="estado_id" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" required>
           <option value="">Seleccione un estado</option>
         </select>
-        <select id="zona_id" class="p-3 border border-verde-vivo rounded-lg" disabled>
+        <select id="zona_id" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" disabled>
           <option value="">Seleccione una zona</option>
         </select>
-        <input type="number" id="clientes_asig" placeholder="Clientes asignados" class="p-3 border border-verde-vivo rounded-lg" min="0" value="0" required>
-        <input type="number" id="dias_trabajo" placeholder="Días de trabajo" class="p-3 border border-verde-vivo rounded-lg" min="0" value="5" required>
-        <button type="submit" class="bg-verde-vivo text-verde-oscuro p-3 rounded-lg hover:bg-verde-oscuro hover:text-white md:col-span-2">Agregar Promotor</button>
+        <input type="number" id="clientes_asig" placeholder="Clientes asignados" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" min="0" value="0" required>
+        <input type="number" id="dias_trabajo" placeholder="Días de trabajo" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" min="0" value="5" required>
+        
+        <button type="submit" class="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 md:col-span-2 font-semibold shadow-md">Agregar Promotor</button>
       </form>
     </div>
 
     <!-- Campo de búsqueda -->
     <div class="mb-6">
-      <input type="text" id="searchInput" placeholder="Buscar por nombre o ID..." class="w-full p-3 border border-verde-vivo rounded-lg text-lg" onkeyup="filterAndLoadPromoters()">
-      <p class="text-sm text-gray-600 mt-1">Escribe para filtrar la lista en tiempo real.</p>
+      <input type="text" id="searchInput" placeholder="Buscar por nombre o ID..." class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-lg" onkeyup="filterAndLoadPromoters()">
+      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Escribe para filtrar la lista en tiempo real.</p>
     </div>
 
     <!-- Lista de promotores -->
-    <div id="promotersList" class="bg-white p-6 rounded-lg shadow-lg border border-verde-vivo min-h-64">
-      <h2 class="text-2xl font-semibold mb-4 text-verde-oscuro">Lista de Promotores</h2>
+    <div id="promotersList" class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 min-h-64">
+      <h2 class="text-2xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Lista de Promotores</h2>
       <ul id="promoters" class="space-y-3"></ul>
       <p id="noResults" class="text-center text-gray-500 hidden">No se encontraron promotores.</p>
     </div>
 
     <!-- Controles de paginación -->
-    <div class="mt-4 flex justify-between items-center bg-white p-4 rounded-lg shadow">
-      <button id="prevBtn" onclick="changePage(-1)" class="bg-verde-vivo text-verde-oscuro px-4 py-2 rounded hover:bg-verde-oscuro hover:text-white disabled:opacity-50" disabled>Anterior</button>
-      <span id="pageInfo" class="text-verde-oscuro font-semibold">Página 1</span>
-      <button id="nextBtn" onclick="changePage(1)" class="bg-verde-vivo text-verde-oscuro px-4 py-2 rounded hover:bg-verde-oscuro hover:text-white">Siguiente</button>
+    <div class="mt-4 flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-lg shadow border border-gray-200 dark:border-slate-700">
+      <button id="prevBtn" onclick="changePage(-1)" class="bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600 disabled:opacity-50" disabled>Anterior</button>
+      <span id="pageInfo" class="text-indigo-600 dark:text-indigo-400 font-semibold">Página 1</span>
+      <button id="nextBtn" onclick="changePage(1)" class="bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">Siguiente</button>
     </div>
   </div>
 
   <!-- Modal para detalles del promotor -->
   <div id="detailsModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content bg-white dark:bg-slate-800 dark:text-white">
       <span class="close" onclick="closeModal('detailsModal')">&times;</span>
-      <h2 class="text-2xl font-bold mb-4 text-verde-oscuro">Detalles del Promotor</h2>
+      <h2 class="text-2xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">Detalles del Promotor</h2>
       <div id="modalBody" class="space-y-2 text-sm"></div>
     </div>
   </div>
 
   <!-- Modal para editar promotor -->
   <div id="editModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content bg-white dark:bg-slate-800 dark:text-white">
       <span class="close" onclick="closeModal('editModal')">&times;</span>
-      <h2 class="text-2xl font-bold mb-4 text-verde-oscuro">Editar Promotor</h2>
+      <h2 class="text-2xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">Editar Promotor</h2>
       <form id="editForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input type="hidden" id="edit_id">
 
         <div class="md:col-span-2">
-          <label class="block text-sm font-medium text-verde-oscuro mb-1">ID del Promotor</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID del Promotor</label>
           <div class="flex">
-            <span class="inline-flex items-center px-3 text-gray-600 bg-gray-100 border border-r-0 border-verde-vivo rounded-l-lg">promotor_</span>
+            <span class="inline-flex items-center px-3 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 border border-r-0 border-gray-300 dark:border-slate-600 rounded-l-lg">promotor_</span>
             <input 
               type="text" 
               id="edit_promoter_suffix" 
-              class="flex-1 p-3 border border-verde-vivo rounded-r-lg focus:outline-none focus:ring-2 focus:ring-verde-vivo" 
+              class="flex-1 p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" 
               required 
               oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9_]/g, '')"
             >
           </div>
         </div>
 
-        <input type="text" id="edit_promoter_name" placeholder="Nombre del promotor" class="p-3 border border-verde-vivo rounded-lg" required oninput="this.value = this.value.toUpperCase()">
-        <select id="edit_estado_id" class="p-3 border border-verde-vivo rounded-lg" required>
+        <input type="text" id="edit_promoter_name" placeholder="Nombre del promotor" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" required oninput="this.value = this.value.toUpperCase()">
+        <select id="edit_estado_id" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" required>
           <option value="">Seleccione un estado</option>
         </select>
-        <select id="edit_zona_id" class="p-3 border border-verde-vivo rounded-lg" disabled>
+        <select id="edit_zona_id" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" disabled>
           <option value="">Seleccione una zona</option>
         </select>
-        <input type="number" id="edit_clientes_asig" placeholder="Clientes asignados" class="p-3 border border-verde-vivo rounded-lg" min="0" required>
-        <input type="number" id="edit_dias_trabajo" placeholder="Días de trabajo" class="p-3 border border-verde-vivo rounded-lg" min="0" required>
-        <button type="submit" class="bg-verde-vivo text-verde-oscuro p-3 rounded-lg hover:bg-verde-oscuro hover:text-white md:col-span-2">Guardar Cambios</button>
+        <input type="number" id="edit_clientes_asig" placeholder="Clientes asignados" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" min="0" required>
+        <input type="number" id="edit_dias_trabajo" placeholder="Días de trabajo" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" min="0" required>
+        
+        <button type="submit" class="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 md:col-span-2 font-semibold">Guardar Cambios</button>
       </form>
     </div>
   </div>
@@ -248,14 +243,14 @@
         const estadoNombre = promoter.web_estados?.nombre || 'N/A';
         const zonaNombre = promoter.web_zonas?.nombre || 'N/A';
         const li = document.createElement('li');
-        li.className = 'border p-4 rounded-lg flex justify-between items-center bg-verde-claro';
+        li.className = 'border dark:border-slate-700 p-4 rounded-lg flex justify-between items-center bg-gray-50 dark:bg-slate-700/50';
         li.innerHTML = `
           <div>
-            <strong class="text-verde-oscuro block">${promoter.promoter_name || 'Sin nombre'}</strong>
-            <span class="text-gray-600">ID: <strong>${promoter.promoter_id || 'N/A'}</strong> | Estado: ${estadoNombre} | Zona: ${zonaNombre} | Clientes: ${promoter.clientes_asig || 0} | Días: ${promoter.dias_trabajo || 0}</span>
+            <strong class="text-indigo-600 dark:text-indigo-400 block">${promoter.promoter_name || 'Sin nombre'}</strong>
+            <span class="text-gray-600 dark:text-gray-400">ID: <strong>${promoter.promoter_id || 'N/A'}</strong> | Estado: ${estadoNombre} | Zona: ${zonaNombre} | Clientes: ${promoter.clientes_asig || 0} | Días: ${promoter.dias_trabajo || 0}</span>
           </div>
           <div class="space-x-2">
-            <button onclick="viewDetails('${promoter.id}')" class="bg-verde-vivo text-verde-oscuro px-3 py-1 rounded hover:bg-verde-oscuro hover:text-white">Ver Detalles</button>
+            <button onclick="viewDetails('${promoter.id}')" class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 px-3 py-1 rounded hover:bg-indigo-200 dark:hover:bg-indigo-800">Ver Detalles</button>
             <button onclick="editPromoter('${promoter.id}')" class="bg-yellow-300 text-gray-800 px-3 py-1 rounded hover:bg-yellow-400">Editar</button>
             <button onclick="deletePromoter('${promoter.id}')" class="bg-red-300 text-gray-800 px-3 py-1 rounded hover:bg-red-400">Eliminar</button>
           </div>
@@ -371,6 +366,7 @@
       const promoterId = `promotor_${suffix}`;
       const estadoId = document.getElementById('estado_id').value;
       const zonaId = document.getElementById('zona_id').value;
+      const password = document.getElementById('promoter_password').value;
 
       if (!estadoId || !zonaId) {
         alert('Estado y zona son obligatorios');
@@ -396,7 +392,8 @@
         zona_id: zonaId,
         clientes_asig: parseInt(document.getElementById('clientes_asig').value) || 0,
         dias_trabajo: parseInt(document.getElementById('dias_trabajo').value) || 0,
-        empresa_id: empresaId  // ← GUARDAMOS LA EMPRESA
+        empresa_id: empresaId,
+        password: password // ← GUARDAMOS LA CONTRASEÑA
       };
 
       const { error } = await supabaseClient.from('web_promotores').insert([newPromoter]);
