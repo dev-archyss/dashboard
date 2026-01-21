@@ -245,6 +245,14 @@
             document.getElementById('totalProductsTracked').textContent = totalProducts;
         }
 
+        function getStockColorClass(stock) {
+            const s = parseInt(stock);
+            if (isNaN(s)) return 'text-gray-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-400';
+            if (s <= 2) return 'text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300 border border-red-200 dark:border-red-800';
+            if (s <= 5) return 'text-orange-700 bg-orange-100 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800';
+            return 'text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300 border border-green-200 dark:border-green-800';
+        }
+
         async function showVisitDetail(visitId) {
             const { data } = await supabaseClient.from('web_precios')
                 .select('*, web_promotores(promoter_name)')
@@ -254,21 +262,57 @@
             if (!data) return;
 
             let html = `
-                <p><strong>Fecha:</strong> ${new Date(data.created_at).toLocaleString('es-ES')}</p>
-                <p><strong>Promotor:</strong> ${data.web_promotores?.promoter_name || '—'}</p>
-                <p><strong>Comercio:</strong> ${data.trade || '—'}</p>
-                <h3 class="mt-6 font-bold">Productos</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-gray-50 dark:bg-slate-700/50 p-4 rounded-xl border border-gray-100 dark:border-slate-600">
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider">Fecha</p>
+                        <p class="text-gray-900 dark:text-white font-medium text-lg">${new Date(data.created_at).toLocaleString('es-ES')}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider">Promotor</p>
+                        <p class="text-gray-900 dark:text-white font-medium text-lg">${data.web_promotores?.promoter_name || '—'}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider">Comercio</p>
+                        <p class="text-gray-900 dark:text-white font-medium text-lg">${data.trade || '—'}</p>
+                    </div>
+                </div>
+                
+                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-boxes text-indigo-500"></i> Detalle de Stock
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             `;
 
             data.myitems?.forEach(item => {
+                const stockShelf = item.stock_shelf !== undefined && item.stock_shelf !== null ? item.stock_shelf : '—';
+                const stockWarehouse = item.stock_warehouse !== undefined && item.stock_warehouse !== null ? item.stock_warehouse : '—';
+                const colorClass = getStockColorClass(stockShelf);
+
                 html += `
-                    <div class="mt-4 p-4 bg-gray-50 dark:bg-slate-700 rounded border dark:border-slate-600">
-                        <p class="font-semibold text-gray-800 dark:text-white">${item.presentation}</p>
-                        <p class="text-gray-600 dark:text-gray-300">Stock Anaquel: <span class="font-bold">${item.stock_shelf || '—'}</span></p>
-                        <p class="text-gray-600 dark:text-gray-300">Stock Bodega: <span class="font-bold">${item.stock_warehouse || '—'}</span></p>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-600 p-4 flex flex-col justify-between hover:shadow-md transition-all duration-200">
+                        <div class="mb-3 border-b border-gray-100 dark:border-slate-700 pb-2">
+                            <h4 class="font-bold text-gray-800 dark:text-white text-sm leading-tight">${item.presentation || 'Producto Desconocido'}</h4>
+                        </div>
+                        
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex flex-col items-center w-1/2 bg-gray-50 dark:bg-slate-700/50 rounded-lg p-2">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Anaquel</span>
+                                <span class="text-2xl font-extrabold px-3 py-1 rounded-md ${colorClass}">
+                                    ${stockShelf}
+                                </span>
+                            </div>
+                            <div class="flex flex-col items-center w-1/2 bg-gray-50 dark:bg-slate-700/50 rounded-lg p-2">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Bodega</span>
+                                <span class="text-xl font-semibold text-gray-600 dark:text-gray-300">
+                                    ${stockWarehouse}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 `;
             });
+
+            html += `</div>`;
 
             document.getElementById('stockModalContent').innerHTML = html;
             stockModal.style.display = 'flex';
