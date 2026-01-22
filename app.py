@@ -3,6 +3,7 @@ import requests
 import os
 from math import radians, sin, cos, sqrt, atan2
 import re
+import json
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -12,7 +13,6 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'tu-clave-secreta-super-larga-y-s
 
 # Credenciales de Supabase
 SUPABASE_URL = "https://djjylikkocemrlsjxscr.supabase.co"
-# Nota: Se usa el string proporcionado como fallback si la variable de entorno no existe
 SUPABASE_KEY = os.getenv('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M')
 
 headers = {
@@ -62,6 +62,7 @@ def fetch_table(table_name, params=None, empresa_id=None):
 
     return all_data
 
+
 def calculate_distance(lat1, lon1, lat2, lon2):
     """Cálculo de distancia entre dos puntos (Haversine)"""
     R = 6371000
@@ -71,6 +72,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
+
 def get_week_date_range(year, week_number):
     """Obtiene el rango de fechas para una semana ISO específica"""
     jan4 = datetime(year, 1, 4)
@@ -79,6 +81,34 @@ def get_week_date_range(year, week_number):
     start_of_week = monday_week1 + timedelta(weeks=week_number - 1)
     end_of_week = start_of_week + timedelta(days=6)
     return start_of_week.strftime('%Y-%m-%d'), end_of_week.strftime('%Y-%m-%d')
+
+
+def safe_json_parse(value):
+    """Convierte jsonb/string a lista de forma segura. Devuelve [] si falla."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, list) else []
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return []
+    if isinstance(value, (dict, list)):
+        return value
+    return []
+
+
+def safe_float(value, default=None):
+    """Convierte a float de forma segura"""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
 
 def get_current_empresa():
     """Valida la sesión actual y devuelve datos de la empresa"""
@@ -100,10 +130,12 @@ def get_current_empresa():
 def login():
     return render_template('login.html')
 
+
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -111,11 +143,13 @@ def dashboard():
         return redirect(url_for('login'))
     return render_template('dashboard.html')
 
+
 @app.route('/gps')
 def gps():
     if 'empresa_id' not in session:
         return redirect(url_for('login'))
     return render_template('GPS.html')
+
 
 @app.route('/clientes')
 def clientes():
@@ -123,11 +157,13 @@ def clientes():
         return redirect(url_for('login'))
     return render_template('clientes.html')
 
+
 @app.route('/analisis')
 def analisis():
     if 'empresa_id' not in session:
         return redirect(url_for('login'))
     return render_template('analisis.html')
+
 
 @app.route('/promotores')
 def promotores():
@@ -135,11 +171,13 @@ def promotores():
         return redirect(url_for('login'))
     return render_template('promotores.html')
 
+
 @app.route('/competencia')
 def productos_competencia():
     if 'empresa_id' not in session:
         return redirect(url_for('login'))
     return render_template('competencia.html')
+
 
 @app.route('/productos')
 def productos():
@@ -147,11 +185,13 @@ def productos():
         return redirect(url_for('login'))
     return render_template('productos.html')
 
+
 @app.route('/stock')
 def stock():
     if 'empresa_id' not in session:
         return redirect(url_for('login'))
     return render_template('stock.html')
+
 
 @app.route('/planograma')
 def planograma():
@@ -162,6 +202,7 @@ def planograma():
                            empresa_nombre=empresa['nombre'],
                            empresa_id=empresa['id'])
 
+
 @app.route('/caras')
 def caras():
     if 'empresa_id' not in session:
@@ -169,7 +210,7 @@ def caras():
     return render_template('caras.html')
 
 # ----------------------------------------------------------------------
-# --- Lógica de Login (CORREGIDA) ---
+# --- Lógica de Login ---
 # ----------------------------------------------------------------------
 
 @app.route('/login', methods=['POST'])
@@ -181,7 +222,6 @@ def do_login():
     if not nombre or not clave:
         return jsonify({"success": False, "error": "Completa ambos campos"}), 400
 
-    # Consulta a Supabase
     url = f"{SUPABASE_URL}/rest/v1/empresas?nombre=eq.{nombre}&select=id,nombre,clave_acceso,estatus,fecha_vencimiento"
     
     try:
@@ -195,12 +235,10 @@ def do_login():
 
         empresa = empresas[0]
 
-        # Validación manual de clave
         if empresa.get('clave_acceso') == clave:
             if empresa.get('estatus') != 'activa':
                 return jsonify({"success": False, "error": "La cuenta no está activa"}), 403
             
-            # Guardar en sesión
             session.clear()
             session['empresa_id'] = empresa['id']
             session['empresa_nombre'] = empresa['nombre']
@@ -237,6 +275,7 @@ def api_get_planograma():
         "url": public_url
     })
 
+
 @app.route('/api/planograma/upload', methods=['POST'])
 def api_upload_planograma():
     empresa = get_current_empresa()
@@ -260,7 +299,6 @@ def api_upload_planograma():
         file_ext = os.path.splitext(file.filename)[1]
         file_name = f"planogramas/{empresa_id}/planograma_{timestamp}{file_ext}"
 
-        # Subir archivo a Supabase Storage
         storage_url = f"{SUPABASE_URL}/storage/v1/object/visits_photos/{file_name}"
         storage_headers = {
             "Authorization": f"Bearer {SUPABASE_KEY}",
@@ -271,7 +309,6 @@ def api_upload_planograma():
         if upload_response.status_code not in (200, 201):
             return jsonify({"success": False, "error": "Error al subir al storage"}), 500
 
-        # Actualizar campo en tabla empresas
         update_url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{empresa_id}"
         update_response = requests.patch(update_url, headers=headers, json={"planogram_image": file_name})
 
@@ -285,7 +322,7 @@ def api_upload_planograma():
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------------------------------------------------
-# --- API Registros (REFACTORIZADO COMPLETO) ---
+# --- API Registros (versión corregida y robusta) ---
 # ----------------------------------------------------------------------
 
 @app.route('/api/records', methods=['GET'])
@@ -298,7 +335,7 @@ def get_records():
     date_to = request.args.get('date_to')
     promoter_id = request.args.get('promoter_id')
     week = request.args.get('week')
-    year = request.args.get('year', str(datetime.now().year))
+    year_str = request.args.get('year', str(datetime.now().year))
 
     params = [
         ("select", "*,web_promotores(id,promoter_name,clientes_asig,dias_trabajo)"),
@@ -306,16 +343,27 @@ def get_records():
         ("empresa_id", f"eq.{empresa_id}")
     ]
 
-    if week and year:
-        date_from, date_to = get_week_date_range(int(year), int(week))
-        params.append(("created_at", f"gte.{date_from}T00:00:00+00:00"))
-        params.append(("created_at", f"lte.{date_to}T23:59:59+00:00"))
+    # Manejo seguro del año
+    try:
+        year = int(year_str)
+    except:
+        year = datetime.now().year
+
+    if week:
+        try:
+            week_num = int(week)
+            date_from, date_to = get_week_date_range(year, week_num)
+            params.append(("created_at", f"gte.{date_from}T00:00:00+00:00"))
+            params.append(("created_at", f"lte.{date_to}T23:59:59+00:00"))
+        except Exception as e:
+            print(f"Error calculando semana {week}/{year}: {str(e)}")
+            return jsonify({"error": "Rango de semana inválido"}), 400
     elif date_from:
         params.append(("created_at", f"gte.{date_from}T00:00:00+00:00"))
-    
+
     if date_to:
         params.append(("created_at", f"lte.{date_to}T23:59:59+00:00"))
-        
+
     if promoter_id and promoter_id != 'all':
         params.append(("promoter_id", f"eq.{promoter_id}"))
 
@@ -325,55 +373,79 @@ def get_records():
     estados = fetch_table("web_estados", empresa_id=empresa_id)
     zonas = fetch_table("web_zonas", empresa_id=empresa_id)
 
-    clientes_by_id = {int(c["id"]): c for c in clientes if "id" in c}
+    # Mapa de clientes más seguro
+    clientes_by_id = {}
+    for c in clientes:
+        cid = c.get("id")
+        if cid is not None:
+            try:
+                clientes_by_id[int(cid)] = c
+            except:
+                continue
 
     formatted_records = []
+
     for record in records_raw:
-        promoter_info = record.get('web_promotores') or {}
-        
-        # Datos de coordenadas de la visita
         try:
-            visit_lat = float(record.get("latitude")) if record.get("latitude") not in [None, "None"] else None
-            visit_lon = float(record.get("longitude")) if record.get("longitude") not in [None, "None"] else None
-        except:
-            visit_lat = visit_lon = None
+            promoter_info = record.get('web_promotores') or {}
 
-        # Datos del cliente asociado
-        cliente_id = record.get("cliente_id")
-        cliente_data = clientes_by_id.get(int(cliente_id)) if cliente_id else None
-        
-        distance = 0
-        verified_status = "Cliente Desconocido"
-        cliente_coords_str = "N/A"
+            # Coordenadas visita - seguro
+            visit_lat = safe_float(record.get("latitude"))
+            visit_lon = safe_float(record.get("longitude"))
 
-        if cliente_data:
-            c_lat = float(cliente_data.get("latitude", 0))
-            c_lon = float(cliente_data.get("longitude", 0))
-            if c_lat != 0: cliente_coords_str = f"{c_lat}, {c_lon}"
-            
-            if visit_lat and c_lat != 0:
-                distance = calculate_distance(visit_lat, visit_lon, c_lat, c_lon)
-                verified_status = "Confirmado" if distance <= 150 else "No Confirmado"
-            elif not visit_lat:
-                verified_status = "Sin GPS Visita"
+            # Cliente
+            cliente_id_raw = record.get("cliente_id")
+            cliente_id = None
+            if cliente_id_raw is not None:
+                try:
+                    cliente_id = int(cliente_id_raw)
+                except:
+                    pass
 
-        formatted_records.append({
-            "id": record.get("id"),
-            "created_at": record.get("created_at"),
-            "promoter_name": promoter_info.get('promoter_name', "Sin Nombre"),
-            "state": record.get("state", "N/A"),
-            "zone": record.get("zone", "N/A"),
-            "trade": record.get("trade", "N/A"),
-            "distance": round(distance, 2),
-            "verified": verified_status,
-            "latitude": visit_lat,
-            "longitude": visit_lon,
-            "client_coords": cliente_coords_str,
-            "myitems": record.get("myitems", {}),
-            "competitoritems": record.get("competitoritems", {}),
-            "before_photos": record.get("before_photos", []),
-            "after_photos": record.get("after_photos", [])
-        })
+            cliente_data = clientes_by_id.get(cliente_id)
+
+            distance = 0.0
+            verified_status = "Cliente Desconocido"
+            cliente_coords_str = "N/A"
+
+            if cliente_data:
+                c_lat = safe_float(cliente_data.get("latitude"), 0.0)
+                c_lon = safe_float(cliente_data.get("longitude"), 0.0)
+
+                if c_lat != 0.0:
+                    cliente_coords_str = f"{c_lat:.5f}, {c_lon:.5f}"
+
+                if visit_lat is not None and visit_lon is not None and c_lat != 0.0:
+                    try:
+                        distance = calculate_distance(visit_lat, visit_lon, c_lat, c_lon)
+                        verified_status = "Confirmado" if distance <= 150 else "No Confirmado"
+                    except Exception as dist_err:
+                        print(f"Error distancia registro {record.get('id')}: {dist_err}")
+                        verified_status = "Error cálculo distancia"
+                elif visit_lat is None or visit_lon is None:
+                    verified_status = "Sin GPS Visita"
+
+            formatted_records.append({
+                "id": record.get("id"),
+                "created_at": record.get("created_at"),
+                "promoter_name": promoter_info.get('promoter_name', "Sin Nombre"),
+                "state": record.get("state", "N/A"),
+                "zone": record.get("zone", "N/A"),
+                "trade": record.get("trade", "N/A"),
+                "distance": round(distance, 2) if distance else 0,
+                "verified": verified_status,
+                "latitude": visit_lat,
+                "longitude": visit_lon,
+                "client_coords": cliente_coords_str,
+                "myitems": safe_json_parse(record.get("myitems")),
+                "competitoritems": safe_json_parse(record.get("competitoritems")),
+                "before_photos": safe_json_parse(record.get("before_photos")),
+                "after_photos": safe_json_parse(record.get("after_photos"))
+            })
+
+        except Exception as e:
+            print(f"Error procesando registro {record.get('id', 'sin-id')}: {str(e)}")
+            continue  # No dejamos que un registro malo rompa todo
 
     return jsonify({
         "records": formatted_records,
@@ -382,10 +454,12 @@ def get_records():
         "zonas": zonas
     })
 
+
 @app.route('/api/weeks_with_visits', methods=['GET'])
 def get_weeks_with_visits():
     empresa_id = request.args.get('empresa_id')
-    if not empresa_id: return jsonify({"error": "empresa_id requerido"}), 400
+    if not empresa_id:
+        return jsonify({"error": "empresa_id requerido"}), 400
     
     year = request.args.get('year', str(datetime.now().year))
     params = [
@@ -396,16 +470,24 @@ def get_weeks_with_visits():
     records = fetch_table("web_precios", params=params)
     weeks = set()
     for r in records:
-        dt = datetime.fromisoformat(r['created_at'].replace('Z', '+00:00'))
-        weeks.add(dt.isocalendar()[1])
+        try:
+            dt_str = r.get('created_at')
+            if dt_str:
+                dt = datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
+                weeks.add(dt.isocalendar()[1])
+        except Exception as e:
+            print(f"Error parseando fecha en weeks: {str(e)} - registro: {r}")
+            continue
     return jsonify({"weeks": sorted(list(weeks), reverse=True)})
+
 
 @app.route('/delete_records', methods=['POST'])
 def delete_records():
     data = request.json or {}
     ids = data.get("ids", [])
     empresa_id = data.get("empresa_id")
-    if not empresa_id or not ids: return jsonify({"success": False}), 400
+    if not empresa_id or not ids:
+        return jsonify({"success": False}), 400
     
     id_list = ",".join(map(str, ids))
     url = f"{SUPABASE_URL}/rest/v1/web_precios?id=in.({id_list})&empresa_id=eq.{empresa_id}"
@@ -426,6 +508,7 @@ def handle_competitor_products():
     res = requests.post(f"{SUPABASE_URL}/rest/v1/web_competidor", headers=headers, json={"presentation": data.get("presentation")})
     return jsonify({"success": res.ok}), 201
 
+
 @app.route('/api/competitorproducts/<int:product_id>', methods=['PATCH', 'DELETE'])
 def update_delete_competitor(product_id):
     url = f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}"
@@ -434,6 +517,7 @@ def update_delete_competitor(product_id):
     else:
         res = requests.delete(url, headers=headers)
     return jsonify({"success": res.ok})
+
 
 # ----------------------------------------------------------------------
 # --- Rutas CRUD Productos Propios ---
@@ -448,6 +532,7 @@ def handle_my_products():
     data = request.json
     res = requests.post(f"{SUPABASE_URL}/rest/v1/web_myproductos", headers=headers, json={"presentation": data.get("presentation")})
     return jsonify({"success": res.ok}), 201
+
 
 @app.route('/api/myproducts/<int:product_id>', methods=['PATCH', 'DELETE'])
 def update_delete_myproduct(product_id):
