@@ -186,7 +186,7 @@
             const zone = document.getElementById('zone').value;
 
             let query = supabaseClient.from('web_precios')
-                .select('myitems, competitoritems, web_promotores!inner(promoter_name, promoter_id)')
+                .select('myitems, total_faces, web_promotores!inner(promoter_name, promoter_id)')
                 .eq('empresa_id', empresaId)
                 .gte('created_at', dateFrom + 'T00:00:00')
                 .lte('created_at', dateTo + 'T23:59:59');
@@ -235,12 +235,14 @@
             let totalBefore = 0;
             let totalAfter = 0;
             let totalMyFaces = 0;
-            let totalCompFaces = 0;
+            let totalShelfFaces = 0;
 
             const productStats = {};
             currentStats = {};
 
             records.forEach(record => {
+                totalShelfFaces += (record.total_faces || 0);
+
                 const items = record.myitems || [];
                 items.forEach(item => {
                     const before = parseInt(item.faces_before) || 0;
@@ -255,13 +257,6 @@
                     productStats[name].before += before;
                     productStats[name].after += after;
                 });
-
-                const compItems = record.competitoritems || [];
-                compItems.forEach(item => {
-                    // Intentamos obtener caras de competencia (faces o faces_shelf)
-                    const faces = parseInt(item.faces) || parseInt(item.faces_shelf) || 0;
-                    totalCompFaces += faces;
-                });
             });
             
             currentStats = productStats;
@@ -273,13 +268,13 @@
             netDisplay.className = `text-6xl font-extrabold ${netChange >= 0 ? 'text-green-600' : 'text-red-600'}`;
 
             // Actualizar SOS (Share of Shelf)
-            const totalShelf = totalMyFaces + totalCompFaces;
-            const sos = totalShelf > 0 ? ((totalMyFaces / totalShelf) * 100).toFixed(1) : '0.0';
+            const sos = totalShelfFaces > 0 ? ((totalMyFaces / totalShelfFaces) * 100).toFixed(1) : '0.0';
+            const totalCompFaces = Math.max(0, totalShelfFaces - totalMyFaces);
             
             document.getElementById('sosDisplay').textContent = `${sos}%`;
             document.getElementById('ourFacesCount').textContent = totalMyFaces;
             document.getElementById('compFacesCount').textContent = totalCompFaces;
-            document.getElementById('totalShelfCount').textContent = totalShelf;
+            document.getElementById('totalShelfCount').textContent = totalShelfFaces;
 
             // Actualizar Gráfico SOS
             const ctxSos = document.getElementById('sosChart').getContext('2d');
