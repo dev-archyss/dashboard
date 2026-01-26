@@ -60,6 +60,24 @@
             </div>
         </div>
 
+        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-100 dark:border-slate-700">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Participación de Anaquel (Share of Shelf)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                <div class="text-center">
+                    <p class="text-5xl font-extrabold text-indigo-600 dark:text-indigo-400" id="sosDisplay">0%</p>
+                    <p class="text-gray-500 dark:text-gray-400 mt-2">Nuestra Participación</p>
+                    <div class="mt-4 text-sm text-gray-400 space-y-1">
+                        <p>Nuestras Caras: <span id="ourFacesCount" class="font-bold text-gray-700 dark:text-gray-200">0</span></p>
+                        <p>Competencia: <span id="compFacesCount" class="font-bold text-gray-700 dark:text-gray-200">0</span></p>
+                        <p>Total Anaquel: <span id="totalShelfCount" class="font-bold text-gray-700 dark:text-gray-200">0</span></p>
+                    </div>
+                </div>
+                <div class="col-span-2 h-64">
+                    <canvas id="sosChart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700">
                 <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Total Caras Antes vs Después</h3>
@@ -105,6 +123,7 @@
         if (!empresaId) window.location.href = '/';
 
         let chartInstance = null;
+        let sosChartInstance = null;
         let allZonas = [];
         let currentStats = {};
 
@@ -167,7 +186,7 @@
             const zone = document.getElementById('zone').value;
 
             let query = supabaseClient.from('web_precios')
-                .select('myitems, web_promotores!inner(promoter_name, promoter_id)')
+                .select('myitems, competitoritems, web_promotores!inner(promoter_name, promoter_id)')
                 .eq('empresa_id', empresaId)
                 .gte('created_at', dateFrom + 'T00:00:00')
                 .lte('created_at', dateTo + 'T23:59:59');
@@ -215,6 +234,9 @@
         function processData(records) {
             let totalBefore = 0;
             let totalAfter = 0;
+            let totalMyFaces = 0;
+            let totalCompFaces = 0;
+
             const productStats = {};
             currentStats = {};
 
@@ -227,10 +249,18 @@
 
                     totalBefore += before;
                     totalAfter += after;
+                    totalMyFaces += after; // Usamos 'after' para el cálculo de participación actual
 
                     if (!productStats[name]) productStats[name] = { before: 0, after: 0 };
                     productStats[name].before += before;
                     productStats[name].after += after;
+                });
+
+                const compItems = record.competitoritems || [];
+                compItems.forEach(item => {
+                    // Intentamos obtener caras de competencia (faces o faces_shelf)
+                    const faces = parseInt(item.faces) || parseInt(item.faces_shelf) || 0;
+                    totalCompFaces += faces;
                 });
             });
             
@@ -241,6 +271,37 @@
             const netDisplay = document.getElementById('netChangeDisplay');
             netDisplay.textContent = (netChange > 0 ? '+' : '') + netChange;
             netDisplay.className = `text-6xl font-extrabold ${netChange >= 0 ? 'text-green-600' : 'text-red-600'}`;
+
+            // Actualizar SOS (Share of Shelf)
+            const totalShelf = totalMyFaces + totalCompFaces;
+            const sos = totalShelf > 0 ? ((totalMyFaces / totalShelf) * 100).toFixed(1) : '0.0';
+            
+            document.getElementById('sosDisplay').textContent = `${sos}%`;
+            document.getElementById('ourFacesCount').textContent = totalMyFaces;
+            document.getElementById('compFacesCount').textContent = totalCompFaces;
+            document.getElementById('totalShelfCount').textContent = totalShelf;
+
+            // Actualizar Gráfico SOS
+            const ctxSos = document.getElementById('sosChart').getContext('2d');
+            if (sosChartInstance) sosChartInstance.destroy();
+            sosChartInstance = new Chart(ctxSos, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Nosotros', 'Competencia'],
+                    datasets: [{
+                        data: [totalMyFaces, totalCompFaces],
+                        backgroundColor: ['#4F46E5', '#F59E0B'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
 
             // Update Chart
             const ctx = document.getElementById('totalFacesChart').getContext('2d');
