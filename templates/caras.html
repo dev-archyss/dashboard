@@ -3,111 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análisis de Caras en Anaquel</title>
+    <title>Análisis de Caras en Anaquel - Dashboard Avanzado</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .card { transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300 min-h-screen">
     <script>tailwind.config = { darkMode: 'class' }</script>
+
+    <!-- Navbar (asumiendo que ya tienes este include) -->
     {% include 'navbar.html' %}
 
-    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
-        <h1 class="text-3xl font-extrabold mb-6 text-center text-gray-800 dark:text-white">Análisis de Caras en Anaquel</h1>
-
-        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-100 dark:border-slate-700">
-            <h2 class="text-2xl font-semibold text-gray-700 dark:text-white mb-4">Filtros</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-                <div>
-                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Fecha Desde:</label>
-                    <input type="date" id="dateFrom" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2">
-                </div>
-                <div>
-                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Fecha Hasta:</label>
-                    <input type="date" id="dateTo" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2">
-                </div>
-                <div>
-                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Promotor:</label>
-                    <select id="promoter" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2">
-                        <option value="all">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Estado:</label>
-                    <select id="state" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2">
-                        <option value="all">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Zona:</label>
-                    <select id="zone" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2" disabled>
-                        <option value="all">Todas</option>
-                    </select>
-                </div>
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-white">Análisis de Caras en Anaquel</h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-2">Seguimiento de participación y ganancia de caras por visita</p>
             </div>
-            <div class="flex justify-end gap-3">
-                <button id="exportCSV" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-all">
-                    <i class="fas fa-file-csv mr-2"></i> Exportar CSV
-                </button>
-                <button id="applyFilters" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-all">
-                    Aplicar Filtros
+            <div class="flex flex-wrap gap-3">
+                <button id="exportCSV" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg shadow-md flex items-center gap-2 transition">
+                    <i class="fas fa-file-csv"></i> Exportar CSV
                 </button>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-100 dark:border-slate-700">
-            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Participación de Anaquel (Share of Shelf)</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-                <div class="text-center">
-                    <p class="text-5xl font-extrabold text-indigo-600 dark:text-indigo-400" id="sosDisplay">0%</p>
-                    <p class="text-gray-500 dark:text-gray-400 mt-2">Nuestra Participación</p>
-                    <div class="mt-4 text-sm text-gray-400 space-y-1">
-                        <p>Nuestras Caras: <span id="ourFacesCount" class="font-bold text-gray-700 dark:text-gray-200">0</span></p>
-                        <p>Competencia: <span id="compFacesCount" class="font-bold text-gray-700 dark:text-gray-200">0</span></p>
-                        <p>Total Anaquel: <span id="totalShelfCount" class="font-bold text-gray-700 dark:text-gray-200">0</span></p>
-                    </div>
+        <!-- FILTROS -->
+        <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-6 mb-8 border border-gray-100 dark:border-slate-700 card">
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-5 flex items-center gap-3">
+                <i class="fas fa-filter text-indigo-600"></i> Filtros Avanzados
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Fecha Desde</label>
+                    <input type="date" id="dateFrom" class="w-full h-11 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 focus:ring-2 focus:ring-indigo-500">
                 </div>
-                <div class="col-span-2 h-64">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Fecha Hasta</label>
+                    <input type="date" id="dateTo" class="w-full h-11 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Promotor</label>
+                    <select id="promoter" class="w-full h-11 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 focus:ring-2 focus:ring-indigo-500">
+                        <option value="all">Todos los promotores</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Estado</label>
+                    <select id="state" class="w-full h-11 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 focus:ring-2 focus:ring-indigo-500">
+                        <option value="all">Todos los estados</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Zona</label>
+                    <select id="zone" class="w-full h-11 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 focus:ring-2 focus:ring-indigo-500" disabled>
+                        <option value="all">Todas las zonas</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-3 justify-end">
+                <button id="clearFilters" class="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2.5 rounded-lg shadow-md transition flex items-center gap-2">
+                    <i class="fas fa-eraser"></i> Limpiar
+                </button>
+                <button id="applyFilters" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg shadow-md transition flex items-center gap-2 font-medium">
+                    <i class="fas fa-search"></i> Aplicar Filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- KPIs Principales -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-6 border border-gray-100 dark:border-slate-700 card text-center">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Participación Actual</p>
+                <p class="text-4xl lg:text-5xl font-extrabold text-indigo-600 dark:text-indigo-400" id="sosDisplay">0%</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">Nuestras caras / Total anaquel</p>
+            </div>
+            <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-6 border border-gray-100 dark:border-slate-700 card text-center">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Caras Ganadas/Perdidas</p>
+                <p class="text-4xl lg:text-5xl font-extrabold" id="netChangeDisplay">0</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">Diferencia neta (después - antes)</p>
+            </div>
+            <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-6 border border-gray-100 dark:border-slate-700 card text-center">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Promedio Ganancia por Visita</p>
+                <p class="text-4xl lg:text-5xl font-extrabold text-green-600 dark:text-green-400" id="avgGainDisplay">0.0</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">Caras ganadas promedio</p>
+            </div>
+            <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-6 border border-gray-100 dark:border-slate-700 card text-center">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Visitas Analizadas</p>
+                <p class="text-4xl lg:text-5xl font-extrabold text-purple-600 dark:text-purple-400" id="visitsCount">0</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">Registros en el período</p>
+            </div>
+        </div>
+
+        <!-- Gráficos principales -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Participación (Doughnut) -->
+            <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-6 border border-gray-100 dark:border-slate-700 card">
+                <h3 class="text-xl font-bold mb-5 text-gray-800 dark:text-white flex items-center gap-3">
+                    <i class="fas fa-chart-pie text-indigo-600"></i> Participación de Anaquel (Share of Shelf)
+                </h3>
+                <div class="h-80">
                     <canvas id="sosChart"></canvas>
                 </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700">
-                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Total Caras Antes vs Después</h3>
-                <canvas id="totalFacesChart"></canvas>
-            </div>
-            <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700">
-                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Ganancia/Pérdida Neta</h3>
-                <div class="flex items-center justify-center h-64">
-                    <div class="text-center">
-                        <p class="text-6xl font-extrabold" id="netChangeDisplay">0</p>
-                        <p class="text-gray-500 dark:text-gray-400 mt-2 text-lg">Caras Ganadas/Perdidas</p>
+                <div class="mt-6 grid grid-cols-2 gap-4 text-center text-sm">
+                    <div>
+                        <p class="text-gray-500 dark:text-gray-400">Nuestras caras</p>
+                        <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400" id="ourFacesCount">0</p>
                     </div>
+                    <div>
+                        <p class="text-gray-500 dark:text-gray-400">Caras competencia</p>
+                        <p class="text-2xl font-bold text-amber-600 dark:text-amber-400" id="compFacesCount">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Evolución Antes vs Después -->
+            <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-6 border border-gray-100 dark:border-slate-700 card">
+                <h3 class="text-xl font-bold mb-5 text-gray-800 dark:text-white flex items-center gap-3">
+                    <i class="fas fa-chart-bar text-indigo-600"></i> Caras Antes vs Después
+                </h3>
+                <div class="h-80">
+                    <canvas id="evolutionChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700">
-            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Detalle por Producto</h3>
+        <!-- Tabla Detallada -->
+        <div class="bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-6 border border-gray-100 dark:border-slate-700 card overflow-hidden">
+            <h3 class="text-xl font-bold mb-5 text-gray-800 dark:text-white flex items-center gap-3">
+                <i class="fas fa-table text-indigo-600"></i> Detalle por Producto y Visita
+            </h3>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-                    <thead class="bg-gray-100 dark:bg-slate-700">
+                    <thead class="bg-gray-100 dark:bg-slate-700 sticky top-0 z-10">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Producto</th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Caras Antes</th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Caras Después</th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Diferencia</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Promotor</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Comercio</th>
+                            <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Caras Nuestras Antes (Manual)</th>
+                            <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Caras Nuestras Antes (Contadas)</th>
+                            <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Caras Nuestras Después</th>
+                            <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Ganancia Neta</th>
+                            <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">% Participación</th>
                         </tr>
                     </thead>
-                    <tbody id="facesTableBody" class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
-                        <tr><td colspan="4" class="text-center py-4 text-gray-500">Cargando datos...</td></tr>
+                    <tbody id="visitsTableBody" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr><td colspan="8" class="text-center py-8 text-gray-500 dark:text-gray-400">Aplica filtros para ver resultados</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -115,254 +162,305 @@
     </div>
 
     <script>
-        const supabaseClient = supabase.createClient(
+        const supabase = supabase.createClient(
             'https://djjylikkocemrlsjxscr.supabase.co',
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M'
         );
+
         const empresaId = localStorage.getItem('empresa_id');
         if (!empresaId) window.location.href = '/';
 
-        let chartInstance = null;
-        let sosChartInstance = null;
-        let allZonas = [];
-        let currentStats = {};
+        let sosChart = null;
+        let evolutionChart = null;
+        let allPromoters = [];
+        let allStates = [];
+        let allZones = [];
+        let currentData = [];
 
-        async function loadCatalogs() {
-            // Cargar Promotores
-            const { data: promotores } = await supabaseClient
+        // Cargar catálogos
+        async function loadFilters() {
+            // Promotores
+            const { data: promoters } = await supabase
                 .from('web_promotores')
                 .select('promoter_name')
                 .eq('empresa_id', empresaId)
                 .order('promoter_name');
-            
+            allPromoters = [...new Set(promoters?.map(p => p.promoter_name) || [])];
             const promoterSelect = document.getElementById('promoter');
-            promoterSelect.innerHTML = '<option value="all">Todos</option>';
-            if (promotores) {
-                const unique = [...new Set(promotores.map(p => p.promoter_name))].sort();
-                unique.forEach(name => {
-                    const opt = document.createElement('option');
-                    opt.value = name;
-                    opt.textContent = name;
-                    promoterSelect.appendChild(opt);
-                });
-            }
+            promoterSelect.innerHTML = '<option value="all">Todos los promotores</option>';
+            allPromoters.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                promoterSelect.appendChild(opt);
+            });
 
-            // Cargar Estados
-            const { data: estados } = await supabaseClient
+            // Estados
+            const { data: states } = await supabase
                 .from('web_estados')
-                .select('*')
+                .select('id, nombre')
                 .eq('empresa_id', empresaId)
                 .order('nombre');
-            
+            allStates = states || [];
             const stateSelect = document.getElementById('state');
-            stateSelect.innerHTML = '<option value="all">Todos</option>';
-            if (estados) {
-                estados.forEach(e => {
-                    const opt = document.createElement('option');
-                    opt.value = e.id; 
-                    opt.textContent = e.nombre;
-                    stateSelect.appendChild(opt);
-                });
-            }
+            stateSelect.innerHTML = '<option value="all">Todos los estados</option>';
+            allStates.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.nombre;
+                opt.textContent = s.nombre;
+                stateSelect.appendChild(opt);
+            });
 
-            // Cargar Zonas
-            const { data: zonas } = await supabaseClient
+            // Zonas (se cargan dinámicamente al seleccionar estado)
+            const { data: zones } = await supabase
                 .from('web_zonas')
-                .select('*')
+                .select('nombre, estado_id')
                 .eq('empresa_id', empresaId)
                 .order('nombre');
-            allZonas = zonas || [];
+            allZones = zones || [];
 
-            stateSelect.addEventListener('change', updateZoneFilter);
+            document.getElementById('state').addEventListener('change', updateZones);
         }
 
+        function updateZones() {
+            const stateVal = document.getElementById('state').value;
+            const zoneSelect = document.getElementById('zone');
+            zoneSelect.innerHTML = '<option value="all">Todas las zonas</option>';
+            zoneSelect.disabled = (stateVal === 'all');
+
+            if (stateVal !== 'all') {
+                const filtered = allZones.filter(z => z.estado_id && document.querySelector(`#state option[value="${stateVal}"]`)?.dataset?.id === z.estado_id?.toString());
+                filtered.forEach(z => {
+                    const opt = document.createElement('option');
+                    opt.value = z.nombre;
+                    opt.textContent = z.nombre;
+                    zoneSelect.appendChild(opt);
+                });
+            }
+        }
+
+        // Cargar datos con filtros
         async function loadData() {
-            const dateFrom = document.getElementById('dateFrom').value;
-            const dateTo = document.getElementById('dateTo').value;
-            const promoterId = document.getElementById('promoter').value;
-            const stateSelect = document.getElementById('state');
-            const stateValue = stateSelect.value;
-            const stateName = stateSelect.options[stateSelect.selectedIndex]?.text;
+            const from = document.getElementById('dateFrom').value;
+            const to = document.getElementById('dateTo').value;
+            const promoter = document.getElementById('promoter').value;
+            const state = document.getElementById('state').value;
             const zone = document.getElementById('zone').value;
 
-            let query = supabaseClient.from('web_precios')
-                .select('myitems, total_faces, web_promotores!inner(promoter_name, promoter_id)')
+            let query = supabase
+                .from('web_precios')
+                .select(`
+                    id, created_at, promoter_name, state, zone, trade,
+                    total_faces_before, our_faces_before_manual, our_faces_before_counted,
+                    total_faces, our_faces_after,
+                    myitems
+                `)
                 .eq('empresa_id', empresaId)
-                .gte('created_at', dateFrom + 'T00:00:00')
-                .lte('created_at', dateTo + 'T23:59:59');
+                .gte('created_at', `${from}T00:00:00`)
+                .lte('created_at', `${to}T23:59:59`)
+                .order('created_at', { ascending: false });
 
-            if (promoterId !== 'all') {
-                query = query.eq('web_promotores.promoter_name', promoterId);
-            }
-
-            if (stateValue !== 'all') {
-                query = query.eq('state', stateName);
-            }
-
-            if (zone !== 'all') {
-                query = query.eq('zone', zone);
-            }
+            if (promoter !== 'all') query = query.eq('promoter_name', promoter);
+            if (state !== 'all') query = query.eq('state', state);
+            if (zone !== 'all') query = query.eq('zone', zone);
 
             const { data, error } = await query;
-            if (error) { console.error(error); return; }
-
-            processData(data);
-        }
-
-        function updateZoneFilter() {
-            const stateSelect = document.getElementById('state');
-            const zoneSelect = document.getElementById('zone');
-            const selectedStateId = stateSelect.value;
-            
-            zoneSelect.innerHTML = '<option value="all">Todas</option>';
-            
-            if (selectedStateId === 'all') {
-                zoneSelect.disabled = true;
+            if (error) {
+                console.error('Error al cargar datos:', error);
                 return;
             }
-            
-            zoneSelect.disabled = false;
-            const filteredZonas = allZonas.filter(z => z.estado_id == selectedStateId);
-            filteredZonas.forEach(z => {
-                const opt = document.createElement('option');
-                opt.value = z.nombre; 
-                opt.textContent = z.nombre;
-                zoneSelect.appendChild(opt);
-            });
+
+            currentData = data || [];
+            renderDashboard(data);
         }
 
-        function processData(records) {
-            let totalBefore = 0;
+        function renderDashboard(data) {
+            if (!data || data.length === 0) {
+                document.getElementById('visitsTableBody').innerHTML = '<tr><td colspan="8" class="text-center py-12 text-gray-500 dark:text-gray-400">No hay datos para los filtros seleccionados</td></tr>';
+                resetChartsAndKPIs();
+                return;
+            }
+
+            let totalBeforeManual = 0;
+            let totalBeforeCounted = 0;
             let totalAfter = 0;
-            let totalMyFaces = 0;
-            let totalShelfFaces = 0;
+            let totalShelfAfter = 0;
+            let totalVisits = data.length;
+            let totalGain = 0;
 
-            const productStats = {};
-            currentStats = {};
+            const productMap = {};
 
-            records.forEach(record => {
-                totalShelfFaces += (record.total_faces || 0);
+            data.forEach(visit => {
+                const beforeManual = visit.our_faces_before_manual || 0;
+                const beforeCounted = visit.our_faces_before_counted || 0;
+                const after = visit.our_faces_after || 0;
+                const shelfAfter = visit.total_faces || 0;
 
-                const items = record.myitems || [];
-                items.forEach(item => {
-                    const before = parseInt(item.faces_before) || 0;
-                    const after = parseInt(item.faces_after) || 0;
-                    const name = item.presentation || 'Desconocido';
+                totalBeforeManual += beforeManual;
+                totalBeforeCounted += beforeCounted;
+                totalAfter += after;
+                totalShelfAfter += shelfAfter;
+                totalGain += (after - beforeCounted);
 
-                    totalBefore += before;
-                    totalAfter += after;
-                    totalMyFaces += after; // Usamos 'after' para el cálculo de participación actual
-
-                    if (!productStats[name]) productStats[name] = { before: 0, after: 0 };
-                    productStats[name].before += before;
-                    productStats[name].after += after;
+                // Detalle por producto
+                (visit.myitems || []).forEach(item => {
+                    if (!item.presentation || item.presentation === 'SIN STOCK') return;
+                    const prod = item.presentation;
+                    if (!productMap[prod]) productMap[prod] = { before: 0, after: 0, visits: 0 };
+                    productMap[prod].before += item.faces_before || 0;
+                    productMap[prod].after += item.faces_after || 0;
+                    productMap[prod].visits += 1;
                 });
             });
-            
-            currentStats = productStats;
 
-            // Update KPI
-            const netChange = totalAfter - totalBefore;
-            const netDisplay = document.getElementById('netChangeDisplay');
-            netDisplay.textContent = (netChange > 0 ? '+' : '') + netChange;
-            netDisplay.className = `text-6xl font-extrabold ${netChange >= 0 ? 'text-green-600' : 'text-red-600'}`;
+            const avgGain = totalVisits > 0 ? (totalGain / totalVisits).toFixed(1) : '0.0';
+            const sos = totalShelfAfter > 0 ? ((totalAfter / totalShelfAfter) * 100).toFixed(1) : '0.0';
 
-            // Actualizar SOS (Share of Shelf)
-            const sos = totalShelfFaces > 0 ? ((totalMyFaces / totalShelfFaces) * 100).toFixed(1) : '0.0';
-            const totalCompFaces = Math.max(0, totalShelfFaces - totalMyFaces);
-            
+            // KPIs
             document.getElementById('sosDisplay').textContent = `${sos}%`;
-            document.getElementById('ourFacesCount').textContent = totalMyFaces;
-            document.getElementById('compFacesCount').textContent = totalCompFaces;
-            document.getElementById('totalShelfCount').textContent = totalShelfFaces;
+            document.getElementById('netChangeDisplay').textContent = totalGain >= 0 ? `+${totalGain}` : totalGain;
+            document.getElementById('netChangeDisplay').className = `text-4xl lg:text-5xl font-extrabold ${totalGain >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`;
+            document.getElementById('avgGainDisplay').textContent = avgGain;
+            document.getElementById('visitsCount').textContent = totalVisits;
 
-            // Actualizar Gráfico SOS
+            // Gráfico Share of Shelf
             const ctxSos = document.getElementById('sosChart').getContext('2d');
-            if (sosChartInstance) sosChartInstance.destroy();
-            sosChartInstance = new Chart(ctxSos, {
+            if (sosChart) sosChart.destroy();
+            sosChart = new Chart(ctxSos, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Nosotros', 'Competencia'],
+                    labels: ['Nuestras caras', 'Competencia'],
                     datasets: [{
-                        data: [totalMyFaces, totalCompFaces],
-                        backgroundColor: ['#4F46E5', '#F59E0B'],
-                        borderWidth: 0
+                        data: [totalAfter, totalShelfAfter - totalAfter],
+                        backgroundColor: ['#4F46E5', '#F97316'],
+                        borderWidth: 0,
+                        cutout: '65%'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'right' }
+                        legend: { position: 'bottom', labels: { font: { size: 14 } } },
+                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw} caras (${((ctx.raw/totalShelfAfter)*100).toFixed(1)}%)` } }
                     }
                 }
             });
 
-            // Update Chart
-            const ctx = document.getElementById('totalFacesChart').getContext('2d');
-            if (chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctx, {
+            // Gráfico Evolución
+            const ctxEv = document.getElementById('evolutionChart').getContext('2d');
+            if (evolutionChart) evolutionChart.destroy();
+            evolutionChart = new Chart(ctxEv, {
                 type: 'bar',
                 data: {
-                    labels: ['Antes', 'Después'],
+                    labels: ['Antes (Manual)', 'Antes (Contado)', 'Después'],
                     datasets: [{
-                        label: 'Total Caras',
-                        data: [totalBefore, totalAfter],
-                        backgroundColor: ['#9CA3AF', '#4F46E5']
+                        label: 'Caras Nuestras',
+                        data: [totalBeforeManual, totalBeforeCounted, totalAfter],
+                        backgroundColor: ['#60A5FA', '#3B82F6', '#4F46E5'],
+                        borderRadius: 8
                     }]
                 },
-                options: { responsive: true }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { display: false } }
+                }
             });
 
-            // Update Table
-            const tbody = document.getElementById('facesTableBody');
+            // Tabla detallada
+            const tbody = document.getElementById('visitsTableBody');
             tbody.innerHTML = '';
-            Object.keys(productStats).sort().forEach(prod => {
-                const stats = productStats[prod];
-                const diff = stats.after - stats.before;
+            data.forEach(visit => {
+                const date = new Date(visit.created_at).toLocaleDateString('es-ES');
+                const gain = (visit.our_faces_after || 0) - (visit.our_faces_before_counted || 0);
+                const participation = visit.total_faces > 0 
+                    ? ((visit.our_faces_after || 0) / visit.total_faces * 100).toFixed(1) + '%' 
+                    : '-';
+
                 const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors';
                 row.innerHTML = `
-                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${prod}</td>
-                    <td class="px-6 py-4 text-center text-sm text-gray-600 dark:text-gray-300">${stats.before}</td>
-                    <td class="px-6 py-4 text-center text-sm text-gray-600 dark:text-gray-300">${stats.after}</td>
-                    <td class="px-6 py-4 text-center text-sm font-bold ${diff >= 0 ? 'text-green-600' : 'text-red-600'}">${diff > 0 ? '+' : ''}${diff}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-200 whitespace-nowrap">${date}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-200">${visit.promoter_name || '-'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-200">${visit.trade || '-'}</td>
+                    <td class="px-6 py-4 text-center text-sm font-medium">${visit.our_faces_before_manual || '-'}</td>
+                    <td class="px-6 py-4 text-center text-sm font-medium">${visit.our_faces_before_counted || '-'}</td>
+                    <td class="px-6 py-4 text-center text-sm font-bold text-indigo-600 dark:text-indigo-400">${visit.our_faces_after || '-'}</td>
+                    <td class="px-6 py-4 text-center text-sm font-bold ${gain >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
+                        ${gain > 0 ? '+' : ''}${gain}
+                    </td>
+                    <td class="px-6 py-4 text-center text-sm font-medium">${participation}</td>
                 `;
                 tbody.appendChild(row);
             });
         }
 
+        function resetChartsAndKPIs() {
+            document.getElementById('sosDisplay').textContent = '0%';
+            document.getElementById('netChangeDisplay').textContent = '0';
+            document.getElementById('avgGainDisplay').textContent = '0.0';
+            document.getElementById('visitsCount').textContent = '0';
+            if (sosChart) sosChart.destroy();
+            if (evolutionChart) evolutionChart.destroy();
+        }
+
+        // Eventos
         document.getElementById('applyFilters').onclick = loadData;
-        
-        document.getElementById('exportCSV').addEventListener('click', () => {
-            if (Object.keys(currentStats).length === 0) {
-                alert('No hay datos para exportar');
-                return;
-            }
-            
-            const headers = ['Producto', 'Caras Antes', 'Caras Después', 'Diferencia'];
-            const rows = Object.keys(currentStats).sort().map(prod => {
-                const stats = currentStats[prod];
-                const diff = stats.after - stats.before;
-                return [`"${prod}"`, stats.before, stats.after, diff].join(',');
-            });
-            
-            const csvContent = [headers.join(','), ...rows].join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        document.getElementById('clearFilters').onclick = () => {
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('promoter').value = 'all';
+            document.getElementById('state').value = 'all';
+            document.getElementById('zone').value = 'all';
+            document.getElementById('zone').disabled = true;
+            loadData();
+        };
+
+        document.getElementById('exportCSV').onclick = () => {
+            if (currentData.length === 0) return alert('No hay datos para exportar');
+
+            const headers = [
+                'Fecha', 'Promotor', 'Estado', 'Zona', 'Comercio',
+                'Caras Totales Antes', 'Caras Nuestras Antes (Manual)', 'Caras Nuestras Antes (Contadas)',
+                'Caras Totales Después', 'Caras Nuestras Después', 'Ganancia Neta', '% Participación'
+            ];
+
+            const rows = currentData.map(v => [
+                new Date(v.created_at).toLocaleString('es-ES'),
+                v.promoter_name || '',
+                v.state || '',
+                v.zone || '',
+                v.trade || '',
+                v.total_faces_before || 0,
+                v.our_faces_before_manual || 0,
+                v.our_faces_before_counted || 0,
+                v.total_faces || 0,
+                v.our_faces_after || 0,
+                (v.our_faces_after || 0) - (v.our_faces_before_counted || 0),
+                v.total_faces > 0 ? ((v.our_faces_after || 0) / v.total_faces * 100).toFixed(1) : 0
+            ].map(v => `"${v}"`).join(','));
+
+            const csv = [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.setAttribute('href', url);
-            link.setAttribute('download', `analisis_caras_${new Date().toISOString().split('T')[0]}.csv`);
+            link.href = url;
+            link.download = `analisis_caras_${new Date().toISOString().split('T')[0]}.csv`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        });
-        
+        };
+
+        // Inicio
         (async () => {
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('dateFrom').value = today;
             document.getElementById('dateTo').value = today;
-            await loadCatalogs();
-            loadData();
+
+            await loadFilters();
+            await loadData();
         })();
     </script>
 </body>
