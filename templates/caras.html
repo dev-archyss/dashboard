@@ -60,48 +60,52 @@
             </div>
         </div>
 
-        <!-- KPIs ampliados con los nuevos campos -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 text-center">
-                <p class="text-sm text-gray-500 dark:text-gray-400">Participación Actual</p>
-                <p class="text-4xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2" id="sosDisplay">0.0%</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Nuestras caras / Total anaquel después</p>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700 text-center">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Participación Actual</p>
+                <p class="text-4xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2" id="sosDisplay">0%</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Nuestras caras / Total después</p>
             </div>
-            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 text-center">
-                <p class="text-sm text-gray-500 dark:text-gray-400">Ganancia Neta Caras</p>
+            <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700 text-center">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Ganancia Neta</p>
                 <p class="text-4xl font-extrabold mt-2" id="netChangeDisplay">0</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">(Después - Antes contado)</p>
             </div>
-            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 text-center">
-                <p class="text-sm text-gray-500 dark:text-gray-400">Caras Nuestras Antes (Manual)</p>
-                <p class="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-2" id="beforeManualDisplay">0</p>
+            <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700 text-center">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Caras Antes (Manual)</p>
+                <p class="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mt-2" id="beforeManualDisplay">0</p>
             </div>
-            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 text-center">
-                <p class="text-sm text-gray-500 dark:text-gray-400">Caras Nuestras Después</p>
-                <p class="text-3xl font-bold text-green-600 dark:text-green-400 mt-2" id="afterDisplay">0</p>
+            <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700 text-center">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Caras Después</p>
+                <p class="text-4xl font-extrabold text-green-600 dark:text-green-400 mt-2" id="afterDisplay">0</p>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700">
-                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Participación de Anaquel</h3>
-                <div class="h-64">
-                    <canvas id="sosChart"></canvas>
-                </div>
-                <div class="mt-4 text-center text-sm space-y-2">
-                    <p>Nuestras caras después: <span id="ourFacesCount" class="font-bold">0</span></p>
-                    <p>Competencia: <span id="compFacesCount" class="font-bold">0</span></p>
-                    <p>Total anaquel después: <span id="totalShelfCount" class="font-bold">0</span></p>
+                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Participación de Anaquel (Share of Shelf)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                    <div class="text-center">
+                        <p class="text-5xl font-extrabold text-indigo-600 dark:text-indigo-400" id="sosDisplay">0%</p>
+                        <p class="text-gray-500 dark:text-gray-400 mt-2">Nuestra Participación</p>
+                        <div class="mt-4 text-sm text-gray-400 space-y-1">
+                            <p>Nuestras Caras: <span id="ourFacesCount" class="font-bold text-gray-700 dark:text-gray-200">0</span></p>
+                            <p>Competencia: <span id="compFacesCount" class="font-bold text-gray-700 dark:text-gray-200">0</span></p>
+                            <p>Total Anaquel: <span id="totalShelfCount" class="font-bold text-gray-700 dark:text-gray-200">0</span></p>
+                        </div>
+                    </div>
+                    <div class="col-span-2 h-64">
+                        <canvas id="sosChart"></canvas>
+                    </div>
                 </div>
             </div>
-
             <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700">
                 <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Antes vs Después (Nuestras caras)</h3>
                 <div class="h-64">
                     <canvas id="totalFacesChart"></canvas>
                 </div>
-                <div class="mt-4 text-center text-sm">
-                    <p>Diferencia neta: <span id="netChangeText" class="font-bold">0 caras</span></p>
+                <div class="mt-4 text-center text-sm text-gray-400">
+                    <p>Diferencia neta: <span id="netChangeText" class="font-bold text-gray-700 dark:text-gray-200">0 caras</span></p>
                 </div>
             </div>
         </div>
@@ -140,7 +144,7 @@
         let currentStats = {};
 
         async function loadCatalogs() {
-            // Promotores
+            // Cargar Promotores
             const { data: promotores } = await supabaseClient
                 .from('web_promotores')
                 .select('promoter_name')
@@ -159,7 +163,7 @@
                 });
             }
 
-            // Estados
+            // Cargar Estados
             const { data: estados } = await supabaseClient
                 .from('web_estados')
                 .select('*')
@@ -177,7 +181,7 @@
                 });
             }
 
-            // Zonas
+            // Cargar Zonas
             const { data: zonas } = await supabaseClient
                 .from('web_zonas')
                 .select('*')
@@ -192,12 +196,12 @@
             const stateSelect = document.getElementById('state');
             const zoneSelect = document.getElementById('zone');
             const selectedState = stateSelect.value;
-            
+
             zoneSelect.innerHTML = '<option value="all">Todas</option>';
             zoneSelect.disabled = (selectedState === 'all');
 
             if (selectedState !== 'all') {
-                const filtered = allZonas.filter(z => z.nombre.startsWith('Zona ') && z.nombre.includes(selectedState));
+                const filtered = allZonas.filter(z => z.nombre.includes(selectedState));
                 filtered.forEach(z => {
                     const opt = document.createElement('option');
                     opt.value = z.nombre.replace('Zona ', '');
@@ -214,28 +218,19 @@
             const state = document.getElementById('state').value;
             const zone = document.getElementById('zone').value;
 
-            let query = supabaseClient.from('web_precios')
-                .select(`
-                    created_at, promoter_name, state, zone, trade,
-                    total_faces_before, our_faces_before_manual, our_faces_before_counted,
-                    total_faces, our_faces_after,
-                    myitems
-                `)
-                .eq('empresa_id', empresaId)
-                .gte('created_at', dateFrom ? `${dateFrom}T00:00:00` : '2000-01-01T00:00:00')
-                .lte('created_at', dateTo ? `${dateTo}T23:59:59` : '2100-12-31T23:59:59')
-                .order('created_at', { ascending: false });
+            let query = supabaseClient
+                .from('web_precios')
+                .select('*, web_promotores(promoter_name)')
+                .eq('empresa_id', empresaId);
 
+            if (dateFrom) query = query.gte('created_at', `${dateFrom}T00:00:00`);
+            if (dateTo) query = query.lte('created_at', `${dateTo}T23:59:59`);
             if (promoter !== 'all') query = query.eq('promoter_name', promoter);
             if (state !== 'all') query = query.eq('state', state);
             if (zone !== 'all') query = query.eq('zone', zone);
 
             const { data, error } = await query;
-            if (error) {
-                console.error(error);
-                return;
-            }
-
+            if (error) throw error;
             processData(data);
         }
 
@@ -244,23 +239,21 @@
             let totalBeforeCounted = 0;
             let totalAfter = 0;
             let totalShelf = 0;
-            let totalGain = 0;
 
             const productStats = {};
             currentStats = {};
 
-            records.forEach(r => {
-                totalBeforeManual += r.our_faces_before_manual || 0;
-                totalBeforeCounted += r.our_faces_before_counted || 0;
-                totalAfter += r.our_faces_after || 0;
-                totalShelf += r.total_faces || 0;
-                totalGain += (r.our_faces_after || 0) - (r.our_faces_before_counted || 0);
+            records.forEach(record => {
+                totalBeforeManual += record.our_faces_before_manual || 0;
+                totalBeforeCounted += record.our_faces_before_counted || 0;
+                totalAfter += record.our_faces_after || 0;
+                totalShelf += record.total_faces || 0;
 
-                (r.myitems || []).forEach(item => {
-                    if (!item.presentation || item.presentation === 'SIN STOCK') return;
-                    const name = item.presentation;
-                    const before = item.faces_before || 0;
-                    const after = item.faces_after || 0;
+                const items = record.myitems || [];
+                items.forEach(item => {
+                    const name = item.presentation || 'Desconocido';
+                    const before = parseInt(item.faces_before) || 0;
+                    const after = parseInt(item.faces_after) || 0;
 
                     if (!productStats[name]) productStats[name] = { before: 0, after: 0 };
                     productStats[name].before += before;
@@ -270,15 +263,16 @@
 
             currentStats = productStats;
 
-            // KPIs
+            // Update KPIs
             const sos = totalShelf > 0 ? ((totalAfter / totalShelf) * 100).toFixed(1) : '0.0';
+            const netChange = totalAfter - totalBeforeCounted;
+
             document.getElementById('sosDisplay').textContent = `${sos}%`;
-            document.getElementById('netChangeDisplay').textContent = totalGain >= 0 ? `+${totalGain}` : totalGain;
-            document.getElementById('netChangeDisplay').className = `text-4xl font-extrabold ${totalGain >= 0 ? 'text-green-600' : 'text-red-600'}`;
+            document.getElementById('netChangeDisplay').textContent = (netChange >= 0 ? '+' : '') + netChange;
             document.getElementById('beforeManualDisplay').textContent = totalBeforeManual;
             document.getElementById('afterDisplay').textContent = totalAfter;
 
-            // Share of Shelf Chart
+            // Update SOS Chart
             const ctxSos = document.getElementById('sosChart').getContext('2d');
             if (sosChartInstance) sosChartInstance.destroy();
             sosChartInstance = new Chart(ctxSos, {
@@ -291,14 +285,10 @@
                         borderWidth: 0
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } }
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
 
-            // Antes vs Después Chart
+            // Update Total Faces Chart
             const ctx = document.getElementById('totalFacesChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
             chartInstance = new Chart(ctx, {
@@ -308,49 +298,54 @@
                     datasets: [{
                         label: 'Caras Nuestras',
                         data: [totalBeforeManual, totalBeforeCounted, totalAfter],
-                        backgroundColor: ['#60A5FA', '#3B82F6', '#4F46E5']
+                        backgroundColor: ['#9CA3AF', '#3B82F6', '#4F46E5']
                     }]
                 },
                 options: { responsive: true }
             });
 
-            // Tabla de productos
+            // Update Table
             const tbody = document.getElementById('facesTableBody');
             tbody.innerHTML = '';
             Object.keys(productStats).sort().forEach(prod => {
-                const s = productStats[prod];
-                const diff = s.after - s.before;
+                const stats = productStats[prod];
+                const diff = stats.after - stats.before;
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td class="px-6 py-4 text-sm">${prod}</td>
-                    <td class="px-6 py-4 text-center">${s.before}</td>
-                    <td class="px-6 py-4 text-center">${s.after}</td>
-                    <td class="px-6 py-4 text-center font-bold ${diff >= 0 ? 'text-green-600' : 'text-red-600'}">
-                        ${diff >= 0 ? '+' : ''}${diff}
-                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${prod}</td>
+                    <td class="px-6 py-4 text-center text-sm text-gray-600 dark:text-gray-300">${stats.before}</td>
+                    <td class="px-6 py-4 text-center text-sm text-gray-600 dark:text-gray-300">${stats.after}</td>
+                    <td class="px-6 py-4 text-center text-sm font-semibold ${diff >= 0 ? 'text-green-600' : 'text-red-600'}">${(diff >= 0 ? '+' : '') + diff}</td>
                 `;
                 tbody.appendChild(row);
             });
+
+            document.getElementById('ourFacesCount').textContent = totalAfter;
+            document.getElementById('compFacesCount').textContent = totalShelf - totalAfter;
+            document.getElementById('totalShelfCount').textContent = totalShelf;
+            document.getElementById('netChangeText').textContent = netChange + ' caras';
+            document.getElementById('netChangeText').className = `font-bold ${netChange >= 0 ? 'text-green-600' : 'text-red-600'}`;
         }
 
         document.getElementById('applyFilters').onclick = loadData;
-
+        
         document.getElementById('exportCSV').addEventListener('click', () => {
-            if (Object.keys(currentStats).length === 0) return alert('No hay datos para exportar');
-
+            if (Object.keys(currentStats).length === 0) {
+                alert('No hay datos para exportar.');
+                return;
+            }
             const headers = ['Producto', 'Caras Antes', 'Caras Después', 'Diferencia'];
-            const rows = Object.keys(currentStats).sort().map(p => {
-                const s = currentStats[p];
-                return [p, s.before, s.after, s.after - s.before].join(',');
+            const rows = Object.entries(currentStats).map(([name, stats]) => {
+                const diff = stats.after - stats.before;
+                return [name, stats.before, stats.after, diff].join(',');
             });
-
-            const csv = [headers.join(','), ...rows].join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
+            const csvContent = [headers, ...rows].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `caras_${new Date().toISOString().slice(0,10)}.csv`;
-            a.click();
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'detalle_caras.csv';
+            link.click();
             URL.revokeObjectURL(url);
         });
 

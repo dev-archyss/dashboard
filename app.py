@@ -338,7 +338,7 @@ def get_records():
     year_str = request.args.get('year', str(datetime.now().year))
 
     params = [
-        ("select", "*,web_promotores(id,promoter_name,clientes_asig,dias_trabajo)"),
+        ("select", "*,web_promotores!inner(promoter_name, promoter_id)"),
         ("order", "created_at.desc"),
         ("empresa_id", f"eq.{empresa_id}")
     ]
