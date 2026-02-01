@@ -63,7 +63,7 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700 text-center">
                 <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Participación Actual</p>
-                <p class="text-4xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2" id="sosDisplay">0%</p>
+                <p class="text-4xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2" id="sosDisplay">0.0%</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Nuestras caras / Total después</p>
             </div>
             <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700 text-center">
@@ -86,7 +86,7 @@
                 <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Participación de Anaquel (Share of Shelf)</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
                     <div class="text-center">
-                        <p class="text-5xl font-extrabold text-indigo-600 dark:text-indigo-400" id="sosDisplay">0%</p>
+                        <p class="text-5xl font-extrabold text-indigo-600 dark:text-indigo-400" id="sosDisplayBig">0%</p>
                         <p class="text-gray-500 dark:text-gray-400 mt-2">Nuestra Participación</p>
                         <div class="mt-4 text-sm text-gray-400 space-y-1">
                             <p>Nuestras Caras: <span id="ourFacesCount" class="font-bold text-gray-700 dark:text-gray-200">0</span></p>
@@ -99,6 +99,7 @@
                     </div>
                 </div>
             </div>
+
             <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-slate-700">
                 <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Antes vs Después (Nuestras caras)</h3>
                 <div class="h-64">
@@ -144,7 +145,6 @@
         let currentStats = {};
 
         async function loadCatalogs() {
-            // Cargar Promotores
             const { data: promotores } = await supabaseClient
                 .from('web_promotores')
                 .select('promoter_name')
@@ -163,7 +163,6 @@
                 });
             }
 
-            // Cargar Estados
             const { data: estados } = await supabaseClient
                 .from('web_estados')
                 .select('*')
@@ -181,7 +180,6 @@
                 });
             }
 
-            // Cargar Zonas
             const { data: zonas } = await supabaseClient
                 .from('web_zonas')
                 .select('*')
@@ -196,7 +194,7 @@
             const stateSelect = document.getElementById('state');
             const zoneSelect = document.getElementById('zone');
             const selectedState = stateSelect.value;
-
+            
             zoneSelect.innerHTML = '<option value="all">Todas</option>';
             zoneSelect.disabled = (selectedState === 'all');
 
@@ -220,7 +218,12 @@
 
             let query = supabaseClient
                 .from('web_precios')
-                .select('*, web_promotores(promoter_name)')
+                .select(`
+                    created_at, promoter_name, state, zone, trade,
+                    total_faces_before, our_faces_before_manual, our_faces_before_counted,
+                    total_faces, our_faces_after,
+                    myitems
+                `)
                 .eq('empresa_id', empresaId);
 
             if (dateFrom) query = query.gte('created_at', `${dateFrom}T00:00:00`);
@@ -230,7 +233,11 @@
             if (zone !== 'all') query = query.eq('zone', zone);
 
             const { data, error } = await query;
-            if (error) throw error;
+            if (error) {
+                console.error('Error al cargar datos:', error);
+                return;
+            }
+
             processData(data);
         }
 
@@ -249,11 +256,11 @@
                 totalAfter += record.our_faces_after || 0;
                 totalShelf += record.total_faces || 0;
 
-                const items = record.myitems || [];
-                items.forEach(item => {
-                    const name = item.presentation || 'Desconocido';
-                    const before = parseInt(item.faces_before) || 0;
-                    const after = parseInt(item.faces_after) || 0;
+                (record.myitems || []).forEach(item => {
+                    if (!item.presentation || item.presentation === 'SIN STOCK') return;
+                    const name = item.presentation;
+                    const before = item.faces_before || 0;
+                    const after = item.faces_after || 0;
 
                     if (!productStats[name]) productStats[name] = { before: 0, after: 0 };
                     productStats[name].before += before;
@@ -263,16 +270,27 @@
 
             currentStats = productStats;
 
-            // Update KPIs
+            // Cálculo único del porcentaje
             const sos = totalShelf > 0 ? ((totalAfter / totalShelf) * 100).toFixed(1) : '0.0';
             const netChange = totalAfter - totalBeforeCounted;
+            const compFaces = Math.max(0, totalShelf - totalAfter);
 
+            // Actualizar TODOS los elementos con el mismo valor
             document.getElementById('sosDisplay').textContent = `${sos}%`;
-            document.getElementById('netChangeDisplay').textContent = (netChange >= 0 ? '+' : '') + netChange;
+            document.getElementById('sosDisplayBig').textContent = `${sos}%`; // si tienes este ID duplicado
+            document.getElementById('netChangeDisplay').textContent = netChange >= 0 ? `+${netChange}` : netChange;
+            document.getElementById('netChangeDisplay').className = `text-4xl font-extrabold ${netChange >= 0 ? 'text-green-600' : 'text-red-600'}`;
             document.getElementById('beforeManualDisplay').textContent = totalBeforeManual;
             document.getElementById('afterDisplay').textContent = totalAfter;
 
-            // Update SOS Chart
+            document.getElementById('ourFacesCount').textContent = totalAfter;
+            document.getElementById('compFacesCount').textContent = compFaces;
+            document.getElementById('totalShelfCount').textContent = totalShelf;
+
+            document.getElementById('netChangeText').textContent = `${netChange} caras`;
+            document.getElementById('netChangeText').className = `font-bold ${netChange >= 0 ? 'text-green-600' : 'text-red-600'}`;
+
+            // Gráfico SOS
             const ctxSos = document.getElementById('sosChart').getContext('2d');
             if (sosChartInstance) sosChartInstance.destroy();
             sosChartInstance = new Chart(ctxSos, {
@@ -280,15 +298,19 @@
                 data: {
                     labels: ['Nosotros', 'Competencia'],
                     datasets: [{
-                        data: [totalAfter, totalShelf - totalAfter],
+                        data: [totalAfter, compFaces],
                         backgroundColor: ['#4F46E5', '#F59E0B'],
                         borderWidth: 0
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
             });
 
-            // Update Total Faces Chart
+            // Gráfico Antes vs Después
             const ctx = document.getElementById('totalFacesChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
             chartInstance = new Chart(ctx, {
@@ -298,55 +320,55 @@
                     datasets: [{
                         label: 'Caras Nuestras',
                         data: [totalBeforeManual, totalBeforeCounted, totalAfter],
-                        backgroundColor: ['#9CA3AF', '#3B82F6', '#4F46E5']
+                        backgroundColor: ['#60A5FA', '#3B82F6', '#4F46E5']
                     }]
                 },
                 options: { responsive: true }
             });
 
-            // Update Table
+            // Tabla de productos
             const tbody = document.getElementById('facesTableBody');
             tbody.innerHTML = '';
             Object.keys(productStats).sort().forEach(prod => {
-                const stats = productStats[prod];
-                const diff = stats.after - stats.before;
+                const s = productStats[prod];
+                const diff = s.after - s.before;
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${prod}</td>
-                    <td class="px-6 py-4 text-center text-sm text-gray-600 dark:text-gray-300">${stats.before}</td>
-                    <td class="px-6 py-4 text-center text-sm text-gray-600 dark:text-gray-300">${stats.after}</td>
-                    <td class="px-6 py-4 text-center text-sm font-semibold ${diff >= 0 ? 'text-green-600' : 'text-red-600'}">${(diff >= 0 ? '+' : '') + diff}</td>
+                    <td class="px-6 py-4 text-center text-sm text-gray-600 dark:text-gray-300">${s.before}</td>
+                    <td class="px-6 py-4 text-center text-sm text-gray-600 dark:text-gray-300">${s.after}</td>
+                    <td class="px-6 py-4 text-center text-sm font-bold ${diff >= 0 ? 'text-green-600' : 'text-red-600'}">
+                        ${diff >= 0 ? '+' : ''}${diff}
+                    </td>
                 `;
                 tbody.appendChild(row);
             });
-
-            document.getElementById('ourFacesCount').textContent = totalAfter;
-            document.getElementById('compFacesCount').textContent = totalShelf - totalAfter;
-            document.getElementById('totalShelfCount').textContent = totalShelf;
-            document.getElementById('netChangeText').textContent = netChange + ' caras';
-            document.getElementById('netChangeText').className = `font-bold ${netChange >= 0 ? 'text-green-600' : 'text-red-600'}`;
         }
 
         document.getElementById('applyFilters').onclick = loadData;
-        
+
         document.getElementById('exportCSV').addEventListener('click', () => {
             if (Object.keys(currentStats).length === 0) {
-                alert('No hay datos para exportar.');
+                alert('No hay datos para exportar');
                 return;
             }
+            
             const headers = ['Producto', 'Caras Antes', 'Caras Después', 'Diferencia'];
-            const rows = Object.entries(currentStats).map(([name, stats]) => {
-                const diff = stats.after - stats.before;
-                return [name, stats.before, stats.after, diff].join(',');
+            const rows = Object.keys(currentStats).sort().map(prod => {
+                const s = currentStats[prod];
+                const diff = s.after - s.before;
+                return [`"${prod}"`, s.before, s.after, diff].join(',');
             });
-            const csvContent = [headers, ...rows].join('\n');
+            
+            const csvContent = [headers.join(','), ...rows].join('\n');
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.href = url;
-            link.download = 'detalle_caras.csv';
+            link.setAttribute('href', url);
+            link.setAttribute('download', `analisis_caras_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
             link.click();
-            URL.revokeObjectURL(url);
+            document.body.removeChild(link);
         });
 
         (async () => {
