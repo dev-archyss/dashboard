@@ -1074,121 +1074,6 @@ def handle_competitor_products():
 def update_delete_myproduct(product_id):
     empresa_id = None
 
-    if request.method == 'PATCH':
-        if not request.is_json:
-            return jsonify({"error": "Se esperaba JSON"}), 400
-        empresa_id = request.json.get('empresa_id')
-    else:  # DELETE
-        empresa_id = request.args.get('empresa_id')
-
-    # ── DEPURACIÓN ────────────────────────────────────────────────
-    print("\n" + "="*60)
-    print(f"DELETE/PATCH - product_id recibido: {product_id}")
-    print(f"DELETE/PATCH - empresa_id recibido: '{empresa_id}'")
-    print(f"DELETE/PATCH - longitud empresa_id: {len(empresa_id) if empresa_id else 'None'}")
-    print(f"DELETE/PATCH - tipo empresa_id: {type(empresa_id)}")
-    # ──────────────────────────────────────────────────────────────
-
-    if not empresa_id:
-        return jsonify({"error": "empresa_id es requerido"}), 400
-
-    check_url = f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{product_id}&empresa_id=eq.{empresa_id}&select=id,presentation,empresa_id"
-    print(f"CHECK URL: {check_url}")
-
-    check = requests.get(check_url, headers=headers)
-    print(f"CHECK status: {check.status_code}")
-    print(f"CHECK respuesta: {check.text}")
-
-    if check.status_code != 200 or len(check.json()) == 0:
-        return jsonify({
-            "error": "Producto no encontrado o no pertenece a esta empresa",
-            "debug_check_url": check_url,
-            "debug_check_status": check.status_code,
-            "debug_check_body": check.text
-        }), 403
-
-    url = f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{product_id}&empresa_id=eq.{empresa_id}"
-
-    print(f"OPERACIÓN URL: {url}")
-
-    if request.method == 'PATCH':
-        payload = {k: v for k, v in request.json.items() if k != 'empresa_id'}
-        res = requests.patch(url, headers=headers, json=payload)
-    else:
-        res = requests.delete(url, headers=headers)
-
-    print(f"OPERACIÓN status: {res.status_code}")
-    if not res.ok:
-        print(f"OPERACIÓN error: {res.text}")
-
-    if res.status_code in (200, 204):
-        return jsonify({"success": True}), 200 if request.method == 'PATCH' else 204
-
-    return jsonify({
-        "error": "Error en Supabase",
-        "status": res.status_code,
-        "detail": res.text
-    }), res.status_code
-
-
-# ----------------------------------------------------------------------
-# --- Rutas CRUD Productos Propios ---
-# ----------------------------------------------------------------------
-
-@app.route('/api/myproducts', methods=['GET', 'POST'])
-def handle_my_products():
-    if request.method == 'GET':
-        empresa_id = request.args.get('empresa_id')
-        
-        if not empresa_id:
-            return jsonify({"error": "empresa_id es requerido"}), 400
-
-        # ← Aquí agregamos el filtro por empresa
-        products = fetch_table(
-            "web_myproductos",
-            params=[("order", "presentation.asc")],
-            empresa_id=empresa_id           # Esto usa el mecanismo que ya tienes en fetch_table
-        )
-        return jsonify({"products": products})
-    
-    # POST (lo dejamos casi igual, pero mejoramos un poco)
-    if not request.is_json:
-        return jsonify({"error": "Se esperaba JSON"}), 400
-        
-    data = request.json
-    presentation = data.get("presentation", "").strip()
-    empresa_id = data.get("empresa_id")   # ← importante: el frontend lo está enviando
-
-    if not presentation:
-        return jsonify({"error": "presentation es requerido"}), 400
-    if not empresa_id:
-        return jsonify({"error": "empresa_id es requerido"}), 400
-
-    payload = {
-        "presentation": presentation.upper(),  # o .strip().upper() según prefieras
-        "empresa_id": empresa_id
-    }
-
-    res = requests.post(
-        f"{SUPABASE_URL}/rest/v1/web_myproductos",
-        headers=headers,
-        json=payload
-    )
-
-    if res.status_code in (200, 201):
-        return jsonify({"success": True}), 201
-    else:
-        try:
-            error_info = res.json()
-        except:
-            error_info = {"message": res.text}
-        return jsonify({"error": error_info.get("message", "Error al crear")}), res.status_code
-
-
-@app.route('/api/myproducts/<product_id>', methods=['PATCH', 'DELETE'])
-def update_delete_myproduct(product_id):
-    empresa_id = None
-
     # Obtener empresa_id según el método
     if request.method == 'PATCH':
         if not request.is_json:
@@ -1262,6 +1147,59 @@ def update_delete_myproduct(product_id):
     except Exception as e:
         print(f"[OPERACIÓN] Excepción: {str(e)}")
         return jsonify({"error": f"Error en la operación: {str(e)}"}), 500
+
+# ----------------------------------------------------------------------
+# --- Rutas CRUD Productos Propios ---
+# ----------------------------------------------------------------------
+
+@app.route('/api/myproducts', methods=['GET', 'POST'])
+def handle_my_products():
+    if request.method == 'GET':
+        empresa_id = request.args.get('empresa_id')
+        
+        if not empresa_id:
+            return jsonify({"error": "empresa_id es requerido"}), 400
+
+        # ← Aquí agregamos el filtro por empresa
+        products = fetch_table(
+            "web_myproductos",
+            params=[("order", "presentation.asc")],
+            empresa_id=empresa_id           # Esto usa el mecanismo que ya tienes en fetch_table
+        )
+        return jsonify({"products": products})
+    
+    # POST (lo dejamos casi igual, pero mejoramos un poco)
+    if not request.is_json:
+        return jsonify({"error": "Se esperaba JSON"}), 400
+        
+    data = request.json
+    presentation = data.get("presentation", "").strip()
+    empresa_id = data.get("empresa_id")   # ← importante: el frontend lo está enviando
+
+    if not presentation:
+        return jsonify({"error": "presentation es requerido"}), 400
+    if not empresa_id:
+        return jsonify({"error": "empresa_id es requerido"}), 400
+
+    payload = {
+        "presentation": presentation.upper(),  # o .strip().upper() según prefieras
+        "empresa_id": empresa_id
+    }
+
+    res = requests.post(
+        f"{SUPABASE_URL}/rest/v1/web_myproductos",
+        headers=headers,
+        json=payload
+    )
+
+    if res.status_code in (200, 201):
+        return jsonify({"success": True}), 201
+    else:
+        try:
+            error_info = res.json()
+        except:
+            error_info = {"message": res.text}
+        return jsonify({"error": error_info.get("message", "Error al crear")}), res.status_code
 
 # --- INICIO ---
 if __name__ == "__main__":
