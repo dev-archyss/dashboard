@@ -1051,12 +1051,51 @@ def update_delete_competitor(product_id):
 @app.route('/api/myproducts', methods=['GET', 'POST'])
 def handle_my_products():
     if request.method == 'GET':
-        products = fetch_table("web_myproductos", params=[("order", "presentation.asc")])
+        empresa_id = request.args.get('empresa_id')
+        
+        if not empresa_id:
+            return jsonify({"error": "empresa_id es requerido"}), 400
+
+        # ← Aquí agregamos el filtro por empresa
+        products = fetch_table(
+            "web_myproductos",
+            params=[("order", "presentation.asc")],
+            empresa_id=empresa_id           # Esto usa el mecanismo que ya tienes en fetch_table
+        )
         return jsonify({"products": products})
     
+    # POST (lo dejamos casi igual, pero mejoramos un poco)
+    if not request.is_json:
+        return jsonify({"error": "Se esperaba JSON"}), 400
+        
     data = request.json
-    res = requests.post(f"{SUPABASE_URL}/rest/v1/web_myproductos", headers=headers, json={"presentation": data.get("presentation")})
-    return jsonify({"success": res.ok}), 201
+    presentation = data.get("presentation", "").strip()
+    empresa_id = data.get("empresa_id")   # ← importante: el frontend lo está enviando
+
+    if not presentation:
+        return jsonify({"error": "presentation es requerido"}), 400
+    if not empresa_id:
+        return jsonify({"error": "empresa_id es requerido"}), 400
+
+    payload = {
+        "presentation": presentation.upper(),  # o .strip().upper() según prefieras
+        "empresa_id": empresa_id
+    }
+
+    res = requests.post(
+        f"{SUPABASE_URL}/rest/v1/web_myproductos",
+        headers=headers,
+        json=payload
+    )
+
+    if res.status_code in (200, 201):
+        return jsonify({"success": True}), 201
+    else:
+        try:
+            error_info = res.json()
+        except:
+            error_info = {"message": res.text}
+        return jsonify({"error": error_info.get("message", "Error al crear")}), res.status_code
 
 
 @app.route('/api/myproducts/<int:product_id>', methods=['PATCH', 'DELETE'])
