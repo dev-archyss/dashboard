@@ -1022,26 +1022,94 @@ def delete_records():
 # ----------------------------------------------------------------------
 # --- Rutas CRUD Productos Competencia ---
 # ----------------------------------------------------------------------
-
 @app.route('/api/competitorproducts', methods=['GET', 'POST'])
 def handle_competitor_products():
     if request.method == 'GET':
-        products = fetch_table("web_competidor", params=[("order", "presentation.asc")])
+        empresa_id = request.args.get('empresa_id')
+        
+        if not empresa_id:
+            return jsonify({"error": "empresa_id es requerido"}), 400
+
+        products = fetch_table(
+            "web_competidor",
+            params=[("order", "presentation.asc")],
+            empresa_id=empresa_id           # ← FILTRO OBLIGATORIO
+        )
         return jsonify({"products": products})
-    
+
+    # POST - creación
+    if not request.is_json:
+        return jsonify({"error": "Se esperaba contenido JSON"}), 400
+
     data = request.json
-    res = requests.post(f"{SUPABASE_URL}/rest/v1/web_competidor", headers=headers, json={"presentation": data.get("presentation")})
-    return jsonify({"success": res.ok}), 201
+    presentation = data.get("presentation", "").strip()
+    empresa_id = data.get("empresa_id")
+
+    if not presentation:
+        return jsonify({"error": "El campo 'presentation' es requerido"}), 400
+    if not empresa_id:
+        return jsonify({"error": "empresa_id es requerido"}), 400
+
+    payload = {
+        "presentation": presentation.upper(),     # o .strip().upper() si prefieres
+        "empresa_id": empresa_id
+    }
+
+    res = requests.post(
+        f"{SUPABASE_URL}/rest/v1/web_competidor",
+        headers=headers,
+        json=payload
+    )
+
+    if res.status_code in (200, 201):
+        return jsonify({"success": True}), 201
+    else:
+        try:
+            error_detail = res.json()
+        except:
+            error_detail = {"message": res.text or "Error desconocido"}
+        return jsonify({"error": error_detail.get("message", "No se pudo crear el producto")}), res.status_code
 
 
 @app.route('/api/competitorproducts/<int:product_id>', methods=['PATCH', 'DELETE'])
 def update_delete_competitor(product_id):
-    url = f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}"
+    # Obtenemos empresa_id según el método
+    if request.method == 'DELETE':
+        empresa_id = request.args.get('empresa_id')
+    else:  # PATCH
+        if not request.is_json:
+            return jsonify({"error": "Se esperaba JSON"}), 400
+        empresa_id = request.json.get('empresa_id')
+
+    if not empresa_id:
+        return jsonify({"error": "empresa_id es requerido"}), 400
+
+    # Verificación de propiedad (seguridad importante)
+    check_url = f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}&empresa_id=eq.{empresa_id}&select=id"
+    check_res = requests.get(check_url, headers=headers)
+
+    if check_res.status_code != 200 or len(check_res.json()) == 0:
+        return jsonify({"error": "Producto no encontrado o no pertenece a esta empresa"}), 403
+
+    # Construimos la URL con filtro de empresa (doble seguridad)
+    base_url = f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}&empresa_id=eq.{empresa_id}"
+
     if request.method == 'PATCH':
-        res = requests.patch(url, headers=headers, json=request.json)
+        # Quitamos empresa_id del payload para que no se pueda cambiar
+        payload = {k: v for k, v in request.json.items() if k != "empresa_id"}
+        res = requests.patch(base_url, headers=headers, json=payload)
     else:
-        res = requests.delete(url, headers=headers)
-    return jsonify({"success": res.ok})
+        res = requests.delete(base_url, headers=headers)
+
+    if res.ok:
+        return jsonify({"success": True}), 204 if request.method == 'DELETE' else 200
+    
+    try:
+        error_detail = res.json()
+    except:
+        error_detail = {"message": res.text or "Error en la operación"}
+    
+    return jsonify({"error": error_detail.get("message", "No se pudo completar la acción")}), res.status_code
 
 
 # ----------------------------------------------------------------------
