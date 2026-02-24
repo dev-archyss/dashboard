@@ -1068,6 +1068,85 @@ def handle_competitor_products():
         except:
             error_detail = {"message": res.text or "Error desconocido"}
         return jsonify({"error": error_detail.get("message", "No se pudo crear el producto")}), res.status_code
+    
+
+@app.route('/api/competitorproducts/<product_id>', methods=['PATCH', 'DELETE'])
+def update_delete_competitor(product_id):
+    empresa_id = None
+
+    # Obtener empresa_id según el método
+    if request.method == 'PATCH':
+        if not request.is_json:
+            return jsonify({"error": "Se esperaba JSON"}), 400
+        empresa_id = request.json.get('empresa_id')
+    else:  # DELETE
+        empresa_id = request.args.get('empresa_id')
+
+    # Depuración detallada
+    print("\n" + "=" * 70)
+    print(f"[COMPETITOR {request.method}] product_id: {product_id}")
+    print(f"[COMPETITOR {request.method}] empresa_id recibido: '{empresa_id}'")
+    print(f"[COMPETITOR {request.method}] tipo: {type(empresa_id)} | longitud: {len(empresa_id) if empresa_id else 'None'}")
+
+    if not empresa_id:
+        return jsonify({"error": "empresa_id es requerido"}), 400
+
+    # URL de verificación (más selectivo para depurar)
+    check_url = f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}&empresa_id=eq.{empresa_id}&select=id,presentation,empresa_id,created_at"
+
+    print(f"[CHECK] URL: {check_url}")
+
+    try:
+        check_response = requests.get(check_url, headers=headers, timeout=10)
+        print(f"[CHECK] Status: {check_response.status_code}")
+        print(f"[CHECK] Contenido: {check_response.text[:500]}{'...' if len(check_response.text) > 500 else ''}")
+        
+        check_data = check_response.json() if check_response.ok else []
+        
+        if not check_response.ok or len(check_data) == 0:
+            return jsonify({
+                "error": "No se encontró el producto de competidor o no pertenece a esta empresa",
+                "status_check": check_response.status_code,
+                "body_check": check_response.text,
+                "product_id_usado": product_id,
+                "empresa_id_usado": empresa_id
+            }), 403
+
+    except Exception as e:
+        print(f"[CHECK] Excepción al verificar: {str(e)}")
+        return jsonify({"error": f"Error al verificar existencia: {str(e)}"}), 500
+
+    # URL para la operación real
+    operation_url = f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}&empresa_id=eq.{empresa_id}"
+
+    print(f"[OPERACIÓN] URL: {operation_url}")
+
+    try:
+        if request.method == 'PATCH':
+            if not request.is_json:
+                return jsonify({"error": "Se esperaba JSON"}), 400
+            payload = {k: v for k, v in request.json.items() if k != 'empresa_id'}
+            print(f"[PATCH] Payload enviado: {payload}")
+            res = requests.patch(operation_url, headers=headers, json=payload, timeout=10)
+        else:
+            res = requests.delete(operation_url, headers=headers, timeout=10)
+
+        print(f"[OPERACIÓN] Status: {res.status_code}")
+        if not res.ok:
+            print(f"[OPERACIÓN] Error: {res.text}")
+
+        if res.status_code in (200, 204):
+            return jsonify({"success": True, "message": "Operación exitosa"}), 200 if request.method == 'PATCH' else 204
+
+        return jsonify({
+            "error": "Error al ejecutar la operación en Supabase",
+            "status": res.status_code,
+            "detail": res.text
+        }), res.status_code
+
+    except Exception as e:
+        print(f"[OPERACIÓN] Excepción: {str(e)}")
+        return jsonify({"error": f"Error en la operación: {str(e)}"}), 500
 
 
 @app.route('/api/myproducts/<product_id>', methods=['PATCH', 'DELETE'])
