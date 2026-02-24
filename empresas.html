@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - Registro de Empresas</title>
+  <title>Admin - Registro de Empresas y Promotores</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -12,6 +12,9 @@
     .status-inactiva { color: #f87171; font-weight: bold; }
     .status-suspendida { color: #fbbf24; font-weight: bold; }
     input, select { background: #1e293b !important; color: white !important; border: 1px solid #334155 !important; }
+    .tab { padding: 12px 24px; cursor: pointer; transition: all 0.2s; }
+    .tab-active { border-bottom: 3px solid #6366f1; color: white; font-weight: bold; }
+    .tab:hover:not(.tab-active) { color: #cbd5e1; }
   </style>
 </head>
 <body class="p-4 md:p-10">
@@ -28,39 +31,86 @@
 
   <div id="adminPanel" class="hidden">
     <div class="max-w-6xl mx-auto">
+
+      <!-- Header -->
       <div class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-slate-800 pb-5 gap-4">
         <div>
-          <h1 class="text-3xl font-bold text-white">Consola de Empresas</h1>
-          <p class="text-slate-400">Control de licencias y acceso</p>
+          <h1 class="text-3xl font-bold text-white">Consola Administrativa</h1>
+          <p class="text-slate-400">Gestión de empresas y promotores</p>
         </div>
-        <button onclick="window.abrirModal();" class="bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-lg font-bold shadow-lg transition">
-          + Nueva Empresa
-        </button>
+        <div class="flex gap-3">
+          <button onclick="window.abrirModalEmpresa();" class="bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-lg font-bold shadow-lg transition">
+            + Nueva Empresa
+          </button>
+          <button onclick="window.abrirModalPromotor();" class="bg-violet-600 hover:bg-violet-500 px-6 py-3 rounded-lg font-bold shadow-lg transition">
+            + Nuevo Promotor
+          </button>
+        </div>
       </div>
 
-      <div class="bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-xl">
-        <table class="w-full text-left">
-          <thead class="bg-slate-800/50 text-slate-400 uppercase text-xs tracking-wider">
-            <tr>
-              <th class="p-4">Nombre de Empresa</th>
-              <th class="p-4">Clave de Acceso</th>
-              <th class="p-4 text-center">Gramaje Base</th>
-              <th class="p-4 text-center">Estatus</th>
-              <th class="p-4">Vencimiento</th>
-              <th class="p-4 text-right">Gestión</th>
-            </tr>
-          </thead>
-          <tbody id="listaEmpresas" class="divide-y divide-slate-800">
-            </tbody>
-        </table>
-        <div id="loading" class="p-10 text-center text-slate-500">Cargando datos de Supabase...</div>
+      <!-- Pestañas -->
+      <div class="flex border-b border-slate-700 mb-6">
+        <div class="tab tab-active" onclick="window.mostrarTab('empresas')">Empresas</div>
+        <div class="tab" onclick="window.mostrarTab('promotores')">Promotores</div>
       </div>
+
+      <!-- Tab Empresas (tu original) -->
+      <div id="tab-empresas">
+        <div class="bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-xl">
+          <table class="w-full text-left">
+            <thead class="bg-slate-800/50 text-slate-400 uppercase text-xs tracking-wider">
+              <tr>
+                <th class="p-4">Nombre de Empresa</th>
+                <th class="p-4">Clave de Acceso</th>
+                <th class="p-4 text-center">Gramaje Base</th>
+                <th class="p-4 text-center">Estatus</th>
+                <th class="p-4">Vencimiento</th>
+                <th class="p-4 text-right">Gestión</th>
+              </tr>
+            </thead>
+            <tbody id="listaEmpresas" class="divide-y divide-slate-800"></tbody>
+          </table>
+          <div id="loading" class="p-10 text-center text-slate-500">Cargando datos de Supabase...</div>
+        </div>
+      </div>
+
+      <!-- Tab Promotores (nueva) -->
+      <div id="tab-promotores" class="hidden">
+        <div class="mb-6 flex flex-col sm:flex-row gap-4 items-end">
+          <div class="flex-1">
+            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Filtrar por Empresa</label>
+            <select id="filtroEmpresaPromotor" class="w-full p-3 rounded-lg" onchange="window.cargarPromotores()">
+              <option value="">-- Todas las empresas --</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-xl">
+          <table class="w-full text-left">
+            <thead class="bg-slate-800/50 text-slate-400 uppercase text-xs tracking-wider">
+              <tr>
+                <th class="p-4">Nombre Promotor</th>
+                <th class="p-4">ID Promotor</th>
+                <th class="p-4">Empresa</th>
+                <th class="p-4 text-center">Clientes Asig.</th>
+                <th class="p-4 text-center">Días Trabajo</th>
+                <th class="p-4 text-center">Admin</th>
+                <th class="p-4 text-right">Gestión</th>
+              </tr>
+            </thead>
+            <tbody id="listaPromotores" class="divide-y divide-slate-800"></tbody>
+          </table>
+          <div id="loadingPromotores" class="p-10 text-center text-slate-500">Cargando promotores...</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <div id="modal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center p-4 z-[110]">
+  <!-- Modal Empresa (tu original, renombrado ligeramente para claridad) -->
+  <div id="modalEmpresa" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center p-4 z-[110]">
     <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 w-full max-w-md shadow-2xl">
-      <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-white">Configurar Empresa</h2>
+      <h2 id="modalEmpresaTitle" class="text-2xl font-bold mb-6 text-white">Configurar Empresa</h2>
       <form id="formEmpresa">
         <input type="hidden" id="empId">
         <div class="space-y-4">
@@ -90,23 +140,88 @@
           </div>
         </div>
         <div class="flex justify-end gap-3 mt-8">
-          <button type="button" onclick="window.cerrarModal();" class="px-5 py-2 text-slate-400 hover:text-white transition">Cancelar</button>
+          <button type="button" onclick="window.cerrarModal('modalEmpresa');" class="px-5 py-2 text-slate-400 hover:text-white transition">Cancelar</button>
           <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 px-6 py-2 rounded-lg font-bold transition">Guardar Registro</button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- Modal Promotor (nuevo) -->
+  <div id="modalPromotor" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center p-4 z-[110]">
+    <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 w-full max-w-lg shadow-2xl">
+      <h2 id="modalPromotorTitle" class="text-2xl font-bold mb-6 text-white">Configurar Promotor</h2>
+      <form id="formPromotor">
+        <input type="hidden" id="promotorId">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Empresa *</label>
+            <select id="empresa_id" required class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-violet-500"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">ID Promotor *</label>
+            <input type="text" id="promoter_id" required class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-violet-500 font-mono">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nombre Completo *</label>
+            <input type="text" id="promoter_name" required class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-violet-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Clientes Asignados</label>
+            <input type="number" id="clientes_asig" min="0" value="0" class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-violet-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Días de Trabajo / Semana</label>
+            <input type="number" id="dias_trabajo" min="1" max="7" value="5" class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-violet-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Es Administrador</label>
+            <div class="mt-2">
+              <input type="checkbox" id="is_admin" class="h-5 w-5 rounded bg-slate-700 border-slate-600">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Contraseña Inicial</label>
+            <input type="text" id="password" placeholder="Solo al crear nuevo" class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-violet-500 font-mono">
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-8">
+          <button type="button" onclick="window.cerrarModal('modalPromotor');" class="px-5 py-2 text-slate-400 hover:text-white transition">Cancelar</button>
+          <button type="submit" class="bg-violet-600 hover:bg-violet-500 px-6 py-2 rounded-lg font-bold transition">Guardar Promotor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
-    // 1. Inicialización Única (Evita el error de re-declaración)
+    // Cliente Supabase (único)
     const supabaseClient = window.supabase.createClient(
       "https://djjylikkocemrlsjxscr.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M"
     );
 
     const CLAVE_MAESTRA = "ADMIN2025";
+    let empresasCache = [];
 
-    // 2. Funciones Globales
+    // =============================================
+    // Pestañas
+    // =============================================
+    window.mostrarTab = function(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active'));
+      event.target.classList.add('tab-active');
+
+      document.getElementById('tab-empresas').classList.add('hidden');
+      document.getElementById('tab-promotores').classList.add('hidden');
+      document.getElementById('tab-' + tab).classList.remove('hidden');
+
+      if (tab === 'promotores') {
+        window.cargarEmpresasParaSelectPromotor();
+      }
+    };
+
+    // =============================================
+    // Acceso y carga inicial
+    // =============================================
     window.verificarAcceso = function() {
       const pass = document.getElementById('adminPass').value;
       if (pass === CLAVE_MAESTRA) {
@@ -116,10 +231,13 @@
       } else {
         const err = document.getElementById('errorMsg');
         err.classList.remove('hidden');
-        setTimeout(() => { err.classList.add('hidden'); }, 2000);
-      };
+        setTimeout(() => err.classList.add('hidden'), 2000);
+      }
     };
 
+    // =============================================
+    // EMPRESAS (tu código original)
+    // =============================================
     window.cargarEmpresas = async function() {
       document.getElementById('loading').classList.remove('hidden');
       const { data, error } = await supabaseClient
@@ -129,47 +247,44 @@
 
       if (error) {
         console.error('Error:', error);
+        document.getElementById('loading').classList.add('hidden');
         return;
-      };
+      }
 
       document.getElementById('loading').classList.add('hidden');
       const lista = document.getElementById('listaEmpresas');
       lista.innerHTML = "";
-      
+
       data.forEach(emp => {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-800/40 transition";
         tr.innerHTML = `
           <td class="p-4 font-bold text-white">${emp.nombre}</td>
           <td class="p-4 font-mono text-indigo-400">${emp.clave_acceso}</td>
-          <td class="p-4 text-center">${parseFloat(emp.gramaje_base_analisis).toFixed(2)} ${emp.unidad_base_analisis}</td>
+          <td class="p-4 text-center">${parseFloat(emp.gramaje_base_analisis || 0).toFixed(2)} ${emp.unidad_base_analisis || 'g'}</td>
           <td class="p-4 text-center"><span class="status-${emp.estatus} uppercase text-xs">${emp.estatus}</span></td>
           <td class="p-4 text-slate-500 text-sm">${emp.fecha_vencimiento || 'Sin límite'}</td>
           <td class="p-4 text-right">
             <button onclick="window.cargarEdicion('${emp.id}');" class="text-indigo-400 hover:text-indigo-200 mr-4 font-medium">Configurar</button>
-            <button onclick="window.eliminarEmpresa('${emp.id}', '${emp.nombre}');" class="text-red-500 hover:text-red-300">Eliminar</button>
+            <button onclick="window.eliminarEmpresa('${emp.id}', '${emp.nombre.replace(/'/g,"\\'")}');" class="text-red-500 hover:text-red-300">Eliminar</button>
           </td>
         `;
         lista.appendChild(tr);
       });
+
+      // Guardamos para usar en promotores
+      empresasCache = data;
     };
 
-    window.eliminarEmpresa = async function(id, nombre) {
-      if (confirm(`¿Eliminar permanentemente a ${nombre}?`)) {
-        await supabaseClient.from('empresas').delete().eq('id', id);
-        window.cargarEmpresas();
-      };
-    };
-
-    window.abrirModal = function() {
+    window.abrirModal = function() {  // renombrado a abrirModalEmpresa en el botón
       document.getElementById('formEmpresa').reset();
       document.getElementById('empId').value = "";
       document.getElementById('modalTitle').innerText = "Nueva Empresa";
       document.getElementById('modal').classList.remove('hidden');
     };
 
-    window.cerrarModal = function() {
-      document.getElementById('modal').classList.add('hidden');
+    window.cerrarModal = function(modalId) {
+      document.getElementById(modalId || 'modal').classList.add('hidden');
     };
 
     window.cargarEdicion = async function(id) {
@@ -183,10 +298,9 @@
         document.getElementById('vencimiento').value = data.fecha_vencimiento || '';
         document.getElementById('modalTitle').innerText = "Editar Empresa";
         document.getElementById('modal').classList.remove('hidden');
-      };
+      }
     };
 
-    // 3. Manejo del Formulario
     document.getElementById('formEmpresa').onsubmit = async function(e) {
       e.preventDefault();
       const id = document.getElementById('empId').value;
@@ -204,15 +318,164 @@
         result = await supabaseClient.from('empresas').update(payload).eq('id', id);
       } else {
         result = await supabaseClient.from('empresas').insert([payload]);
-      };
+      }
 
       if (result.error) {
         alert("Error: " + result.error.message);
       } else {
-        window.cerrarModal();
+        window.cerrarModal('modal');
         window.cargarEmpresas();
-      };
+      }
     };
+
+    window.eliminarEmpresa = async function(id, nombre) {
+      if (confirm(`¿Eliminar permanentemente a ${nombre}?`)) {
+        await supabaseClient.from('empresas').delete().eq('id', id);
+        window.cargarEmpresas();
+      }
+    };
+
+    // =============================================
+    // PROMOTORES - Nueva funcionalidad
+    // =============================================
+    window.abrirModalPromotor = function() {
+      document.getElementById('formPromotor')?.reset?.();
+      document.getElementById('promotorId').value = "";
+      document.getElementById('modalPromotorTitle').innerText = "Nuevo Promotor";
+
+      const select = document.getElementById('empresa_id');
+      if (select) {
+        select.innerHTML = '<option value="">-- Seleccionar empresa --</option>';
+        empresasCache.forEach(emp => {
+          const opt = document.createElement('option');
+          opt.value = emp.id;
+          opt.textContent = emp.nombre;
+          select.appendChild(opt);
+        });
+      }
+
+      document.getElementById('modalPromotor').classList.remove('hidden');
+    };
+
+    window.cargarEmpresasParaSelectPromotor = function() {
+      const select = document.getElementById('filtroEmpresaPromotor');
+      if (!select) return;
+
+      select.innerHTML = '<option value="">-- Todas las empresas --</option>';
+      empresasCache.forEach(emp => {
+        const opt = document.createElement('option');
+        opt.value = emp.id;
+        opt.textContent = emp.nombre;
+        select.appendChild(opt);
+      });
+
+      window.cargarPromotores();
+    };
+
+    window.cargarPromotores = async function() {
+      document.getElementById('loadingPromotores').classList.remove('hidden');
+      const empresaId = document.getElementById('filtroEmpresaPromotor').value;
+
+      let query = supabaseClient
+        .from('web_promotores')
+        .select(`
+          id, promoter_id, promoter_name, clientes_asig, dias_trabajo, is_admin, empresa_id,
+          empresas!inner(nombre)
+        `)
+        .order('promoter_name');
+
+      if (empresaId) {
+        query = query.eq('empresa_id', empresaId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error al cargar promotores:', error);
+        document.getElementById('loadingPromotores').classList.add('hidden');
+        return;
+      }
+
+      const tbody = document.getElementById('listaPromotores');
+      tbody.innerHTML = '';
+
+      data.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="p-4 font-medium">${p.promoter_name}</td>
+          <td class="p-4 font-mono text-violet-300">${p.promoter_id}</td>
+          <td class="p-4">${p.empresas?.nombre || '—'}</td>
+          <td class="p-4 text-center">${p.clientes_asig ?? 0}</td>
+          <td class="p-4 text-center">${p.dias_trabajo ?? '—'}</td>
+          <td class="p-4 text-center">${p.is_admin ? '<span class="text-emerald-400">Sí</span>' : '—'}</td>
+          <td class="p-4 text-right">
+            <button onclick="window.cargarEdicionPromotor('${p.id}');" class="text-indigo-400 hover:text-indigo-200 mr-4 font-medium">Editar</button>
+            <button onclick="window.eliminarPromotor('${p.id}', '${p.promoter_name.replace(/'/g,"\\'")}');" class="text-red-500 hover:text-red-300">Eliminar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('loadingPromotores').classList.add('hidden');
+    };
+
+    window.cargarEdicionPromotor = async function(id) {
+      const { data } = await supabaseClient.from('web_promotores').select('*').eq('id', id).single();
+      if (!data) return;
+
+      document.getElementById('promotorId').value = data.id;
+      document.getElementById('empresa_id').value = data.empresa_id || '';
+      document.getElementById('promoter_id').value = data.promoter_id;
+      document.getElementById('promoter_name').value = data.promoter_name;
+      document.getElementById('clientes_asig').value = data.clientes_asig || 0;
+      document.getElementById('dias_trabajo').value = data.dias_trabajo || 5;
+      document.getElementById('is_admin').checked = !!data.is_admin;
+      document.getElementById('password').value = ''; // nunca mostramos la real
+      document.getElementById('modalPromotorTitle').innerText = "Editar Promotor";
+      document.getElementById('modalPromotor').classList.remove('hidden');
+    };
+
+    document.getElementById('formPromotor').onsubmit = async function(e) {
+      e.preventDefault();
+      const id = document.getElementById('promotorId').value;
+
+      const payload = {
+        empresa_id: document.getElementById('empresa_id').value || null,
+        promoter_id: document.getElementById('promoter_id').value.trim(),
+        promoter_name: document.getElementById('promoter_name').value.trim(),
+        clientes_asig: parseInt(document.getElementById('clientes_asig').value) || 0,
+        dias_trabajo: parseInt(document.getElementById('dias_trabajo').value) || 5,
+        is_admin: document.getElementById('is_admin').checked
+      };
+
+      const pw = document.getElementById('password').value.trim();
+      if (pw && !id) { // solo al crear
+        payload.password = pw;
+      }
+
+      let result;
+      if (id) {
+        result = await supabaseClient.from('web_promotores').update(payload).eq('id', id);
+      } else {
+        result = await supabaseClient.from('web_promotores').insert([payload]);
+      }
+
+      if (result.error) {
+        alert("Error: " + result.error.message);
+      } else {
+        window.cerrarModal('modalPromotor');
+        window.cargarPromotores();
+      }
+    };
+
+    window.eliminarPromotor = async function(id, nombre) {
+      if (confirm(`¿Eliminar permanentemente al promotor "${nombre}"?`)) {
+        await supabaseClient.from('web_promotores').delete().eq('id', id);
+        window.cargarPromotores();
+      }
+    };
+
   </script>
 </body>
 </html>
