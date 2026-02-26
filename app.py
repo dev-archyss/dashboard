@@ -1282,7 +1282,7 @@ def handle_my_products():
 
 # --- INICIO ---
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8020))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=True)
 
 
