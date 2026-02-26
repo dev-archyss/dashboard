@@ -9,7 +9,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/dist/umd/supabase.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-
   <style>
     :root {
       --pastel-pink: #FDECEF;
@@ -47,7 +46,6 @@
     }
     .input:focus { outline: none; box-shadow: 0 0 0 6px rgba(99,102,241,0.08); border-color: #6366F1; }
     .dark .input { background-color: #334155; border-color: #475569; color: white; }
-
     .price-badge {
       display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600;
     }
@@ -55,7 +53,6 @@
     .price-bs { background-color: #fef3c7; color: #92400e; }
     .price-cop { background-color: #dcfce7; color: #166534; }
     .price-comp { background-color: #fde68a; color: #92400e; }
-
     .presentation-item {
       cursor: pointer;
       padding: 0.25rem 0.5rem;
@@ -74,7 +71,6 @@
       color: white;
       border-color: #6366F1;
     }
-
     #comercioDropdown {
       display: none;
       position: absolute;
@@ -108,7 +104,6 @@
 <body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
   <script>tailwind.config = { darkMode: 'class' }</script>
   {% include 'navbar.html' %}
-
   <div class="mx-auto p-4 sm:p-6" id="root">
     <header class="flex items-center justify-between mb-6">
       <div>
@@ -119,7 +114,7 @@
         <button id="btnExportAnalisis" class="btn-primary shadow-lg shadow-indigo-500/30">Exportar CSV</button>
       </div>
     </header>
-    
+   
     <section class="card p-4 mb-6 bg-white dark:bg-slate-800">
       <h2 class="text-lg font-bold text-slate-800 dark:text-white mb-4">Filtros</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -130,12 +125,6 @@
         <div class="flex flex-col gap-1">
           <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Hasta</label>
           <input id="fHasta" type="date" class="input" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Empresa</label>
-          <select id="fEmpresa" class="input">
-            <option value="">Todas</option>
-          </select>
         </div>
         <div class="flex flex-col gap-1">
           <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Estado</label>
@@ -186,7 +175,7 @@
             </div>
             <div id="compPresList" class="hidden absolute top-full left-0 right-0 z-10 card p-3 mt-1 shadow-lg max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border dark:border-slate-600">
               <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Selecciona presentaciones:</span>
-              <input id="searchCompPres" type="text" placeholder="Buscar..." 
+              <input id="searchCompPres" type="text" placeholder="Buscar..."
                      class="input mt-2 w-full text-sm" />
               <div id="compPresItems" class="flex flex-wrap gap-2 mt-2"></div>
             </div>
@@ -198,7 +187,6 @@
         <button id="btnLimpiar" class="btn-ghost dark:text-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">Limpiar</button>
       </div>
     </section>
-
     <section class="card p-4 mb-6 bg-white dark:bg-slate-800">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-bold text-slate-800 dark:text-white">Comparativa de Precios (USD/kg)</h3>
@@ -209,7 +197,6 @@
       </div>
       <canvas id="chartComparativa" height="200"></canvas>
     </section>
-
     <section class="card p-4 bg-white dark:bg-slate-800">
       <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4">Detalle de Comparación</h3>
       <div class="overflow-x-auto">
@@ -233,36 +220,19 @@
       </div>
       <div class="mt-4 text-sm text-slate-500 dark:text-slate-400" id="analisisInfo">—</div>
     </section>
-
     <script>
-      const { createClient } = supabase; 
-      const supabaseClient = createClient( 
-          'https://djjylikkocemrlsjxscr.supabase.co', 
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M' 
-      );
-
-      const empresaId = localStorage.getItem('empresa_id');
-      const empresaNombre = localStorage.getItem('empresa_nombre') || 'Desconocida';
-
-      if (!empresaId) {
-          alert('Debes iniciar sesión primero.');
-          window.location.href = 'login.html';
-      }
-
       const $ = id => document.getElementById(id);
       const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('es-ES') : '—';
       const fmtDateShort = iso => iso ? new Date(iso).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : '—';
       const colores = ['#6366F1', '#F59E0B', '#10B981', '#EF4444', '#3B82F6', '#8B5CF6'];
       const selectedCompPres = new Set();
       let selectedComercio = '';
-      
-
+     
       let tasasCache = [];
       let todasPresentaciones = { nuestras: new Set(), competencia: new Set() };
       let estadosData = [];
       let zonasData = [];
       let analisisData = [];
-
       document.addEventListener('DOMContentLoaded', () => {
         const hoy = new Date();
         $('fDesde').value = hoy.toISOString().slice(0, 10);
@@ -270,26 +240,8 @@
         $('fTipoComercio').value = 'Detal';
         loadCatalogs();
       });
-
       // === CARGA DE EMPRESAS ===
-      async function cargarEmpresas() {
-        try {
-          const { data, error } = await supabaseClient
-            .from('empresas')
-            .select('id, nombre')
-            .eq('estatus', 'activa')
-            .order('nombre');
-
-          if (error) throw error;
-
-          const select = $('fEmpresa');
-          select.innerHTML = '<option value="">Todas</option>' +
-            data.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
-        } catch (err) {
-          console.error('Error cargando empresas:', err);
-        }
-      }
-
+      // Nota: Eliminamos carga de empresas ya que usamos backend para filtrar por empresa logueada
       let debounceTimeout;
       $('searchComercio').addEventListener('input', (e) => {
         clearTimeout(debounceTimeout);
@@ -302,12 +254,10 @@
           $('comercioDropdown').style.display = 'block';
         }, 300);
       });
-
       $('searchComercio').addEventListener('focus', () => {
         loadComercios($('searchComercio').value);
         $('comercioDropdown').style.display = 'block';
       });
-
       document.addEventListener('click', (e) => {
         const comercioInput = $('searchComercio');
         const comercioDropdown = $('comercioDropdown');
@@ -315,7 +265,6 @@
           comercioDropdown.style.display = 'none';
         }
       });
-
       $('comercioOptions').addEventListener('click', (e) => {
         if (e.target.classList.contains('comercio-option')) {
           const selectedValue = e.target.textContent;
@@ -325,43 +274,36 @@
           fetchDataAnalisis();
         }
       });
-
       async function loadComercios(searchTerm = '') {
         try {
+          // Nota: Cambiamos a usar backend si es necesario, pero por ahora mantenemos Supabase directo para comercios
           let query = supabaseClient
             .from('web_precios')
             .select('trade, created_at')
             .not('trade', 'is', null)
             .order('created_at', { ascending: false })
             .limit(20);
-
           if (searchTerm) {
             query = query.ilike('trade', `%${searchTerm}%`);
           }
-
           const { data, error } = await query;
-
           if (error) {
             console.error('Error loading comercios:', error);
             return;
           }
-
           const tradeMap = new Map();
           data.forEach(row => {
             if (row.trade && !tradeMap.has(row.trade)) {
               tradeMap.set(row.trade, row.created_at);
             }
           });
-
           const sortedTrades = Array.from(tradeMap.entries())
             .sort((a, b) => new Date(b[1]) - new Date(a[1]))
             .map(entry => entry[0]);
-
           const comercioOptions = $('comercioOptions');
           comercioOptions.innerHTML = ['Todos', ...sortedTrades]
             .map(c => `<div class="comercio-option">${c}</div>`)
             .join('');
-
           if (sortedTrades.length > 0 || !searchTerm) {
             $('comercioDropdown').style.display = 'block';
           } else {
@@ -371,7 +313,6 @@
           console.error('Error in loadComercios:', error);
         }
       }
-
       $('compPresList').addEventListener('click', (e) => {
         if (e.target.classList.contains('presentation-item')) {
           const pres = e.target.textContent;
@@ -384,7 +325,6 @@
           fetchDataAnalisis();
         }
       });
-
       $('selectedCompPres').addEventListener('click', () => {
         const compPresList = $('compPresList');
         compPresList.classList.toggle('hidden');
@@ -392,7 +332,6 @@
           renderCompPresList();
         }
       });
-
       document.addEventListener('click', (e) => {
         const compPresList = $('compPresList');
         const selectedCompPresDiv = $('selectedCompPres');
@@ -400,7 +339,6 @@
           compPresList.classList.add('hidden');
         }
       });
-
       function renderCompPresList(filtro = '') {
         const itemsContainer = $('compPresItems');
         itemsContainer.innerHTML = '';
@@ -414,7 +352,6 @@
           itemsContainer.appendChild(item);
         });
       }
-
       function renderSelectedCompPres() {
         const selectedContainer = $('selectedCompPres');
         if (selectedCompPres.size === 0) {
@@ -433,45 +370,26 @@
           renderCompPresList();
         }
       }
-
       document.addEventListener('input', (e) => {
         if (e.target.id === 'searchCompPres') {
           renderCompPresList(e.target.value);
         }
       });
-
-      async function cargarTasas() {
-        try {
-          const { data, error } = await supabaseClient
-            .from('web_tasa')
-            .select('fecha, tasa_bs_usd, tasa_cop_usd')
-            .order('fecha', { ascending: false });
-          
-          if (error) {
-            console.error('Error cargando tasas:', error);
-            return [];
-          }
-          
-          tasasCache = data || [];
-          return tasasCache;
-        } catch (err) {
-          console.error('Error en cargarTasas:', err);
-          return [];
-        }
+      async function cargarTasas(preciosRaw) {
+        // Nota: Ahora tasas vienen del backend, pero si necesitas, puedes procesarlas aquí
+        return tasasCache;
       }
-
       function obtenerTasa(fechaStr) {
         if (!tasasCache.length) {
           return { tasa_bs_usd: 36.5, tasa_cop_usd: 4200 };
         }
-        
+       
         const fecha = new Date(fechaStr);
         const tasasOrdenadas = [...tasasCache].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
         const tasa = tasasOrdenadas.find(t => new Date(t.fecha) <= fecha);
-        
+       
         return tasa || tasasOrdenadas[0] || { tasa_bs_usd: 36.5, tasa_cop_usd: 4200 };
       }
-
       function normalizarMoneda(monedas) {
         if (!monedas) return 'USD';
         const raw = String(monedas).trim().toUpperCase();
@@ -482,7 +400,6 @@
         };
         return map[raw] || (/^COP$/i.test(raw) ? 'COP' : /^BS/i.test(raw) ? 'Bs' : /^USD$/i.test(raw) ? 'USD' : raw);
       }
-
       function convertirAPrecioUSD(precio, moneda, fecha) {
         if (!precio) return null;
         const aNumero = (val) => {
@@ -492,7 +409,6 @@
         };
         const precioNum = aNumero(precio);
         if (isNaN(precioNum)) return null;
-
         const monedaNormalizada = normalizarMoneda(moneda);
         const tasa = obtenerTasa(fecha);
         if (monedaNormalizada === 'USD') return precioNum;
@@ -500,7 +416,6 @@
         if (monedaNormalizada === 'COP') return precioNum / parseFloat(tasa.tasa_cop_usd || 1);
         return precioNum;
       }
-
       function normalizarPesoEnKg(presentacion) {
         if (!presentacion) return null;
         const lower = presentacion.toLowerCase();
@@ -512,25 +427,19 @@
         if (matchNum && parseFloat(matchNum[1]) > 100) return parseFloat(matchNum[1]) / 1000;
         return null;
       }
-
       async function loadCatalogs() {
         try {
-          await cargarEmpresas(); // Carga de empresas
-
+          // Carga catálogos desde backend si es necesario, pero por ahora mantenemos algunos en frontend
           const { data: estados } = await supabaseClient.from('web_estados').select('id, nombre').order('nombre');
           estadosData = estados || [];
           $('fEstado').innerHTML = '<option value="">Todos</option>' + estadosData.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
-
           const { data: promotores } = await supabaseClient.from('web_promotores').select('promoter_name').order('promoter_name');
           $('fPromotor').innerHTML = '<option value="">Todos</option>' + (promotores || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
-
           const { data: zonas } = await supabaseClient.from('web_zonas').select('id, nombre, estado_id').order('nombre');
           zonasData = zonas || [];
-
           await loadComercios();
           await cargarPresentaciones();
           fetchDataAnalisis();
-
           $('fEstado').addEventListener('change', () => {
             const estadoSel = $('fEstado').value;
             $('fZona').innerHTML = '<option value="">Todas</option>';
@@ -542,86 +451,65 @@
               }
             }
           });
-
         } catch (error) {
           console.error('Error en loadCatalogs:', error);
         }
       }
-
       async function cargarPresentaciones() {
         try {
           const { data: precios, error } = await supabaseClient.from('web_precios').select('myitems, competitoritems');
           if (error) throw error;
-
           todasPresentaciones = { nuestras: new Set(), competencia: new Set() };
           (precios || []).forEach(row => {
             let myitems = Array.isArray(row.myitems) ? row.myitems : (typeof row.myitems === 'string' ? JSON.parse(row.myitems) : []);
             let competitoritems = Array.isArray(row.competitoritems) ? row.competitoritems : (typeof row.competitoritems === 'string' ? JSON.parse(row.competitoritems) : []);
-
             myitems.forEach(item => item?.presentation && todasPresentaciones.nuestras.add(item.presentation));
             competitoritems.forEach(item => item?.presentation && todasPresentaciones.competencia.add(item.presentation));
           });
-
           $('fNuestraPres').innerHTML = '<option value="">Todas</option>' + [...todasPresentaciones.nuestras].sort().map(p => `<option value="${p}">${p}</option>`).join('');
           renderCompPresList();
         } catch (error) {
           console.error('Error en cargarPresentaciones:', error);
         }
       }
-
       async function fetchDataAnalisis() {
         try {
-          await cargarTasas();
-
-          const desde = $('fDesde').value;
-          const hasta = $('fHasta').value;
-          const est = $('fEstado').value;
-          const zona = $('fZona').value;
-          const prom = $('fPromotor').value;
-          const nuestraPres = $('fNuestraPres').value;
-          const tipoComercio = $('fTipoComercio').value;
-          const empresaSel = $('fEmpresa').value;
-
-          let query = supabaseClient.from('web_precios').select('*');
-          
-          if (desde) query = query.gte('created_at', new Date(desde).toISOString());
-          if (hasta) {
-            const to = new Date(hasta);
-            to.setDate(to.getDate() + 1);
-            query = query.lt('created_at', to.toISOString());
+          const params = new URLSearchParams({
+            date_from: $('fDesde').value,
+            date_to: $('fHasta').value,
+            state: $('fEstado').value,
+            zone: $('fZona').value,
+            promoter: $('fPromotor').value,
+            trade: selectedComercio,
+            tipo_comercio: $('fTipoComercio').value,
+            nuestra_pres: $('fNuestraPres').value,
+          });
+          selectedCompPres.forEach(p => params.append('comp_pres[]', p));
+          const response = await fetch(`/api/analisis-precios?${params.toString()}`, {
+            method: 'GET',
+            credentials: 'include'  // Enviar cookies de sesión
+          });
+          if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${await response.text()}`);
           }
-          if (est) query = query.eq('state', est);
-          if (zona) query = query.eq('zone', zona);
-          if (prom) query = query.eq('promoter_name', prom);
-          if (selectedComercio) query = query.eq('trade', selectedComercio);
-          if (tipoComercio !== 'Todos') query = query.eq('p_mayorista', tipoComercio === 'Detal' ? 'No' : 'Si');
-          if (empresaSel) query = query.eq('empresa_id', empresaSel); // ← FILTRO POR EMPRESA
-
-          const { data, error } = await query.order('created_at', { ascending: false });
-          if (error) throw error;
-
+          const { precios, tasas } = await response.json();
+          tasasCache = tasas || [];
           const filasAnalisis = [];
-          (data || []).forEach(row => {
-            let myitems = Array.isArray(row.myitems) ? row.myitems : (typeof row.myitems === 'string' ? JSON.parse(row.myitems) : []);
-            let competitoritems = Array.isArray(row.competitoritems) ? row.competitoritems : (typeof row.competitoritems === 'string' ? JSON.parse(row.competitoritems) : []);
-
+          precios.forEach(row => {
+            let myitems = safe_json_parse(row.myitems);
+            let competitoritems = safe_json_parse(row.competitoritems);
             myitems.forEach(mi => {
-              if (nuestraPres && mi.presentation !== nuestraPres) return;
-              
+              if ($('fNuestraPres').value && mi.presentation !== $('fNuestraPres').value) return;
               const nuestroPrecioUSD = convertirAPrecioUSD(mi.price, mi.currency, row.created_at);
               const nuestroPesoKg = normalizarPesoEnKg(mi.presentation);
               const nuestroPrecioPorKg = (nuestroPrecioUSD && nuestroPesoKg) ? (nuestroPrecioUSD / nuestroPesoKg) : null;
-
               competitoritems.forEach(ci => {
                 if (selectedCompPres.size > 0 && !selectedCompPres.has(ci.presentation)) return;
-
                 const compPrecioUSD = convertirAPrecioUSD(ci.price, ci.currency, row.created_at);
                 const compPesoKg = normalizarPesoEnKg(ci.presentation);
                 const compPrecioPorKg = (compPrecioUSD && compPesoKg) ? (compPrecioUSD / compPesoKg) : null;
-
                 if (nuestroPrecioPorKg !== null && compPrecioPorKg !== null) {
                   const diferenciaPorcentaje = ((nuestroPrecioPorKg - compPrecioPorKg) / nuestroPrecioPorKg) * 100;
-                  
                   filasAnalisis.push({
                     ...row,
                     nuestraPresentacion: mi.presentation,
@@ -642,23 +530,20 @@
               });
             });
           });
-
           analisisData = filasAnalisis;
           renderAnalisis(analisisData);
           drawChart();
-         
         } catch (error) {
           console.error('Error en fetchDataAnalisis:', error);
           alert('Error procesando datos: ' + error.message);
         }
       }
-
       function renderAnalisis(filas) {
         const tbody = $('tbodyAnalisis');
         tbody.innerHTML = filas.map(f => {
           const diferenciaTexto = f.diferenciaPorcentaje > 0 ? '+' : '';
           const tipoComercio = f.p_mayorista === 'Si' ? 'Mayorista' : 'Detal';
-          
+         
           return `
           <tr>
             <td class="p-3 whitespace-nowrap">${fmtDate(f.fecha)}</td>
@@ -694,10 +579,8 @@
           </tr>
         `;
         }).join('');
-
         $('analisisInfo').textContent = `Mostrando ${filas.length} registros de comparación`;
       }
-
       function drawChart() {
         const chartType = $('chartType').value;
         const data = analisisData;
@@ -705,28 +588,25 @@
         if (window.analisisChart) {
           window.analisisChart.destroy();
         }
-
         if (data.length === 0) {
           window.analisisChart = new Chart(ctx, {
             type: 'bar',
             data: { labels: [], datasets: [] },
-            options: { 
-              responsive: true, 
-              plugins: { 
-                title: { display: true, text: 'Sin datos para mostrar' } 
-              } 
+            options: {
+              responsive: true,
+              plugins: {
+                title: { display: true, text: 'Sin datos para mostrar' }
+              }
             }
           });
           return;
         }
-
         if (chartType === 'bar') {
           drawBarChart(ctx, data);
         } else if (chartType === 'line') {
           drawLineChart(ctx, data);
         }
       }
-
       function drawBarChart(ctx, filas) {
         const grupos = {};
         filas.forEach(f => {
@@ -741,7 +621,6 @@
           grupos[key].nuestrosPreciosPorKg.push(f.nuestroPrecioPorKg);
           grupos[key].compPreciosPorKg.push(f.compPrecioPorKg);
         });
-
         const labels = Object.keys(grupos);
         const nuestrosPromedios = labels.map(label => {
           const precios = grupos[label].nuestrosPreciosPorKg;
@@ -751,7 +630,6 @@
           const precios = grupos[label].compPreciosPorKg;
           return precios.reduce((a, b) => a + b, 0) / precios.length;
         });
-
         window.analisisChart = new Chart(ctx, {
           type: 'bar',
           data: {
@@ -793,11 +671,9 @@
           }
         });
       }
-
       function drawLineChart(ctx, filas) {
         const nuestraPresentacion = $('fNuestraPres').value;
         const dataPorFecha = {};
-
         filas.forEach(f => {
           const fecha = f.fecha.split('T')[0];
           if (!dataPorFecha[fecha]) {
@@ -812,12 +688,9 @@
           dataPorFecha[fecha][f.nuestraPresentacion].push(f.nuestroPrecioPorKg);
           dataPorFecha[fecha][f.competencia].push(f.compPrecioPorKg);
         });
-
         const fechasOrdenadas = Object.keys(dataPorFecha).sort();
         const labels = fechasOrdenadas.map(fecha => fmtDateShort(fecha));
-
         const datasets = [];
-
         const nuestroDatos = fechasOrdenadas.map(fecha => {
           const precios = dataPorFecha[fecha][nuestraPresentacion] || [];
           return precios.length > 0 ? precios.reduce((a, b) => a + b) / precios.length : null;
@@ -832,7 +705,7 @@
           pointRadius: 5,
           pointHoverRadius: 7
         });
-        
+       
         let colorIndex = 0;
         selectedCompPres.forEach(pres => {
           colorIndex = (colorIndex + 1) % colores.length;
@@ -840,7 +713,6 @@
             const precios = dataPorFecha[fecha][pres] || [];
             return precios.length > 0 ? precios.reduce((a, b) => a + b) / precios.length : null;
           });
-
           datasets.push({
             label: `Competencia - ${pres}`,
             data: compDatos,
@@ -851,7 +723,6 @@
             borderDash: [5, 5]
           });
         });
-
         window.analisisChart = new Chart(ctx, {
           type: 'line',
           data: {
@@ -881,16 +752,13 @@
           }
         });
       }
-
       $('btnFiltrar').addEventListener('click', fetchDataAnalisis);
       $('chartType').addEventListener('change', drawChart);
-      
+     
       $('btnLimpiar').addEventListener('click', () => {
         const hoy = new Date();
         $('fHasta').value = hoy.toISOString().slice(0, 10);
         $('fDesde').value = hoy.toISOString().slice(0, 10);
-
-        $('fEmpresa').value = ''; 
         $('fEstado').value = '';
         $('fZona').innerHTML = '<option value="">Todas</option>';
         $('fZona').value = '';
@@ -902,10 +770,9 @@
         selectedCompPres.clear();
         renderSelectedCompPres();
         loadComercios();
-        
+       
         fetchDataAnalisis();
       });
-
       $('btnExportAnalisis').addEventListener('click', () => {
         const headers = ['Fecha', 'Estado', 'Zona', 'Comercio', 'Tipo', 'Nuestra Presentación', 'Nuestro Peso (kg)', 'Nuestro Precio ($/kg)', 'Competencia Presentación', 'Competencia Peso (kg)', 'Precio Competencia ($/kg)', 'Diferencia (%)'];
         const filasData = Array.from($('tbodyAnalisis').querySelectorAll('tr')).map(tr => {
@@ -937,7 +804,7 @@
             `"${diferencia}"`
           ].join(',');
         });
-        
+       
         const csv = [headers.join(','), ...filasData].join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
