@@ -221,6 +221,17 @@
       <div class="mt-4 text-sm text-slate-500 dark:text-slate-400" id="analisisInfo">—</div>
     </section>
     <script>
+      const { createClient } = supabase;
+      const supabaseClient = createClient(
+          'https://djjylikkocemrlsjxscr.supabase.co',
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M'
+      );
+      const empresaId = localStorage.getItem('empresa_id');
+      const empresaNombre = localStorage.getItem('empresa_nombre') || 'Desconocida';
+      if (!empresaId) {
+          alert('Debes iniciar sesión primero.');
+          window.location.href = 'login.html';
+      }
       const $ = id => document.getElementById(id);
       const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('es-ES') : '—';
       const fmtDateShort = iso => iso ? new Date(iso).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : '—';
@@ -240,8 +251,6 @@
         $('fTipoComercio').value = 'Detal';
         loadCatalogs();
       });
-      // === CARGA DE EMPRESAS ===
-      // Nota: Eliminamos carga de empresas ya que usamos backend para filtrar por empresa logueada
       let debounceTimeout;
       $('searchComercio').addEventListener('input', (e) => {
         clearTimeout(debounceTimeout);
@@ -276,10 +285,10 @@
       });
       async function loadComercios(searchTerm = '') {
         try {
-          // Nota: Cambiamos a usar backend si es necesario, pero por ahora mantenemos Supabase directo para comercios
           let query = supabaseClient
             .from('web_precios')
             .select('trade, created_at')
+            .eq('empresa_id', empresaId)
             .not('trade', 'is', null)
             .order('created_at', { ascending: false })
             .limit(20);
@@ -375,9 +384,24 @@
           renderCompPresList(e.target.value);
         }
       });
-      async function cargarTasas(preciosRaw) {
-        // Nota: Ahora tasas vienen del backend, pero si necesitas, puedes procesarlas aquí
-        return tasasCache;
+      async function cargarTasas() {
+        try {
+          const { data, error } = await supabaseClient
+            .from('web_tasa')
+            .select('fecha, tasa_bs_usd, tasa_cop_usd')
+            .order('fecha', { ascending: false });
+         
+          if (error) {
+            console.error('Error cargando tasas:', error);
+            return [];
+          }
+         
+          tasasCache = data || [];
+          return tasasCache;
+        } catch (err) {
+          console.error('Error en cargarTasas:', err);
+          return [];
+        }
       }
       function obtenerTasa(fechaStr) {
         if (!tasasCache.length) {
@@ -429,11 +453,10 @@
       }
       async function loadCatalogs() {
         try {
-          // Carga catálogos desde backend si es necesario, pero por ahora mantenemos algunos en frontend
           const { data: estados } = await supabaseClient.from('web_estados').select('id, nombre').order('nombre');
           estadosData = estados || [];
           $('fEstado').innerHTML = '<option value="">Todos</option>' + estadosData.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
-          const { data: promotores } = await supabaseClient.from('web_promotores').select('promoter_name').order('promoter_name');
+          const { data: promotores } = await supabaseClient.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId).order('promoter_name');
           $('fPromotor').innerHTML = '<option value="">Todos</option>' + (promotores || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
           const { data: zonas } = await supabaseClient.from('web_zonas').select('id, nombre, estado_id').order('nombre');
           zonasData = zonas || [];
@@ -457,7 +480,7 @@
       }
       async function cargarPresentaciones() {
         try {
-          const { data: precios, error } = await supabaseClient.from('web_precios').select('myitems, competitoritems');
+          const { data: precios, error } = await supabaseClient.from('web_precios').select('myitems, competitoritems').eq('empresa_id', empresaId);
           if (error) throw error;
           todasPresentaciones = { nuestras: new Set(), competencia: new Set() };
           (precios || []).forEach(row => {
@@ -474,32 +497,36 @@
       }
       async function fetchDataAnalisis() {
         try {
-          const params = new URLSearchParams({
-            date_from: $('fDesde').value,
-            date_to: $('fHasta').value,
-            state: $('fEstado').value,
-            zone: $('fZona').value,
-            promoter: $('fPromotor').value,
-            trade: selectedComercio,
-            tipo_comercio: $('fTipoComercio').value,
-            nuestra_pres: $('fNuestraPres').value,
-          });
-          selectedCompPres.forEach(p => params.append('comp_pres[]', p));
-          const response = await fetch(`/api/analisis-precios?${params.toString()}`, {
-            method: 'GET',
-            credentials: 'include'  // Enviar cookies de sesión
-          });
-          if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${await response.text()}`);
+          await cargarTasas();
+          const desde = $('fDesde').value;
+          const hasta = $('fHasta').value;
+          const est = $('fEstado').value;
+          const zona = $('fZona').value;
+          const prom = $('fPromotor').value;
+          const nuestraPres = $('fNuestraPres').value;
+          const tipoComercio = $('fTipoComercio').value;
+          let query = supabaseClient.from('web_precios').select('*').eq('empresa_id', empresaId);
+         
+          if (desde) query = query.gte('created_at', new Date(desde).toISOString());
+          if (hasta) {
+            const to = new Date(hasta);
+            to.setDate(to.getDate() + 1);
+            query = query.lt('created_at', to.toISOString());
           }
-          const { precios, tasas } = await response.json();
-          tasasCache = tasas || [];
+          if (est) query = query.eq('state', est);
+          if (zona) query = query.eq('zone', zona);
+          if (prom) query = query.eq('promoter_name', prom);
+          if (selectedComercio) query = query.eq('trade', selectedComercio);
+          if (tipoComercio !== 'Todos') query = query.eq('p_mayorista', tipoComercio === 'Detal' ? 'No' : 'Si');
+          const { data, error } = await query.order('created_at', { ascending: false });
+          if (error) throw error;
           const filasAnalisis = [];
-          precios.forEach(row => {
-            let myitems = safe_json_parse(row.myitems);
-            let competitoritems = safe_json_parse(row.competitoritems);
+          (data || []).forEach(row => {
+            let myitems = Array.isArray(row.myitems) ? row.myitems : (typeof row.myitems === 'string' ? JSON.parse(row.myitems) : []);
+            let competitoritems = Array.isArray(row.competitoritems) ? row.competitoritems : (typeof row.competitoritems === 'string' ? JSON.parse(row.competitoritems) : []);
             myitems.forEach(mi => {
-              if ($('fNuestraPres').value && mi.presentation !== $('fNuestraPres').value) return;
+              if (nuestraPres && mi.presentation !== nuestraPres) return;
+             
               const nuestroPrecioUSD = convertirAPrecioUSD(mi.price, mi.currency, row.created_at);
               const nuestroPesoKg = normalizarPesoEnKg(mi.presentation);
               const nuestroPrecioPorKg = (nuestroPrecioUSD && nuestroPesoKg) ? (nuestroPrecioUSD / nuestroPesoKg) : null;
@@ -510,6 +537,7 @@
                 const compPrecioPorKg = (compPrecioUSD && compPesoKg) ? (compPrecioUSD / compPesoKg) : null;
                 if (nuestroPrecioPorKg !== null && compPrecioPorKg !== null) {
                   const diferenciaPorcentaje = ((nuestroPrecioPorKg - compPrecioPorKg) / nuestroPrecioPorKg) * 100;
+                 
                   filasAnalisis.push({
                     ...row,
                     nuestraPresentacion: mi.presentation,
@@ -533,6 +561,7 @@
           analisisData = filasAnalisis;
           renderAnalisis(analisisData);
           drawChart();
+        
         } catch (error) {
           console.error('Error en fetchDataAnalisis:', error);
           alert('Error procesando datos: ' + error.message);
