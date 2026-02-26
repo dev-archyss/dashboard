@@ -1280,6 +1280,66 @@ def handle_my_products():
             error_info = {"message": res.text}
         return jsonify({"error": error_info.get("message", "Error al crear")}), res.status_code
 
+@app.route('/api/analisis-precios', methods=['GET'])
+def api_analisis_precios():
+    empresa = get_current_empresa()
+    if not empresa:
+        return jsonify({"error": "No hay sesión activa"}), 401
+
+    empresa_id = empresa['id']
+
+    # Parámetros opcionales desde el frontend
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    state = request.args.get('state')
+    zone = request.args.get('zone')
+    promoter = request.args.get('promoter')
+    trade = request.args.get('trade')
+    tipo_comercio = request.args.get('tipo_comercio')  # 'Detal', 'Mayorista', 'Todos'
+    nuestra_pres = request.args.get('nuestra_pres')
+    comp_pres = request.args.getlist('comp_pres[]')  # array de presentaciones de competencia
+
+    params = [
+        ("select", "*"),
+        ("empresa_id", f"eq.{empresa_id}"),
+        ("order", "created_at.desc")
+    ]
+
+    if date_from:
+        params.append(("created_at", f"gte.{date_from}T00:00:00+00:00"))
+    if date_to:
+        params.append(("created_at", f"lte.{date_to}T23:59:59+00:00"))
+
+    if state:
+        params.append(("state", f"eq.{state}"))
+    if zone:
+        params.append(("zone", f"eq.{zone}"))
+    if promoter:
+        params.append(("promoter_name", f"eq.{promoter}"))
+    if trade:
+        params.append(("trade", f"eq.{trade}"))
+    if tipo_comercio and tipo_comercio != "Todos":
+        es_mayorista = "Si" if tipo_comercio == "Mayorista" else "No"
+        params.append(("p_mayorista", f"eq.{es_mayorista}"))
+
+    # Traer datos necesarios
+    precios = fetch_table("web_precios", params=params)
+    tasas = fetch_table("web_tasa", params=[("order", "fecha.desc")])
+
+    # Puedes agregar más fetches si necesitas otros catálogos filtrados por empresa_id
+    # Por ejemplo:
+    # estados = fetch_table("web_estados", empresa_id=empresa_id)
+    # zonas = fetch_table("web_zonas", empresa_id=empresa_id)
+    # etc.
+
+    return jsonify({
+        "precios": precios,
+        "tasas": tasas,
+        # "estados": estados,
+        # "zonas": zonas,
+        # agregar otros si los necesitas
+    })
+
 # --- INICIO ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
