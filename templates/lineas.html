@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Líneas de Producto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; }
+        .modal-content { margin: 5% auto; padding: 24px; border-radius: 12px; width: 90%; max-width: 560px; }
+        .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1; }
+
+        .badge-activa   { background: #DCFCE7; color: #166534; }
+        .badge-inactiva { background: #F3F4F6; color: #6B7280; }
+        .dark .badge-activa   { background: #14532D; color: #BBF7D0; }
+        .dark .badge-inactiva { background: #374151; color: #9CA3AF; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
+    {% include 'navbar.html' %}
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <h1 class="text-3xl font-bold mb-2 text-indigo-600 dark:text-indigo-400 text-center">Líneas de Producto</h1>
+        <p class="text-center text-gray-500 dark:text-gray-400 text-sm mb-8">
+            Define las líneas de tu empresa. Cada producto y cada promotor se asociará a una línea.
+        </p>
+
+        <!-- ── Formulario crear línea ── -->
+        <div class="mb-8 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700">
+            <h2 class="text-xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Nueva Línea</h2>
+            <form id="createForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Nombre de la línea <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="nombre"
+                        placeholder="Ej: SAL, LECHE, PASTA, ACEITE..."
+                        class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        required oninput="this.value = this.value.toUpperCase()">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Gramaje base <span class="text-gray-400 text-xs">(opcional)</span>
+                    </label>
+                    <input type="number" id="gramaje_base" step="any" min="0"
+                        placeholder="Ej: 500"
+                        class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Unidad base <span class="text-gray-400 text-xs">(opcional)</span>
+                    </label>
+                    <input type="text" id="unidad_base"
+                        placeholder="Ej: g, kg, ml, l, unidad"
+                        class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        oninput="this.value = this.value.toLowerCase()">
+                </div>
+
+                <!-- Planograma de línea -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Planograma de la línea <span class="text-gray-400 text-xs">(opcional — sobreescribe el planograma de la empresa)</span>
+                    </label>
+                    <div id="planogram_preview_create" class="hidden mb-2">
+                        <img id="planogram_img_create" src="" alt="Planograma"
+                            class="h-24 rounded-lg border border-gray-200 dark:border-slate-600 object-contain bg-gray-50">
+                    </div>
+                    <input type="file" id="planogram_file" accept=".jpg,.jpeg,.png"
+                        class="w-full p-2.5 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm"
+                        onchange="previewPlanogram(this, 'planogram_img_create', 'planogram_preview_create')">
+                    <p class="text-xs text-gray-400 mt-1">JPG o PNG. Si no subes ninguno, se usará el planograma general de la empresa.</p>
+                </div>
+
+                <button type="submit"
+                    class="md:col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-lg font-semibold shadow-md transition">
+                    Crear Línea
+                </button>
+            </form>
+        </div>
+
+        <!-- ── Lista de líneas ── -->
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-indigo-600 dark:text-indigo-400">Líneas registradas</h2>
+                <span id="total_badge"
+                    class="text-xs font-semibold bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full"></span>
+            </div>
+
+            <div id="lineas_list" class="space-y-3">
+                <p class="text-center text-gray-400 py-8" id="loading_msg">Cargando líneas...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         MODAL: Editar línea
+    ══════════════════════════════════════════════════ -->
+    <div id="editModal" class="modal">
+        <div class="modal-content bg-white dark:bg-slate-800 dark:text-white">
+            <span class="close" onclick="closeModal('editModal')">&times;</span>
+            <h2 class="text-xl font-bold mb-5 text-indigo-600 dark:text-indigo-400">Editar Línea</h2>
+
+            <form id="editForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="hidden" id="edit_id">
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre</label>
+                    <input type="text" id="edit_nombre"
+                        class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        required oninput="this.value = this.value.toUpperCase()">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gramaje base</label>
+                    <input type="number" id="edit_gramaje_base" step="any" min="0"
+                        class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Unidad base</label>
+                    <input type="text" id="edit_unidad_base"
+                        class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        oninput="this.value = this.value.toLowerCase()">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Planograma de la línea
+                        <span class="text-gray-400 text-xs ml-1">(sube uno nuevo para reemplazar el actual)</span>
+                    </label>
+                    <!-- Preview actual -->
+                    <div id="edit_planogram_current" class="hidden mb-2 flex items-center gap-3">
+                        <img id="edit_planogram_img" src="" alt="Planograma actual"
+                            class="h-20 rounded-lg border border-gray-200 dark:border-slate-600 object-contain bg-gray-50">
+                        <button type="button" onclick="quitarPlanogramaEdit()"
+                            class="text-xs text-red-500 hover:text-red-700 font-medium">Quitar planograma</button>
+                    </div>
+                    <input type="file" id="edit_planogram_file" accept=".jpg,.jpeg,.png"
+                        class="w-full p-2.5 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm">
+                    <input type="hidden" id="edit_planogram_actual">
+                    <input type="hidden" id="edit_planogram_borrar" value="0">
+                </div>
+
+                <div class="md:col-span-2 flex items-center gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="edit_activa" class="w-4 h-4 accent-indigo-600">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Línea activa</span>
+                    </label>
+                </div>
+
+                <button type="submit"
+                    class="md:col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-lg font-semibold transition">
+                    Guardar Cambios
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         JAVASCRIPT
+    ══════════════════════════════════════════════════ -->
+    <script>
+        const supabaseUrl = 'https://djjylikkocemrlsjxscr.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
+        const db          = supabase.createClient(supabaseUrl, supabaseKey);
+        const empresaId   = localStorage.getItem('empresa_id');
+
+        if (!empresaId) {
+            alert('No hay sesión activa.');
+            window.location.href = '/login.html';
+        }
+
+        const STORAGE_BASE = `${supabaseUrl}/storage/v1/object/public/visits_photos/`;
+
+        // ── Cargar líneas ────────────────────────────────────────
+        async function loadLineas() {
+            const list    = document.getElementById('lineas_list');
+            const loadMsg = document.getElementById('loading_msg');
+
+            const { data, error } = await db
+                .from('web_lineas')
+                .select('*')
+                .eq('empresa_id', empresaId)
+                .order('nombre');
+
+            if (error) {
+                list.innerHTML = `<p class="text-red-500 text-center py-4">Error al cargar: ${error.message}</p>`;
+                return;
+            }
+
+            document.getElementById('total_badge').textContent =
+                `${data.length} línea${data.length !== 1 ? 's' : ''}`;
+
+            if (!data || data.length === 0) {
+                list.innerHTML = `<p class="text-center text-gray-400 py-8">No hay líneas registradas. Crea la primera arriba.</p>`;
+                return;
+            }
+
+            list.innerHTML = '';
+            data.forEach(linea => {
+                const card = document.createElement('div');
+                card.className = 'border dark:border-slate-700 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-50 dark:bg-slate-700/50';
+
+                const badgeClass = linea.activa ? 'badge-activa' : 'badge-inactiva';
+                const badgeText  = linea.activa ? 'Activa' : 'Inactiva';
+
+                const meta = [];
+                if (linea.gramaje_base) meta.push(`${linea.gramaje_base} ${linea.unidad_base || ''}`);
+                if (linea.planogram_image) meta.push('Con planograma');
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        ${linea.planogram_image
+                            ? `<img src="${STORAGE_BASE}${linea.planogram_image}" alt="Planograma"
+                                class="h-12 w-16 object-contain rounded-lg border border-gray-200 dark:border-slate-600 bg-white flex-shrink-0">`
+                            : `<div class="h-12 w-16 rounded-lg border border-dashed border-gray-300 dark:border-slate-600 flex items-center justify-center flex-shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                               </div>`
+                        }
+                        <div>
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <strong class="text-indigo-600 dark:text-indigo-400 text-lg">${linea.nombre}</strong>
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${badgeClass}">${badgeText}</span>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                ${meta.length > 0 ? meta.join(' · ') : 'Sin configuración adicional'}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="editLinea('${linea.id}')"
+                            class="bg-yellow-200 text-yellow-800 px-3 py-1.5 rounded-lg text-sm hover:bg-yellow-300 transition font-medium">
+                            Editar
+                        </button>
+                        <button onclick="toggleActiva('${linea.id}', ${!linea.activa})"
+                            class="${linea.activa
+                                ? 'bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300'
+                                : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'} px-3 py-1.5 rounded-lg text-sm transition font-medium">
+                            ${linea.activa ? 'Desactivar' : 'Activar'}
+                        </button>
+                        <button onclick="deleteLinea('${linea.id}', '${linea.nombre.replace(/'/g, "\\'")}')"
+                            class="bg-red-200 text-red-800 px-3 py-1.5 rounded-lg text-sm hover:bg-red-300 transition font-medium">
+                            Eliminar
+                        </button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        // ── Crear línea ──────────────────────────────────────────
+        document.getElementById('createForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const nombre = document.getElementById('nombre').value.trim();
+            if (!nombre) { alert('El nombre es obligatorio.'); return; }
+
+            // Verificar duplicado en la empresa
+            const { data: dup } = await db.from('web_lineas')
+                .select('id').eq('empresa_id', empresaId).eq('nombre', nombre).maybeSingle();
+            if (dup) { alert(`Ya existe una línea con el nombre "${nombre}".`); return; }
+
+            // Subir planograma si hay archivo
+            let planogramPath = null;
+            const file = document.getElementById('planogram_file').files[0];
+            if (file) {
+                planogramPath = await subirPlanograma(file, nombre);
+                if (!planogramPath) return; // error ya mostrado
+            }
+
+            const { error } = await db.from('web_lineas').insert([{
+                empresa_id:     empresaId,
+                nombre:         nombre,
+                gramaje_base:   parseFloat(document.getElementById('gramaje_base').value) || null,
+                unidad_base:    document.getElementById('unidad_base').value.trim() || null,
+                planogram_image: planogramPath,
+                activa:         true
+            }]);
+
+            if (error) { alert('Error al crear: ' + error.message); return; }
+
+            alert(`Línea "${nombre}" creada correctamente.`);
+            document.getElementById('createForm').reset();
+            document.getElementById('planogram_preview_create').classList.add('hidden');
+            loadLineas();
+        });
+
+        // ── Editar línea ─────────────────────────────────────────
+        async function editLinea(id) {
+            const { data: l, error } = await db.from('web_lineas')
+                .select('*').eq('id', id).eq('empresa_id', empresaId).single();
+            if (error || !l) { alert('No se pudo cargar la línea.'); return; }
+
+            document.getElementById('edit_id').value            = l.id;
+            document.getElementById('edit_nombre').value        = l.nombre;
+            document.getElementById('edit_gramaje_base').value  = l.gramaje_base || '';
+            document.getElementById('edit_unidad_base').value   = l.unidad_base  || '';
+            document.getElementById('edit_activa').checked      = l.activa;
+            document.getElementById('edit_planogram_actual').value = l.planogram_image || '';
+            document.getElementById('edit_planogram_borrar').value = '0';
+            document.getElementById('edit_planogram_file').value   = '';
+
+            // Preview planograma actual
+            const previewDiv = document.getElementById('edit_planogram_current');
+            const previewImg = document.getElementById('edit_planogram_img');
+            if (l.planogram_image) {
+                previewImg.src = `${STORAGE_BASE}${l.planogram_image}`;
+                previewDiv.classList.remove('hidden');
+            } else {
+                previewDiv.classList.add('hidden');
+            }
+
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function quitarPlanogramaEdit() {
+            document.getElementById('edit_planogram_borrar').value = '1';
+            document.getElementById('edit_planogram_current').classList.add('hidden');
+            document.getElementById('edit_planogram_file').value = '';
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id     = document.getElementById('edit_id').value;
+            const nombre = document.getElementById('edit_nombre').value.trim();
+            if (!nombre) { alert('El nombre es obligatorio.'); return; }
+
+            // Verificar duplicado (excluyendo la actual)
+            const { data: dup } = await db.from('web_lineas')
+                .select('id').eq('empresa_id', empresaId).eq('nombre', nombre).neq('id', id).maybeSingle();
+            if (dup) { alert(`Ya existe otra línea con el nombre "${nombre}".`); return; }
+
+            // Determinar planograma
+            let planogramPath = document.getElementById('edit_planogram_actual').value || null;
+            const borrar      = document.getElementById('edit_planogram_borrar').value === '1';
+            const newFile     = document.getElementById('edit_planogram_file').files[0];
+
+            if (borrar) {
+                planogramPath = null;
+            } else if (newFile) {
+                planogramPath = await subirPlanograma(newFile, nombre);
+                if (!planogramPath) return;
+            }
+
+            const { error } = await db.from('web_lineas').update({
+                nombre:          nombre,
+                gramaje_base:    parseFloat(document.getElementById('edit_gramaje_base').value) || null,
+                unidad_base:     document.getElementById('edit_unidad_base').value.trim() || null,
+                planogram_image: planogramPath,
+                activa:          document.getElementById('edit_activa').checked
+            }).eq('id', id).eq('empresa_id', empresaId);
+
+            if (error) { alert('Error al guardar: ' + error.message); return; }
+            alert('Línea actualizada correctamente.');
+            closeModal('editModal');
+            loadLineas();
+        });
+
+        // ── Activar / desactivar ─────────────────────────────────
+        async function toggleActiva(id, nuevoEstado) {
+            const { error } = await db.from('web_lineas')
+                .update({ activa: nuevoEstado })
+                .eq('id', id).eq('empresa_id', empresaId);
+            if (error) { alert('Error: ' + error.message); return; }
+            loadLineas();
+        }
+
+        // ── Eliminar línea ───────────────────────────────────────
+        async function deleteLinea(id, nombre) {
+            // Verificar si tiene productos asociados
+            const { count: prodCount } = await db.from('web_myproductos')
+                .select('id', { count: 'exact', head: true })
+                .eq('linea_id', id);
+
+            const { count: compCount } = await db.from('web_competidor')
+                .select('id', { count: 'exact', head: true })
+                .eq('linea_id', id);
+
+            const total = (prodCount || 0) + (compCount || 0);
+
+            let msg = `¿Eliminar la línea "${nombre}"?`;
+            if (total > 0) {
+                msg += `\n\nAtención: hay ${total} producto(s) asociado(s) a esta línea. Su campo linea_id quedará en NULL (sin línea asignada).`;
+            }
+
+            if (!confirm(msg)) return;
+
+            const { error } = await db.from('web_lineas')
+                .delete().eq('id', id).eq('empresa_id', empresaId);
+            if (error) { alert('Error al eliminar: ' + error.message); return; }
+
+            alert(`Línea "${nombre}" eliminada.`);
+            loadLineas();
+        }
+
+        // ── Subir planograma al Storage ──────────────────────────
+        async function subirPlanograma(file, lineaNombre) {
+            const allowed = ['.jpg', '.jpeg', '.png'];
+            const ext     = '.' + file.name.split('.').pop().toLowerCase();
+            if (!allowed.includes(ext)) {
+                alert('Solo se permiten archivos JPG o PNG.');
+                return null;
+            }
+
+            const timestamp = Date.now();
+            const safeName  = lineaNombre.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const path      = `planogramas/${empresaId}/lineas/${safeName}_${timestamp}${ext}`;
+            const storageUrl = `${supabaseUrl}/storage/v1/object/visits_photos/${path}`;
+
+            const res = await fetch(storageUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': file.type || 'image/jpeg'
+                },
+                body: file
+            });
+
+            if (!res.ok) {
+                alert('Error al subir el planograma al storage.');
+                return null;
+            }
+            return path;
+        }
+
+        // ── Preview de imagen antes de subir ────────────────────
+        function previewPlanogram(input, imgId, divId) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById(imgId).src = e.target.result;
+                document.getElementById(divId).classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ── Helpers ──────────────────────────────────────────────
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        window.onclick = (event) => {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) closeModal('editModal');
+        };
+
+        // ── Init ─────────────────────────────────────────────────
+        window.onload = () => loadLineas();
+    </script>
+</body>
+</html>

@@ -10,125 +10,431 @@
             theme: {
                 extend: {
                     colors: {
-                        'turquesa-base': '#14B8A6',  
-                        'turquesa-claro': '#5EEAD4',  
-                        'turquesa-oscuro': '#0F766E',  
+                        'turquesa-base':  '#14B8A6',
+                        'turquesa-claro': '#5EEAD4',
+                        'turquesa-oscuro':'#0F766E',
                     }
                 }
             }
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal-content { margin: 5% auto; padding: 30px; border-radius: 12px; width: 80%; max-width: 600px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .modal-content { margin: 5% auto; padding: 30px; border-radius: 12px; width: 80%; max-width: 600px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
         .close { color: #0F766E; float: right; font-size: 32px; font-weight: bold; cursor: pointer; line-height: 0.8; }
 
-        .btn-turquesa { 
-            background-image: linear-gradient(to right, #14B8A6, #0F766E) !important; 
-            color: white !important; 
+        .btn-turquesa {
+            background-image: linear-gradient(to right, #14B8A6, #0F766E) !important;
+            color: white !important;
             transition: all 0.2s;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .btn-turquesa:hover { opacity: 0.9; box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15); }
-
+        .btn-turquesa:hover { opacity: 0.9; }
         .header-bg { background-image: linear-gradient(to right, #5EEAD4, #14B8A6); }
 
-        #productsTable th, #productsTable td { 
-            padding: 0.6rem 1.5rem; 
-            font-size: 0.875rem; 
-        }
-        
-        .table-container { 
-            max-height: 500px; 
-            overflow-y: auto; 
-            border: 1px solid #E5E7EB; 
-            border-radius: 0.75rem;
-        }
+        #productsTable th, #productsTable td { padding: 0.6rem 1.5rem; font-size: 0.875rem; }
 
-        .table-header-sticky th {
-            position: sticky;
-            top: 0;
-            background-color: #F9FAFB;
-            z-index: 10;
-        }
+        .table-container { max-height: 500px; overflow-y: auto; border: 1px solid #E5E7EB; border-radius: 0.75rem; }
+        .table-header-sticky th { position: sticky; top: 0; background-color: #F9FAFB; z-index: 10; }
         .dark .table-header-sticky th { background-color: #334155; color: #e2e8f0; }
+
+        /* Badge de línea en tabla */
+        .badge-linea { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; background: #CCFBF1; color: #0F766E; }
+        .dark .badge-linea { background: #134E4A; color: #99F6E4; }
+        .badge-sin-linea { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; background: #F3F4F6; color: #9CA3AF; }
+        .dark .badge-sin-linea { background: #374151; color: #6B7280; }
+
+        /* Filtro activo */
+        .filtro-btn { transition: all 0.15s; }
+        .filtro-btn.active { background: linear-gradient(to right, #14B8A6, #0F766E); color: white; }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
     {% include 'navbar.html' %}
 
-    <div class="container mx-auto p-4 sm:p-6 lg:p-8"> 
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <div class="header-bg p-6 rounded-xl shadow-xl mb-8">
             <h1 class="text-3xl font-extrabold text-white text-center tracking-wide">
                 GESTIÓN DE PRESENTACIONES DE PRODUCTOS PROPIOS
             </h1>
         </div>
 
-        <div class="mb-10 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700">
-            <h2 class="text-xl font-semibold mb-4 text-turquesa-oscuro dark:text-turquesa-claro" id="formTitle">AÑADIR NUEVA PRESENTACIÓN</h2>
-            <form id="productForm" class="flex flex-col md:flex-row gap-3 items-center">
+        <!-- ── Formulario crear/editar ── -->
+        <div class="mb-8 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700">
+            <h2 class="text-xl font-semibold mb-4 text-turquesa-oscuro dark:text-turquesa-claro" id="formTitle">
+                AÑADIR NUEVA PRESENTACIÓN
+            </h2>
+            <form id="productForm">
                 <input type="hidden" id="product_id" value="">
-                
-                <input 
-                    type="text" 
-                    id="presentation" 
-                    placeholder="NOMBRE/DESCRIPCIÓN DE LA PRESENTACIÓN (*)" 
-                    class="p-2.5 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg focus:ring-turquesa-base focus:border-turquesa-base transition uppercase w-full md:w-3/5" 
-                    required
-                >
-                
-                <div class="flex space-x-3 w-full md:w-2/5 justify-end"> 
-                    <button type="submit" id="submitButton" class="btn-turquesa px-4 py-2.5 rounded-lg font-bold text-sm w-full md:w-auto"> 
-                        CREAR PRESENTACIÓN
-                    </button>
-                    <button type="button" id="cancelButton" class="bg-gray-400 text-white px-4 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-500 transition duration-150 hidden w-full md:w-auto" onclick="resetForm()">
-                        CANCELAR
-                    </button>
+
+                <div class="flex flex-col md:flex-row gap-3 items-start">
+                    <!-- Nombre de la presentación -->
+                    <div class="w-full md:w-2/5">
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                            Presentación <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="presentation"
+                            placeholder="NOMBRE / DESCRIPCIÓN"
+                            class="w-full p-2.5 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-turquesa-base uppercase transition"
+                            required oninput="this.value = this.value.toUpperCase()">
+                    </div>
+
+                    <!-- Selector de línea -->
+                    <div class="w-full md:w-2/5">
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                            Línea de producto <span class="text-gray-400 text-xs normal-case font-normal">(opcional)</span>
+                        </label>
+                        <select id="linea_id"
+                            class="w-full p-2.5 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-turquesa-base transition text-sm">
+                            <option value="">Sin línea asignada</option>
+                        </select>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="flex gap-2 w-full md:w-auto md:self-end">
+                        <button type="submit" id="submitButton" class="btn-turquesa px-4 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap">
+                            CREAR PRESENTACIÓN
+                        </button>
+                        <button type="button" id="cancelButton"
+                            class="bg-gray-400 text-white px-4 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-500 transition hidden"
+                            onclick="resetForm()">
+                            CANCELAR
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
 
-        <h2 class="text-xl font-semibold mb-4 text-turquesa-oscuro dark:text-turquesa-claro">LISTA DE PRESENTACIONES DE LA EMPRESA</h2>
+        <!-- ── Filtros por línea ── -->
+        <div class="mb-4 flex flex-wrap gap-2 items-center">
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mr-1">Filtrar:</span>
+            <button id="filtro_todas" onclick="aplicarFiltro('')"
+                class="filtro-btn active px-3 py-1.5 rounded-full text-sm font-medium bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                Todas
+            </button>
+            <button onclick="aplicarFiltro('__sin_linea__')"
+                id="filtro_sin_linea"
+                class="filtro-btn px-3 py-1.5 rounded-full text-sm font-medium bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                Sin línea
+            </button>
+            <div id="filtros_lineas" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- ── Tabla de presentaciones ── -->
+        <h2 class="text-xl font-semibold mb-4 text-turquesa-oscuro dark:text-turquesa-claro">
+            LISTA DE PRESENTACIONES
+            <span id="count_label" class="text-sm font-normal text-gray-400 ml-2"></span>
+        </h2>
         <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg table-container border border-gray-200 dark:border-slate-700">
             <table id="productsTable" class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
                 <thead class="table-header-sticky">
                     <tr>
-                        <th class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-3/5">PRESENTACIÓN</th>
+                        <th class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/5">PRESENTACIÓN</th>
+                        <th class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">LÍNEA</th>
                         <th class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">CREADO EN</th>
                         <th class="text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">ACCIONES</th>
                     </tr>
                 </thead>
-                <tbody id="productsTableBody" class="bg-white dark:bg-slate-800 divide-y divide-gray-100 dark:divide-slate-700">
-                </tbody>
+                <tbody id="productsTableBody" class="bg-white dark:bg-slate-800 divide-y divide-gray-100 dark:divide-slate-700"></tbody>
             </table>
             <p id="loadingMessage" class="text-center text-gray-500 py-4">Cargando presentaciones...</p>
         </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════
+         MODAL: Editar producto
+    ══════════════════════════════════════════════════ -->
+    <div id="editModal" class="modal">
+        <div class="modal-content bg-white dark:bg-slate-800 dark:text-white">
+            <span class="close" onclick="closeModal('editModal')">&times;</span>
+            <h2 class="text-xl font-bold mb-5 text-turquesa-oscuro dark:text-turquesa-claro">EDITAR PRESENTACIÓN</h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                        Presentación <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="modal_presentation"
+                        class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-turquesa-base uppercase"
+                        required oninput="this.value = this.value.toUpperCase()">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                        Línea de producto
+                    </label>
+                    <select id="modal_linea_id"
+                        class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-turquesa-base text-sm">
+                        <option value="">Sin línea asignada</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button onclick="guardarEdicion()"
+                        class="btn-turquesa flex-1 py-3 rounded-lg font-bold text-sm">
+                        GUARDAR CAMBIOS
+                    </button>
+                    <button onclick="closeModal('editModal')"
+                        class="flex-1 py-3 rounded-lg font-bold text-sm bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 transition">
+                        CANCELAR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         JAVASCRIPT
+    ══════════════════════════════════════════════════ -->
     <script>
-        // Validación de sesión
-        const empresaId = localStorage.getItem('empresa_id');
+        // ── Config ───────────────────────────────────────────────
+        const empresaId   = localStorage.getItem('empresa_id');
+        const supabaseUrl = 'https://djjylikkocemrlsjxscr.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
+        const db          = supabase.createClient(supabaseUrl, supabaseKey);
 
         if (!empresaId) {
             alert('Debes iniciar sesión primero.');
             window.location.href = '/login.html';
         }
 
-        // API
-        const API_URL = '/api/myproducts';
+        // ── Estado ───────────────────────────────────────────────
+        let allProducts  = [];
+        let allLineas    = [];
+        let filtroActivo = '';       // '' = todas, '__sin_linea__' = sin línea, uuid = línea específica
+        let editingId    = null;
 
-        // Elementos
-        const form = document.getElementById('productForm');
-        const tableBody = document.getElementById('productsTableBody');
-        const submitButton = document.getElementById('submitButton');
-        const cancelButton = document.getElementById('cancelButton');
-        const formTitle = document.getElementById('formTitle');
-        const loadingMessage = document.getElementById('loadingMessage');
-        const inputPresentation = document.getElementById('presentation');
-        const defaultHeaders = { 'Content-Type': 'application/json' };
+        // ── Init ─────────────────────────────────────────────────
+        window.onload = async () => {
+            await loadLineas();
+            await loadProducts();
+        };
 
-        // Formatear fecha
+        // ── Cargar líneas ────────────────────────────────────────
+        async function loadLineas() {
+            const { data } = await db.from('web_lineas')
+                .select('id, nombre')
+                .eq('empresa_id', empresaId)
+                .eq('activa', true)
+                .order('nombre');
+
+            allLineas = data || [];
+            poblarSelectoresLinea();
+            renderFiltrosBotones();
+        }
+
+        function poblarSelectoresLinea() {
+            ['linea_id', 'modal_linea_id'].forEach(selId => {
+                const sel = document.getElementById(selId);
+                sel.innerHTML = '<option value="">Sin línea asignada</option>';
+                allLineas.forEach(l => {
+                    sel.innerHTML += `<option value="${l.id}">${l.nombre}</option>`;
+                });
+            });
+        }
+
+        function renderFiltrosBotones() {
+            const container = document.getElementById('filtros_lineas');
+            container.innerHTML = '';
+            allLineas.forEach(l => {
+                const btn = document.createElement('button');
+                btn.id        = `filtro_${l.id}`;
+                btn.className = 'filtro-btn px-3 py-1.5 rounded-full text-sm font-medium bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200';
+                btn.textContent = l.nombre;
+                btn.onclick   = () => aplicarFiltro(l.id);
+                container.appendChild(btn);
+            });
+        }
+
+        // ── Filtros ──────────────────────────────────────────────
+        function aplicarFiltro(valor) {
+            filtroActivo = valor;
+
+            // Resetear todos los botones
+            document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+
+            if (valor === '')              document.getElementById('filtro_todas').classList.add('active');
+            else if (valor === '__sin_linea__') document.getElementById('filtro_sin_linea').classList.add('active');
+            else {
+                const btn = document.getElementById(`filtro_${valor}`);
+                if (btn) btn.classList.add('active');
+            }
+
+            renderTable();
+        }
+
+        // ── Cargar productos ─────────────────────────────────────
+        async function loadProducts() {
+            document.getElementById('loadingMessage').classList.remove('hidden');
+            document.getElementById('productsTableBody').innerHTML = '';
+
+            const { data, error } = await db
+                .from('web_myproductos')
+                .select('id, presentation, linea_id, created_at, web_lineas(id, nombre)')
+                .eq('empresa_id', empresaId)
+                .order('presentation');
+
+            if (error) {
+                document.getElementById('loadingMessage').textContent = 'ERROR AL CARGAR LOS DATOS.';
+                return;
+            }
+
+            allProducts = data || [];
+            renderTable();
+        }
+
+        // ── Renderizar tabla con filtro ──────────────────────────
+        function renderTable() {
+            const tbody      = document.getElementById('productsTableBody');
+            const loadingMsg = document.getElementById('loadingMessage');
+
+            let productos = allProducts;
+
+            if (filtroActivo === '__sin_linea__') {
+                productos = allProducts.filter(p => !p.linea_id);
+            } else if (filtroActivo !== '') {
+                productos = allProducts.filter(p => p.linea_id === filtroActivo);
+            }
+
+            tbody.innerHTML = '';
+            loadingMsg.classList.add('hidden');
+
+            document.getElementById('count_label').textContent =
+                `${productos.length} de ${allProducts.length}`;
+
+            if (productos.length === 0) {
+                loadingMsg.textContent = 'NO HAY PRESENTACIONES PARA EL FILTRO SELECCIONADO.';
+                loadingMsg.classList.remove('hidden');
+                return;
+            }
+
+            productos.forEach(product => {
+                const row = tbody.insertRow();
+                row.id        = `row-${product.id}`;
+                row.className = 'hover:bg-gray-50 dark:hover:bg-slate-700 transition duration-150';
+
+                const lineaNombre = product.web_lineas?.nombre || null;
+                const badgeLinea  = lineaNombre
+                    ? `<span class="badge-linea">${lineaNombre}</span>`
+                    : `<span class="badge-sin-linea">Sin línea</span>`;
+
+                row.insertCell().textContent = product.presentation;
+
+                const lineaCell = row.insertCell();
+                lineaCell.innerHTML = badgeLinea;
+
+                row.insertCell().textContent = formatDateTime(product.created_at);
+
+                const actionsCell = row.insertCell();
+                actionsCell.className = 'whitespace-nowrap text-center text-xs font-medium space-x-3';
+                actionsCell.innerHTML = `
+                    <button onclick="openEdit('${product.id}')"
+                        class="text-turquesa-base hover:text-turquesa-oscuro transition">EDITAR</button>
+                    <button onclick="deleteProduct('${product.id}')"
+                        class="text-red-600 hover:text-red-800 transition">ELIMINAR</button>
+                `;
+            });
+        }
+
+        // ── Crear presentación ───────────────────────────────────
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const presentation = document.getElementById('presentation').value.trim().toUpperCase();
+            const lineaId      = document.getElementById('linea_id').value || null;
+
+            if (!presentation) { alert('EL NOMBRE ES OBLIGATORIO.'); return; }
+
+            const { error } = await db.from('web_myproductos').insert([{
+                presentation: presentation,
+                linea_id:     lineaId,
+                empresa_id:   empresaId
+            }]);
+
+            if (error) {
+                let msg = error.message;
+                if (msg.includes('unique') || msg.includes('presentation_key')) {
+                    msg = 'ESA PRESENTACIÓN YA EXISTE EN TU EMPRESA.';
+                }
+                alert(`ERROR: ${msg}`);
+                return;
+            }
+
+            alert('PRESENTACIÓN CREADA CON ÉXITO.');
+            resetForm();
+            await loadProducts();
+        });
+
+        // ── Abrir modal editar ───────────────────────────────────
+        function openEdit(id) {
+            const product = allProducts.find(p => p.id === id);
+            if (!product) return;
+
+            editingId = id;
+            document.getElementById('modal_presentation').value = product.presentation;
+            document.getElementById('modal_linea_id').value     = product.linea_id || '';
+
+            // Resaltar fila
+            document.querySelectorAll('#productsTableBody tr').forEach(r => r.classList.remove('ring-2', 'ring-turquesa-base'));
+            const row = document.getElementById(`row-${id}`);
+            if (row) row.classList.add('ring-2', 'ring-turquesa-base');
+
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        // ── Guardar edición ──────────────────────────────────────
+        async function guardarEdicion() {
+            if (!editingId) return;
+            const presentation = document.getElementById('modal_presentation').value.trim().toUpperCase();
+            const lineaId      = document.getElementById('modal_linea_id').value || null;
+
+            if (!presentation) { alert('EL NOMBRE ES OBLIGATORIO.'); return; }
+
+            const { error } = await db.from('web_myproductos').update({
+                presentation: presentation,
+                linea_id:     lineaId
+            }).eq('id', editingId).eq('empresa_id', empresaId);
+
+            if (error) {
+                let msg = error.message;
+                if (msg.includes('unique')) msg = 'ESA PRESENTACIÓN YA EXISTE.';
+                alert(`ERROR: ${msg}`);
+                return;
+            }
+
+            alert('PRESENTACIÓN ACTUALIZADA.');
+            closeModal('editModal');
+            // Quitar resaltado
+            const row = document.getElementById(`row-${editingId}`);
+            if (row) row.classList.remove('ring-2', 'ring-turquesa-base');
+            editingId = null;
+            await loadProducts();
+        }
+
+        // ── Eliminar ─────────────────────────────────────────────
+        async function deleteProduct(id) {
+            if (!confirm('¿ELIMINAR ESTA PRESENTACIÓN?')) return;
+
+            const { error } = await db.from('web_myproductos')
+                .delete().eq('id', id).eq('empresa_id', empresaId);
+
+            if (error) { alert(`ERROR: ${error.message}`); return; }
+            alert('PRESENTACIÓN ELIMINADA.');
+            await loadProducts();
+        }
+
+        // ── Reset formulario ─────────────────────────────────────
+        function resetForm() {
+            document.getElementById('product_id').value   = '';
+            document.getElementById('presentation').value = '';
+            document.getElementById('linea_id').value     = '';
+            document.getElementById('formTitle').textContent     = 'AÑADIR NUEVA PRESENTACIÓN';
+            document.getElementById('submitButton').textContent  = 'CREAR PRESENTACIÓN';
+            document.getElementById('cancelButton').classList.add('hidden');
+        }
+
+        // ── Helpers ──────────────────────────────────────────────
         function formatDateTime(isoString) {
             if (!isoString) return 'N/A';
             const date = new Date(isoString);
@@ -137,170 +443,21 @@
             return `${d} ${t}`;
         }
 
-        // Cargar productos filtrados por empresa_id
-        async function loadProducts() {
-            loadingMessage.classList.remove('hidden');
-            tableBody.innerHTML = '';
-            try {
-                const response = await fetch(`${API_URL}?empresa_id=${empresaId}`);
-                const data = await response.json();
-                renderTable(data.products || []);
-            } catch (error) {
-                console.error('Error al cargar productos:', error);
-                loadingMessage.textContent = 'ERROR AL CARGAR LOS DATOS.';
-                loadingMessage.classList.remove('hidden');
-            }
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
         }
 
-        // Renderizar tabla
-        function renderTable(products) {
-            tableBody.innerHTML = '';
-            loadingMessage.classList.add('hidden');
-            if (products.length === 0) {
-                loadingMessage.textContent = 'NO HAY PRESENTACIONES REGISTRADAS PARA ESTA EMPRESA.';
-                loadingMessage.classList.remove('hidden');
-                return;
-            }
-            
-            products.forEach(product => {
-                const row = tableBody.insertRow();
-                row.id = `row-${product.id}`;
-                row.className = 'hover:bg-gray-50 dark:hover:bg-slate-700 transition duration-150';
-
-                row.insertCell().textContent = product.presentation;
-                row.insertCell().textContent = formatDateTime(product.created_at);
-                
-                const actionsCell = row.insertCell();
-                actionsCell.className = 'whitespace-nowrap text-center text-xs font-medium space-x-2';
-                actionsCell.innerHTML = `
-                    <button onclick="editProduct('${product.id}', \`${product.presentation.replace(/'/g, "\\'")}\`)" class="text-turquesa-base hover:text-turquesa-oscuro transition duration-150">EDITAR</button>
-                    <button onclick="deleteProduct('${product.id}')" class="text-red-600 hover:text-red-800 transition duration-150">ELIMINAR</button>
-                `;
-            });
-        }
-
-        // === ENVÍO DE FORMULARIO ===
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('product_id').value;
-            const presentation = inputPresentation.value.trim().toUpperCase();
-            
-            if (!presentation) {
-                alert("EL NOMBRE DE LA PRESENTACIÓN ES OBLIGATORIO.");
-                return;
-            }
-            
-            const payload = { 
-                presentation,
-                empresa_id: empresaId  // ← Enviamos empresa_id
-            };
-
-            try {
-                let response;
-                if (id) {
-                    response = await fetch(`${API_URL}/${id}`, {
-                        method: 'PATCH',
-                        headers: defaultHeaders,
-                        body: JSON.stringify(payload)
-                    });
-                } else {
-                    response = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: defaultHeaders,
-                        body: JSON.stringify(payload)
-                    });
-                }
-
-                if (response.ok || response.status === 201 || response.status === 204) {
-                    alert(id ? 'PRESENTACIÓN ACTUALIZADA CON ÉXITO.' : 'PRESENTACIÓN CREADA CON ÉXITO.');
-                    resetForm();
-                    loadProducts();
-                    return;
-                }
-
-                let errorMessage = 'ERROR DESCONOCIDO';
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error || response.statusText;
-
-                    if (errorMessage.includes('web_myproductos_presentation_key') || errorMessage.includes('unique constraint')) {
-                        errorMessage = "ERROR: EL NOMBRE DE LA PRESENTACIÓN YA EXISTE EN TU EMPRESA.";
-                    }
-                } catch (jsonError) {
-                    errorMessage = response.statusText || `ERROR HTTP ${response.status}`;
-                }
-
-                alert(`ERROR: ${errorMessage}`);
-
-            } catch (error) {
-                console.error('Error en la operación:', error);
-                alert('ERROR DE CONEXIÓN CON LA API.');
-            }
-        });
-
-        // Editar
-        function editProduct(id, presentation) {
-            document.getElementById('product_id').value = id;
-            inputPresentation.value = presentation;
-            formTitle.textContent = 'EDITAR PRESENTACIÓN';
-            submitButton.textContent = 'GUARDAR CAMBIOS';
-            cancelButton.classList.remove('hidden');
-            
-            document.querySelectorAll('#productsTableBody tr').forEach(row => {
-                row.classList.remove('bg-turquesa-claro', 'bg-opacity-20');
-            });
-            const row = document.getElementById(`row-${id}`);
-            if (row) row.classList.add('bg-turquesa-claro', 'bg-opacity-20');
-            inputPresentation.focus();
-        }
-
-        // Resetear formulario
-        function resetForm() {
-            const currentId = document.getElementById('product_id').value;
-            if (currentId) {
-                const row = document.getElementById(`row-${currentId}`);
-                if (row) row.classList.remove('bg-turquesa-claro', 'bg-opacity-20');
-            }
-            document.getElementById('product_id').value = '';
-            form.reset();
-            formTitle.textContent = 'AÑADIR NUEVA PRESENTACIÓN';
-            submitButton.textContent = 'CREAR PRESENTACIÓN';
-            cancelButton.classList.add('hidden');
-        }
-
-        // Eliminar
-        async function deleteProduct(id) {
-            if (!confirm(`¿ESTÁS SEGURO DE QUE QUIERES ELIMINAR ESTA PRESENTACIÓN?`)) return;
-
-            try {
-                const response = await fetch(`${API_URL}/${id}?empresa_id=${empresaId}`, {
-                    method: 'DELETE',
-                    headers: defaultHeaders
-                });
-
-                if (response.status === 204 || response.ok) {
-                    alert('PRESENTACIÓN ELIMINADA CON ÉXITO.');
-                    loadProducts();
-                } else {
-                    const err = await response.json().catch(() => ({}));
-                    alert(`ERROR: ${err.error || 'No se pudo eliminar'}`);
-                }
-            } catch (error) {
-                alert('ERROR DE CONEXIÓN AL ELIMINAR.');
-            }
-        }
+        window.onclick = (event) => {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) closeModal('editModal');
+        };
 
         // Exportar funciones globales
-        window.editProduct = editProduct;
+        window.openEdit      = openEdit;
         window.deleteProduct = deleteProduct;
-        window.resetForm = resetForm;
-
-        // Cargar al iniciar
-        window.onload = () => {
-            if (empresaId) {
-                loadProducts();
-            }
-        };
+        window.resetForm     = resetForm;
+        window.aplicarFiltro = aplicarFiltro;
+        window.guardarEdicion = guardarEdicion;
     </script>
 </body>
 </html>
