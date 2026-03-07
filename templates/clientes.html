@@ -5,17 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control de Clientes</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class'
-        }
-    </script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal-content { margin: 5% auto; padding: 20px; border-radius: 10px; width: 80%; max-width: 600px; }
-        .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; }
+        .modal-content { margin: 4% auto; padding: 24px; border-radius: 12px; width: 90%; max-width: 620px; }
+        .modal-wide { max-width: 860px; }
+        .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1; }
+
+        /* Tabla productos asignados */
+        .assigned-table th { background: #F0FDF4; color: #166534; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.6rem 1rem; }
+        .dark .assigned-table th { background: #14532D; color: #BBF7D0; }
+        .assigned-table td { padding: 0.6rem 1rem; font-size: 0.875rem; border-bottom: 1px solid #E5E7EB; vertical-align: middle; }
+        .dark .assigned-table td { border-color: #374151; }
+        .assigned-table tr:last-child td { border-bottom: none; }
+        .assigned-table tr:hover td { background: #F0FDF4; }
+        .dark .assigned-table tr:hover td { background: #052E16; }
+
+        /* Badge línea */
+        .badge-linea { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; background: #DCFCE7; color: #166534; }
+        .dark .badge-linea { background: #14532D; color: #BBF7D0; }
+
+        /* Buscador dropdown */
+        .search-dropdown { position: absolute; z-index: 200; width: 100%; background: white; border: 1px solid #D1D5DB; border-radius: 0.5rem; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 16px rgba(0,0,0,0.12); }
+        .dark .search-dropdown { background: #1E293B; border-color: #475569; }
+        .search-item { padding: 0.6rem 1rem; cursor: pointer; font-size: 0.875rem; border-bottom: 1px solid #F3F4F6; }
+        .dark .search-item { border-color: #334155; }
+        .search-item:hover { background: #F0FDF4; }
+        .dark .search-item:hover { background: #14532D; }
+        .search-item:last-child { border-bottom: none; }
+        .search-item .linea-tag { font-size: 0.65rem; color: #6B7280; margin-left: 6px; }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
@@ -24,45 +44,64 @@
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <h1 class="text-3xl font-bold mb-6 text-indigo-600 dark:text-indigo-400 text-center">Panel de Control de Clientes</h1>
 
-        <!-- Formulario para crear cliente -->
+        <!-- ── Formulario crear cliente ── -->
         <div class="mb-8 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700">
             <h2 class="text-2xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Agregar Nuevo Cliente</h2>
             <form id="createForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input type="text" id="trade_name" placeholder="Nombre comercial" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" required oninput="this.value = this.value.toUpperCase()">
-                <input type="text" id="address" placeholder="Dirección" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="text" id="city" placeholder="Ciudad" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="text" id="phone" placeholder="Teléfono" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="number" step="any" id="latitude" placeholder="Latitud" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="number" step="any" id="longitude" placeholder="Longitud" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="text" id="owner_full_name" placeholder="Nombre completo del propietario" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg md:col-span-2">
-                <input type="text" id="route_name" placeholder="Ruta" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="text" id="seller_name" placeholder="Vendedor" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <button type="submit" class="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 md:col-span-2 font-semibold shadow-md">Agregar Cliente</button>
+                <input type="text" id="trade_name" placeholder="Nombre comercial"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" required
+                    oninput="this.value = this.value.toUpperCase()">
+                <input type="text" id="address" placeholder="Dirección"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="city" placeholder="Ciudad"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="phone" placeholder="Teléfono"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="number" step="any" id="latitude" placeholder="Latitud"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="number" step="any" id="longitude" placeholder="Longitud"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="owner_full_name" placeholder="Nombre completo del propietario"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg md:col-span-2">
+                <input type="text" id="route_name" placeholder="Ruta"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="seller_name" placeholder="Vendedor"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <button type="submit"
+                    class="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 md:col-span-2 font-semibold shadow-md">
+                    Agregar Cliente
+                </button>
             </form>
         </div>
 
-        <!-- Campo de búsqueda -->
+        <!-- ── Buscador ── -->
         <div class="mb-6">
-            <input type="text" id="searchInput" placeholder="Buscar por nombre, código, ciudad o teléfono..." class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-lg" onkeyup="filterAndLoadClients()">
-            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Escribe para filtrar la lista en tiempo real.</p>
+            <input type="text" id="searchInput" placeholder="Buscar por nombre, código, ciudad o teléfono..."
+                class="w-full p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-lg"
+                onkeyup="filterAndLoadClients()">
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Escribe para filtrar la lista en tiempo real.</p>
         </div>
 
-        <!-- Controles de paginación -->
+        <!-- ── Paginación ── -->
         <div class="mb-4 flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-lg shadow border border-gray-200 dark:border-slate-700">
-            <button id="prevBtn" onclick="changePage(-1)" class="bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600 disabled:opacity-50" disabled>Anterior</button>
+            <button id="prevBtn" onclick="changePage(-1)"
+                class="bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300 disabled:opacity-50" disabled>Anterior</button>
             <span id="pageInfo" class="text-indigo-600 dark:text-indigo-400 font-semibold">Página 1</span>
-            <button id="nextBtn" onclick="changePage(1)" class="bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">Siguiente</button>
+            <button id="nextBtn" onclick="changePage(1)"
+                class="bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300">Siguiente</button>
         </div>
 
-        <!-- Lista de clientes -->
-        <div id="clientsList" class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 min-h-64">
+        <!-- ── Lista de clientes ── -->
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 min-h-64">
             <h2 class="text-2xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Lista de Clientes</h2>
             <ul id="clients" class="space-y-3"></ul>
             <p id="noResults" class="text-center text-gray-500 hidden">No se encontraron clientes.</p>
         </div>
     </div>
 
-    <!-- Modal para detalles del cliente -->
+    <!-- ══════════════════════════════════════════════════
+         MODAL: Detalles del cliente
+    ══════════════════════════════════════════════════ -->
     <div id="detailsModal" class="modal">
         <div class="modal-content bg-white dark:bg-slate-800 dark:text-white">
             <span class="close" onclick="closeModal('detailsModal')">&times;</span>
@@ -71,300 +110,642 @@
         </div>
     </div>
 
-    <!-- Modal para editar cliente -->
+    <!-- ══════════════════════════════════════════════════
+         MODAL: Editar cliente
+    ══════════════════════════════════════════════════ -->
     <div id="editModal" class="modal">
         <div class="modal-content bg-white dark:bg-slate-800 dark:text-white">
             <span class="close" onclick="closeModal('editModal')">&times;</span>
             <h2 class="text-2xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">Editar Cliente</h2>
             <form id="editForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input type="hidden" id="edit_id">
-                <input type="text" id="edit_trade_name" placeholder="Nombre comercial" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" required oninput="this.value = this.value.toUpperCase()">
-                <input type="text" id="edit_address" placeholder="Dirección" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="text" id="edit_city" placeholder="Ciudad" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="text" id="edit_phone" placeholder="Teléfono" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="number" step="any" id="edit_latitude" placeholder="Latitud" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="number" step="any" id="edit_longitude" placeholder="Longitud" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="text" id="edit_owner_full_name" placeholder="Nombre completo del propietario" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg md:col-span-2">
-                <input type="text" id="edit_route_name" placeholder="Ruta" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <input type="text" id="edit_seller_name" placeholder="Vendedor" class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
-                <button type="submit" class="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 md:col-span-2 font-semibold">Guardar Cambios</button>
+                <input type="text" id="edit_trade_name" placeholder="Nombre comercial"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg" required
+                    oninput="this.value = this.value.toUpperCase()">
+                <input type="text" id="edit_address" placeholder="Dirección"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="edit_city" placeholder="Ciudad"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="edit_phone" placeholder="Teléfono"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="number" step="any" id="edit_latitude" placeholder="Latitud"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="number" step="any" id="edit_longitude" placeholder="Longitud"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="edit_owner_full_name" placeholder="Nombre completo del propietario"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg md:col-span-2">
+                <input type="text" id="edit_route_name" placeholder="Ruta"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <input type="text" id="edit_seller_name" placeholder="Vendedor"
+                    class="p-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg">
+                <button type="submit"
+                    class="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 md:col-span-2 font-semibold">
+                    Guardar Cambios
+                </button>
             </form>
         </div>
     </div>
 
-    <script>
-        // Variables globales
-        let currentPage = 1;
-        const clientsPerPage = 10;
-        let searchTerm = '';
-        let totalCount = 0;
+    <!-- ══════════════════════════════════════════════════
+         MODAL: Gestión de presentaciones del comercio
+    ══════════════════════════════════════════════════ -->
+    <div id="productosModal" class="modal">
+        <div class="modal-content modal-wide bg-white dark:bg-slate-800 dark:text-white">
+            <span class="close" onclick="closeModal('productosModal')">&times;</span>
 
-        // Configuración de Supabase
+            <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xl font-bold text-emerald-600 dark:text-emerald-400">Presentaciones Asignadas</h2>
+                <span id="pm_cliente_badge"
+                    class="text-xs font-semibold bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full"></span>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                Sin asignaciones = el promotor puede capturar cualquier presentación. Con asignaciones = solo las asignadas aparecen en la visita.
+            </p>
+
+            <!-- ── Filtro por línea + buscador de producto ── -->
+            <div class="bg-emerald-50 dark:bg-slate-700 rounded-xl p-4 mb-5">
+                <h3 class="text-sm font-bold text-emerald-700 dark:text-emerald-300 mb-3">Asignar presentación</h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <!-- Filtro de línea -->
+                    <select id="pm_filtro_linea"
+                        class="p-2.5 border border-gray-300 dark:border-slate-600 dark:bg-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        onchange="pm_filtrarProductos()">
+                        <option value="">Todas las líneas</option>
+                    </select>
+
+                    <!-- Buscador de presentación -->
+                    <div class="relative sm:col-span-2" id="pm_search_wrapper">
+                        <input type="text" id="pm_search_input" placeholder="Buscar presentación..."
+                            class="w-full p-2.5 border border-gray-300 dark:border-slate-600 dark:bg-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                            autocomplete="off"
+                            oninput="pm_buscarProducto(this.value)">
+                        <div id="pm_search_dropdown" class="search-dropdown hidden"></div>
+                        <input type="hidden" id="pm_producto_id_selected">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 mt-3">
+                    <button onclick="asignarProducto()"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition">
+                        + Asignar
+                    </button>
+                    <button onclick="pm_asignarTodosDeLinea()"
+                        class="bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-500 text-gray-700 dark:text-gray-200 font-medium px-4 py-2.5 rounded-lg text-sm transition">
+                        Asignar todas de la línea
+                    </button>
+                </div>
+                <p id="pm_assign_error" class="text-red-500 text-xs mt-2 hidden"></p>
+                <p id="pm_assign_ok"    class="text-emerald-600 text-xs mt-2 hidden"></p>
+            </div>
+
+            <!-- ── Tabla de presentaciones asignadas ── -->
+            <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-600">
+                <table class="min-w-full assigned-table">
+                    <thead>
+                        <tr>
+                            <th class="text-left">Presentación</th>
+                            <th class="text-left">Línea</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pm_tabla_body">
+                        <tr><td colspan="4" class="text-center text-gray-400 py-6">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-xs text-gray-400 mt-3 text-right" id="pm_count_label"></p>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         JAVASCRIPT
+    ══════════════════════════════════════════════════ -->
+    <script>
+        // ── Config ───────────────────────────────────────────────
         const supabaseUrl = 'https://djjylikkocemrlsjxscr.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
-        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-        // Obtener empresa_id y validar sesión
-        const empresaId = localStorage.getItem('empresa_id');
+        const db          = supabase.createClient(supabaseUrl, supabaseKey);
+        const empresaId   = localStorage.getItem('empresa_id');
 
         if (!empresaId) {
-            alert('No hay sesión activa. Serás redirigido al login.');
+            alert('No hay sesión activa.');
             window.location.href = '/login.html';
         }
 
-        // Cargar clientes con paginación, filtro y restricción por empresa
+        // ── Estado global ────────────────────────────────────────
+        let currentPage      = 1;
+        const clientsPerPage = 10;
+        let searchTerm       = '';
+        let totalCount       = 0;
+
+        // Catálogos precargados
+        let allLineas    = [];   // líneas de la empresa
+        let allProductos = [];   // todas las presentaciones de la empresa
+
+        // Estado modal productos
+        let pm_cliente_id   = null;
+        let pm_cliente_name = '';
+        let pm_search_timer = null;
+        let pm_productos_filtrados = [];  // productos según filtro de línea activo
+
+        // ── Inicialización ───────────────────────────────────────
+        window.onload = async () => {
+            await Promise.all([loadLineas(), loadAllProductos()]);
+            loadClients(currentPage, searchTerm);
+        };
+
+        // ── Catálogos ────────────────────────────────────────────
+        async function loadLineas() {
+            const { data } = await db.from('web_lineas')
+                .select('id, nombre')
+                .eq('empresa_id', empresaId)
+                .eq('activa', true)
+                .order('nombre');
+            allLineas = data || [];
+        }
+
+        async function loadAllProductos() {
+            const { data } = await db.from('web_myproductos')
+                .select('id, presentation, linea_id, web_lineas(nombre)')
+                .eq('empresa_id', empresaId)
+                .order('presentation');
+            allProductos = data || [];
+        }
+
+        // ── Clientes ─────────────────────────────────────────────
         async function loadClients(page, term) {
-            let query = supabaseClient
-                .from('web_clientes')
+            let query = db.from('web_clientes')
                 .select('*', { count: 'exact' })
-                .eq('empresa_id', empresaId); // ← Solo clientes de esta empresa
+                .eq('empresa_id', empresaId);
 
             if (term) {
-                const likeTerm = `%${term}%`;
-                query = query.or(`trade_name.ilike.${likeTerm},code.ilike.${likeTerm},city.ilike.${likeTerm},phone.ilike.${likeTerm}`);
+                const like = `%${term}%`;
+                query = query.or(`trade_name.ilike.${like},code.ilike.${like},city.ilike.${like},phone.ilike.${like}`);
             }
 
             query = query.order('id', { ascending: false });
-
-            const startIndex = (page - 1) * clientsPerPage;
-            query = query.range(startIndex, startIndex + clientsPerPage - 1);
+            const start = (page - 1) * clientsPerPage;
+            query = query.range(start, start + clientsPerPage - 1);
 
             const { data, error, count } = await query;
-
-            if (error) {
-                console.error('Error al cargar clientes:', error.message);
-                alert('Error al cargar clientes: ' + error.message);
-                return;
-            }
+            if (error) { alert('Error al cargar clientes: ' + error.message); return; }
 
             totalCount = count || 0;
             displayClients(data || []);
             updatePagination();
         }
 
-        // Mostrar clientes en la lista
         function displayClients(clients) {
-            const clientsList = document.getElementById('clients');
-            const noResults = document.getElementById('noResults');
-            clientsList.innerHTML = '';
-            if (clients.length === 0) {
-                noResults.classList.remove('hidden');
-                return;
-            }
-            noResults.classList.add('hidden');
+            const ul    = document.getElementById('clients');
+            const noRes = document.getElementById('noResults');
+            ul.innerHTML = '';
+
+            if (clients.length === 0) { noRes.classList.remove('hidden'); return; }
+            noRes.classList.add('hidden');
+
             clients.forEach(client => {
                 const li = document.createElement('li');
-                li.className = 'border dark:border-slate-700 p-4 rounded-lg flex justify-between items-center bg-gray-50 dark:bg-slate-700/50';
+                li.className = 'border dark:border-slate-700 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-50 dark:bg-slate-700/50';
                 li.innerHTML = `
                     <div>
                         <strong class="text-indigo-600 dark:text-indigo-400 block">${client.trade_name || 'Sin nombre'}</strong>
-                        <span class="text-gray-600 dark:text-gray-400">Código: ${client.code || 'N/A'} | Ciudad: ${client.city || 'N/A'} | Tel: ${client.phone || 'N/A'}</span>
+                        <span class="text-gray-600 dark:text-gray-400 text-sm">
+                            Código: ${client.code || 'N/A'} | Ciudad: ${client.city || 'N/A'} | Tel: ${client.phone || 'N/A'}
+                        </span>
                     </div>
-                    <div class="space-x-2">
-                        <button onclick="viewDetails(${client.id})" class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 px-3 py-1 rounded hover:bg-indigo-200 dark:hover:bg-indigo-800">Ver Detalles</button>
-                        <button onclick="editClient(${client.id})" class="bg-yellow-300 text-gray-800 px-3 py-1 rounded hover:bg-yellow-400">Editar</button>
-                        <button onclick="deleteClient(${client.id})" class="bg-red-300 text-gray-800 px-3 py-1 rounded hover:bg-red-400">Eliminar</button>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="viewDetails(${client.id})"
+                            class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-200 transition">
+                            Ver detalles
+                        </button>
+                        <button onclick="openProductosModal(${client.id}, '${(client.trade_name || '').replace(/'/g, "\\'")}')"
+                            class="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 px-3 py-1.5 rounded-lg text-sm hover:bg-emerald-200 transition flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
+                            </svg>
+                            Presentaciones
+                        </button>
+                        <button onclick="editClient(${client.id})"
+                            class="bg-yellow-200 text-yellow-800 px-3 py-1.5 rounded-lg text-sm hover:bg-yellow-300 transition">
+                            Editar
+                        </button>
+                        <button onclick="deleteClient(${client.id})"
+                            class="bg-red-200 text-red-800 px-3 py-1.5 rounded-lg text-sm hover:bg-red-300 transition">
+                            Eliminar
+                        </button>
                     </div>
                 `;
-                clientsList.appendChild(li);
+                ul.appendChild(li);
             });
         }
 
-        // Filtrar y cargar
         function filterAndLoadClients() {
-            searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            searchTerm  = document.getElementById('searchInput').value.toLowerCase();
             currentPage = 1;
             loadClients(currentPage, searchTerm);
         }
 
-        // Paginación
-        function changePage(direction) {
+        function changePage(dir) {
             const totalPages = Math.ceil(totalCount / clientsPerPage);
-            currentPage += direction;
-            if (currentPage < 1) currentPage = 1;
-            if (currentPage > totalPages) currentPage = totalPages;
+            currentPage = Math.min(Math.max(currentPage + dir, 1), totalPages);
             loadClients(currentPage, searchTerm);
         }
 
         function updatePagination() {
-            const totalPages = Math.ceil(totalCount / clientsPerPage);
-            document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages || 1}`;
-            document.getElementById('prevBtn').disabled = currentPage === 1;
-            document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+            const totalPages = Math.ceil(totalCount / clientsPerPage) || 1;
+            document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages}`;
+            document.getElementById('prevBtn').disabled     = currentPage === 1;
+            document.getElementById('nextBtn').disabled     = currentPage === totalPages;
         }
 
-        // Ver detalles
+        // ── Ver detalles ─────────────────────────────────────────
         async function viewDetails(id) {
-            const { data: client } = await supabaseClient
-                .from('web_clientes')
-                .select('*')
-                .eq('id', id)
-                .eq('empresa_id', empresaId)
-                .single();
+            const { data: c } = await db.from('web_clientes')
+                .select('*').eq('id', id).eq('empresa_id', empresaId).single();
+            if (!c) return;
 
-            if (!client) return;
+            // Contar presentaciones asignadas
+            const { count } = await db.from('web_cliente_productos')
+                .select('id', { count: 'exact', head: true })
+                .eq('empresa_id', empresaId).eq('cliente_id', id).eq('activa', true);
 
-            const modalBody = document.getElementById('modalBody');
-            modalBody.innerHTML = `
-                <p><strong>Código:</strong> ${client.code || 'N/A'}</p>
-                <p><strong>Nombre Comercial:</strong> ${client.trade_name || 'N/A'}</p>
-                <p><strong>Dirección:</strong> ${client.address || 'N/A'}</p>
-                <p><strong>Ciudad:</strong> ${client.city || 'N/A'}</p>
-                <p><strong>Teléfono:</strong> ${client.phone || 'N/A'}</p>
-                <p><strong>Propietario:</strong> ${client.owner_full_name || 'N/A'}</p>
-                <p><strong>Email:</strong> ${client.email || 'N/A'}</p>
-                <p><strong>Ruta:</strong> ${client.route_name || 'N/A'}</p>
-                <p><strong>Vendedor:</strong> ${client.seller_name || 'N/A'}</p>
-                <p><strong>Activo:</strong> ${client.active ? 'Sí' : 'No'}</p>
-                <p><strong>Límite de Crédito:</strong> $${client.credit_limit || 0}</p>
-                <p><strong>Orden Mínima:</strong> $${client.minimum_order || 0}</p>
-                <p><strong>Última Actualización:</strong> ${client.last_update ? new Date(client.last_update).toLocaleDateString('es-ES') : 'N/A'}</p>
+            document.getElementById('modalBody').innerHTML = `
+                <p><strong>Código:</strong> ${c.code || 'N/A'}</p>
+                <p><strong>Nombre Comercial:</strong> ${c.trade_name || 'N/A'}</p>
+                <p><strong>Dirección:</strong> ${c.address || 'N/A'}</p>
+                <p><strong>Ciudad:</strong> ${c.city || 'N/A'}</p>
+                <p><strong>Teléfono:</strong> ${c.phone || 'N/A'}</p>
+                <p><strong>Propietario:</strong> ${c.owner_full_name || 'N/A'}</p>
+                <p><strong>Ruta:</strong> ${c.route_name || 'N/A'}</p>
+                <p><strong>Vendedor:</strong> ${c.seller_name || 'N/A'}</p>
+                <p><strong>Activo:</strong> ${c.active ? 'Sí' : 'No'}</p>
+                <hr class="my-3 border-gray-200 dark:border-slate-600">
+                <p><strong>Presentaciones asignadas:</strong>
+                    <span class="ml-1 font-semibold ${count > 0 ? 'text-emerald-600' : 'text-gray-400'}">
+                        ${count > 0 ? count + ' presentación(es)' : 'Sin asignaciones (ve todas)'}
+                    </span>
+                </p>
             `;
             document.getElementById('detailsModal').style.display = 'block';
         }
 
-        // Editar cliente
+        // ── Editar cliente ───────────────────────────────────────
         async function editClient(id) {
-            const { data: client } = await supabaseClient
-                .from('web_clientes')
-                .select('*')
-                .eq('id', id)
-                .eq('empresa_id', empresaId)
-                .single();
+            const { data: c } = await db.from('web_clientes')
+                .select('*').eq('id', id).eq('empresa_id', empresaId).single();
+            if (!c) return;
 
-            if (!client) return;
-
-            document.getElementById('edit_id').value = client.id;
-            document.getElementById('edit_trade_name').value = client.trade_name || '';
-            document.getElementById('edit_address').value = client.address || '';
-            document.getElementById('edit_city').value = client.city || '';
-            document.getElementById('edit_phone').value = client.phone || '';
-            document.getElementById('edit_latitude').value = client.latitude || '';
-            document.getElementById('edit_longitude').value = client.longitude || '';
-            document.getElementById('edit_owner_full_name').value = client.owner_full_name || '';
-            document.getElementById('edit_route_name').value = client.route_name || '';
-            document.getElementById('edit_seller_name').value = client.seller_name || '';
-
-            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('edit_id').value             = c.id;
+            document.getElementById('edit_trade_name').value     = c.trade_name || '';
+            document.getElementById('edit_address').value        = c.address || '';
+            document.getElementById('edit_city').value           = c.city || '';
+            document.getElementById('edit_phone').value          = c.phone || '';
+            document.getElementById('edit_latitude').value       = c.latitude || '';
+            document.getElementById('edit_longitude').value      = c.longitude || '';
+            document.getElementById('edit_owner_full_name').value = c.owner_full_name || '';
+            document.getElementById('edit_route_name').value     = c.route_name || '';
+            document.getElementById('edit_seller_name').value    = c.seller_name || '';
+            document.getElementById('editModal').style.display   = 'block';
         }
 
-        // Cerrar modal
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-        }
-
-        // Crear nuevo cliente
+        // ── Crear cliente ────────────────────────────────────────
         document.getElementById('createForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // Generar código automático por empresa
-            const { data: codesData, error: codesError } = await supabaseClient
-                .from('web_clientes')
-                .select('code')
-                .eq('empresa_id', empresaId);
+            const { data: codesData } = await db.from('web_clientes').select('code').eq('empresa_id', empresaId);
+            const existingCodes = (codesData || []).map(c => parseInt(c.code, 10)).filter(n => !isNaN(n));
+            const maxCode       = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+            const newCode       = (maxCode + 1).toString().padStart(4, '0');
 
-            if (codesError) {
-                alert('Error al generar código: ' + codesError.message);
-                return;
-            }
+            const { error } = await db.from('web_clientes').insert([{
+                code:           newCode,
+                trade_name:     document.getElementById('trade_name').value.trim().toUpperCase(),
+                address:        document.getElementById('address').value || null,
+                city:           document.getElementById('city').value || null,
+                phone:          document.getElementById('phone').value || null,
+                latitude:       parseFloat(document.getElementById('latitude').value) || null,
+                longitude:      parseFloat(document.getElementById('longitude').value) || null,
+                owner_full_name:document.getElementById('owner_full_name').value || null,
+                route_name:     document.getElementById('route_name').value || null,
+                seller_name:    document.getElementById('seller_name').value || null,
+                active:         true,
+                credit_limit:   0,
+                minimum_order:  0,
+                empresa_id:     empresaId
+            }]);
 
-            const existingCodes = codesData
-                .map(c => parseInt(c.code, 10))
-                .filter(n => !isNaN(n));
-
-            const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
-            const newCode = (maxCode + 1).toString().padStart(4, '0');
-
-            const newClient = {
-                code: newCode,
-                trade_name: document.getElementById('trade_name').value.trim().toUpperCase(),
-                address: document.getElementById('address').value || null,
-                city: document.getElementById('city').value || null,
-                phone: document.getElementById('phone').value || null,
-                latitude: parseFloat(document.getElementById('latitude').value) || null,
-                longitude: parseFloat(document.getElementById('longitude').value) || null,
-                owner_full_name: document.getElementById('owner_full_name').value || null,
-                route_name: document.getElementById('route_name').value || null,
-                seller_name: document.getElementById('seller_name').value || null,
-                active: true,
-                credit_limit: 0,
-                minimum_order: 0,
-                empresa_id: empresaId
-            };
-
-            const { error } = await supabaseClient.from('web_clientes').insert([newClient]);
-
-            if (error) {
-                alert('Error al crear cliente: ' + error.message);
-            } else {
-                alert('Cliente creado exitosamente con código: ' + newCode);
-                document.getElementById('createForm').reset();
-                currentPage = 1;
-                loadClients(currentPage, searchTerm);
-            }
+            if (error) { alert('Error al crear: ' + error.message); return; }
+            alert('Cliente creado con código: ' + newCode);
+            document.getElementById('createForm').reset();
+            currentPage = 1;
+            loadClients(currentPage, searchTerm);
         });
 
-        // Guardar edición
+        // ── Guardar edición cliente ──────────────────────────────
         document.getElementById('editForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('edit_id').value;
-
-            const updates = {
-                trade_name: document.getElementById('edit_trade_name').value.trim().toUpperCase(),
-                address: document.getElementById('edit_address').value || null,
-                city: document.getElementById('edit_city').value || null,
-                phone: document.getElementById('edit_phone').value || null,
-                latitude: parseFloat(document.getElementById('edit_latitude').value) || null,
-                longitude: parseFloat(document.getElementById('edit_longitude').value) || null,
+            const { error } = await db.from('web_clientes').update({
+                trade_name:      document.getElementById('edit_trade_name').value.trim().toUpperCase(),
+                address:         document.getElementById('edit_address').value || null,
+                city:            document.getElementById('edit_city').value || null,
+                phone:           document.getElementById('edit_phone').value || null,
+                latitude:        parseFloat(document.getElementById('edit_latitude').value) || null,
+                longitude:       parseFloat(document.getElementById('edit_longitude').value) || null,
                 owner_full_name: document.getElementById('edit_owner_full_name').value || null,
-                route_name: document.getElementById('edit_route_name').value || null,
-                seller_name: document.getElementById('edit_seller_name').value || null,
-            };
+                route_name:      document.getElementById('edit_route_name').value || null,
+                seller_name:     document.getElementById('edit_seller_name').value || null,
+            }).eq('id', id).eq('empresa_id', empresaId);
 
-            const { error } = await supabaseClient
-                .from('web_clientes')
-                .update(updates)
-                .eq('id', id)
-                .eq('empresa_id', empresaId);
+            if (error) { alert('Error al actualizar: ' + error.message); return; }
+            alert('Cliente actualizado');
+            closeModal('editModal');
+            loadClients(currentPage, searchTerm);
+        });
 
-            if (error) {
-                alert('Error al actualizar: ' + error.message);
-            } else {
-                alert('Cliente actualizado exitosamente');
-                closeModal('editModal');
-                loadClients(currentPage, searchTerm);
+        // ── Eliminar cliente ─────────────────────────────────────
+        async function deleteClient(id) {
+            if (!confirm('¿Eliminar este cliente? Sus presentaciones asignadas también se eliminarán.')) return;
+            await db.from('web_cliente_productos').delete().eq('cliente_id', id).eq('empresa_id', empresaId);
+            const { error } = await db.from('web_clientes').delete().eq('id', id).eq('empresa_id', empresaId);
+            if (error) { alert('Error al eliminar: ' + error.message); return; }
+            alert('Cliente eliminado');
+            loadClients(currentPage, searchTerm);
+        }
+
+        // ════════════════════════════════════════════════════════
+        //  MODAL PRESENTACIONES — lógica completa
+        // ════════════════════════════════════════════════════════
+
+        async function openProductosModal(clienteId, clienteName) {
+            pm_cliente_id   = clienteId;
+            pm_cliente_name = clienteName;
+
+            document.getElementById('pm_cliente_badge').textContent  = clienteName;
+            document.getElementById('pm_search_input').value         = '';
+            document.getElementById('pm_producto_id_selected').value = '';
+            document.getElementById('pm_search_dropdown').classList.add('hidden');
+            hideMsg('pm_assign_error');
+            hideMsg('pm_assign_ok');
+
+            // Poblar selector de líneas
+            const linSel = document.getElementById('pm_filtro_linea');
+            linSel.innerHTML = '<option value="">Todas las líneas</option>';
+            allLineas.forEach(l => linSel.innerHTML += `<option value="${l.id}">${l.nombre}</option>`);
+
+            // Inicializar productos filtrados
+            pm_productos_filtrados = [...allProductos];
+
+            document.getElementById('productosModal').style.display = 'block';
+            await cargarTablaPresentaciones();
+        }
+
+        // Filtrar productos por línea seleccionada en el selector
+        function pm_filtrarProductos() {
+            const lineaId = document.getElementById('pm_filtro_linea').value;
+            pm_productos_filtrados = lineaId
+                ? allProductos.filter(p => p.linea_id === lineaId)
+                : [...allProductos];
+
+            // Limpiar búsqueda al cambiar línea
+            document.getElementById('pm_search_input').value         = '';
+            document.getElementById('pm_producto_id_selected').value = '';
+            document.getElementById('pm_search_dropdown').classList.add('hidden');
+        }
+
+        // Buscador de presentaciones con debounce
+        function pm_buscarProducto(term) {
+            document.getElementById('pm_producto_id_selected').value = '';
+            clearTimeout(pm_search_timer);
+            const dropdown = document.getElementById('pm_search_dropdown');
+
+            if (!term.trim()) { dropdown.classList.add('hidden'); return; }
+
+            pm_search_timer = setTimeout(() => {
+                const termLower  = term.toLowerCase();
+                const resultados = pm_productos_filtrados
+                    .filter(p => p.presentation?.toLowerCase().includes(termLower))
+                    .slice(0, 20);
+
+                dropdown.innerHTML = '';
+                if (resultados.length === 0) {
+                    dropdown.innerHTML = `<div class="search-item text-gray-400">Sin resultados para "${term}"</div>`;
+                } else {
+                    resultados.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = 'search-item';
+                        const lineaNombre = p.web_lineas?.nombre || '';
+                        div.innerHTML = `${p.presentation}<span class="linea-tag">${lineaNombre}</span>`;
+                        div.onclick = () => {
+                            document.getElementById('pm_search_input').value         = p.presentation;
+                            document.getElementById('pm_producto_id_selected').value = p.id;
+                            dropdown.classList.add('hidden');
+                        };
+                        dropdown.appendChild(div);
+                    });
+                }
+                dropdown.classList.remove('hidden');
+            }, 200);
+        }
+
+        // Cerrar dropdown al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('pm_search_wrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                document.getElementById('pm_search_dropdown')?.classList.add('hidden');
             }
         });
 
-        // Eliminar cliente
-        async function deleteClient(id) {
-            if (confirm('¿Estás seguro de eliminar este cliente? Esta acción no se puede deshacer.')) {
-                const { error } = await supabaseClient
-                    .from('web_clientes')
-                    .delete()
-                    .eq('id', id)
-                    .eq('empresa_id', empresaId);
+        // ── Asignar una presentación ─────────────────────────────
+        async function asignarProducto() {
+            const productoId = document.getElementById('pm_producto_id_selected').value;
+            hideMsg('pm_assign_error');
+            hideMsg('pm_assign_ok');
 
-                if (error) {
-                    alert('Error al eliminar: ' + error.message);
-                } else {
-                    alert('Cliente eliminado');
-                    loadClients(currentPage, searchTerm);
-                }
+            if (!productoId) {
+                showMsg('pm_assign_error', 'Selecciona una presentación de la lista antes de asignar.');
+                return;
             }
+
+            const producto = allProductos.find(p => p.id === productoId);
+
+            // Verificar duplicado
+            const { data: dup } = await db.from('web_cliente_productos')
+                .select('id').eq('empresa_id', empresaId)
+                .eq('cliente_id', pm_cliente_id).eq('producto_id', productoId).maybeSingle();
+
+            if (dup) {
+                showMsg('pm_assign_error', 'Esta presentación ya está asignada a este comercio.');
+                return;
+            }
+
+            const { error } = await db.from('web_cliente_productos').insert([{
+                empresa_id:  empresaId,
+                cliente_id:  pm_cliente_id,
+                producto_id: productoId,
+                linea_id:    producto?.linea_id || null,
+                activa:      true
+            }]);
+
+            if (error) { showMsg('pm_assign_error', 'Error: ' + error.message); return; }
+
+            document.getElementById('pm_search_input').value         = '';
+            document.getElementById('pm_producto_id_selected').value = '';
+            showMsg('pm_assign_ok', '✓ Presentación asignada correctamente.');
+            await cargarTablaPresentaciones();
         }
 
-        // Cerrar modal al hacer clic fuera
-        window.onclick = function(event) {
-            const detailsModal = document.getElementById('detailsModal');
-            const editModal = document.getElementById('editModal');
-            if (event.target === detailsModal) closeModal('detailsModal');
-            if (event.target === editModal) closeModal('editModal');
+        // ── Asignar TODAS las presentaciones de la línea seleccionada ──
+        async function pm_asignarTodosDeLinea() {
+            const lineaId = document.getElementById('pm_filtro_linea').value;
+            hideMsg('pm_assign_error');
+            hideMsg('pm_assign_ok');
+
+            if (!lineaId) {
+                showMsg('pm_assign_error', 'Selecciona primero una línea específica para usar esta opción.');
+                return;
+            }
+
+            const productosDeLinea = allProductos.filter(p => p.linea_id === lineaId);
+            if (productosDeLinea.length === 0) {
+                showMsg('pm_assign_error', 'No hay presentaciones registradas para esa línea.');
+                return;
+            }
+
+            // Obtener los ya asignados para no duplicar
+            const { data: yaAsignados } = await db.from('web_cliente_productos')
+                .select('producto_id').eq('empresa_id', empresaId).eq('cliente_id', pm_cliente_id);
+
+            const yaIds = new Set((yaAsignados || []).map(r => r.producto_id));
+            const nuevos = productosDeLinea.filter(p => !yaIds.has(p.id));
+
+            if (nuevos.length === 0) {
+                showMsg('pm_assign_ok', 'Todos los productos de esta línea ya están asignados.');
+                return;
+            }
+
+            const payload = nuevos.map(p => ({
+                empresa_id:  empresaId,
+                cliente_id:  pm_cliente_id,
+                producto_id: p.id,
+                linea_id:    p.linea_id || null,
+                activa:      true
+            }));
+
+            const { error } = await db.from('web_cliente_productos').insert(payload);
+            if (error) { showMsg('pm_assign_error', 'Error: ' + error.message); return; }
+
+            showMsg('pm_assign_ok', `✓ ${nuevos.length} presentación(es) asignadas correctamente.`);
+            await cargarTablaPresentaciones();
         }
 
-        // Cargar al iniciar
-        window.onload = () => {
-            loadClients(currentPage, searchTerm);
+        // ── Tabla de presentaciones asignadas ────────────────────
+        async function cargarTablaPresentaciones() {
+            const tbody = document.getElementById('pm_tabla_body');
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-gray-400 py-6">Cargando...</td></tr>`;
+
+            const { data, error } = await db
+                .from('web_cliente_productos')
+                .select(`
+                    id, activa,
+                    web_myproductos!web_cliente_productos_producto_id_fkey(id, presentation),
+                    web_lineas!web_cliente_productos_linea_id_fkey(nombre)
+                `)
+                .eq('empresa_id', empresaId)
+                .eq('cliente_id', pm_cliente_id)
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-500 py-4">Error: ${error.message}</td></tr>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-gray-400 py-6">
+                    Sin presentaciones asignadas — el comercio puede capturar cualquier producto.
+                </td></tr>`;
+                document.getElementById('pm_count_label').textContent = '';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            data.forEach(row => {
+                const producto    = row.web_myproductos || {};
+                const lineaNombre = row.web_lineas?.nombre || null;
+                const activaBadge = row.activa
+                    ? `<span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Activo</span>`
+                    : `<span class="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Inactivo</span>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="font-medium text-gray-800 dark:text-gray-100">${producto.presentation || '—'}</td>
+                    <td>
+                        ${lineaNombre
+                            ? `<span class="badge-linea">${lineaNombre}</span>`
+                            : `<span class="text-gray-400 text-xs">Sin línea</span>`}
+                    </td>
+                    <td class="text-center">${activaBadge}</td>
+                    <td class="text-center whitespace-nowrap">
+                        ${row.activa
+                            ? `<button onclick="toggleActivoProducto('${row.id}', false)"
+                                class="text-xs text-yellow-600 hover:text-yellow-800 font-medium mr-2">Desactivar</button>`
+                            : `<button onclick="toggleActivoProducto('${row.id}', true)"
+                                class="text-xs text-emerald-600 hover:text-emerald-800 font-medium mr-2">Activar</button>`
+                        }
+                        <button onclick="eliminarAsignacionProducto('${row.id}')"
+                            class="text-xs text-red-500 hover:text-red-700 font-medium">Quitar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const activos = data.filter(r => r.activa).length;
+            document.getElementById('pm_count_label').textContent =
+                `${activos} activa(s) · ${data.length} total(es)`;
+        }
+
+        // ── Activar / desactivar ─────────────────────────────────
+        async function toggleActivoProducto(asignacionId, nuevoEstado) {
+            const { error } = await db.from('web_cliente_productos')
+                .update({ activa: nuevoEstado })
+                .eq('id', asignacionId).eq('empresa_id', empresaId);
+            if (error) { alert('Error: ' + error.message); return; }
+            await cargarTablaPresentaciones();
+        }
+
+        // ── Quitar asignación ────────────────────────────────────
+        async function eliminarAsignacionProducto(asignacionId) {
+            if (!confirm('¿Quitar esta presentación del comercio?')) return;
+            const { error } = await db.from('web_cliente_productos')
+                .delete().eq('id', asignacionId).eq('empresa_id', empresaId);
+            if (error) { alert('Error: ' + error.message); return; }
+            await cargarTablaPresentaciones();
+        }
+
+        // ── Helpers ──────────────────────────────────────────────
+        function showMsg(id, msg) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+        function hideMsg(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        }
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // Cerrar modales al hacer clic fuera
+        window.onclick = (event) => {
+            ['detailsModal', 'editModal', 'productosModal'].forEach(id => {
+                const modal = document.getElementById(id);
+                if (event.target === modal) closeModal(id);
+            });
         };
     </script>
 </body>
