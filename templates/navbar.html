@@ -19,6 +19,7 @@
                 <a href="/clientes" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-store"></i> Clientes</a>
                 <a href="/promotores" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-user-tie"></i> Promotores</a>
                 <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-2"></div>
+                <a href="/lineas" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-layer-group"></i> Líneas</a>
                 <a href="/productos" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-box-open"></i> Productos</a>
                 <a href="/competencia" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-tag"></i> Competencia</a>
                 <a href="/stock" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-boxes"></i> Stock</a>
@@ -50,6 +51,7 @@
             <a href="/analisis" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Análisis</a>
             <a href="/clientes" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Clientes</a>
             <a href="/promotores" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Promotores</a>
+            <a href="/lineas" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Líneas</a>
             <a href="/productos" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Productos</a>
             <a href="/competencia" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Competencia</a>
             <a href="/stock" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Stock</a>
@@ -61,7 +63,6 @@
 </nav>
 
 <script>
-    // Lógica del Tema (Oscuro/Claro)
     function initTheme() {
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
@@ -77,11 +78,10 @@
             document.documentElement.classList.add('dark'); localStorage.theme = 'dark';
         }
     }
-    // Resaltar enlace activo y cargar nombre empresa
     document.addEventListener('DOMContentLoaded', () => {
         const path = window.location.pathname;
         document.querySelectorAll('.nav-link').forEach(link => {
-            if(link.getAttribute('href') === path) link.classList.add('bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-900/50', 'dark:text-indigo-300');
+            if (link.getAttribute('href') === path) link.classList.add('bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-900/50', 'dark:text-indigo-300');
             else link.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:text-indigo-600', 'dark:text-gray-300', 'dark:hover:bg-slate-700');
         });
         const empresaNombre = localStorage.getItem('empresa_nombre') || 'Empresa';
