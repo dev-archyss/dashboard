@@ -675,6 +675,11 @@ def gps():
         return redirect(url_for('login'))
     return render_template('GPS.html')
 
+@app.route('/lineas')
+def lineas():
+    if 'empresa_id' not in session:
+        return redirect(url_for('login'))
+    return render_template('lineas.html')
 
 @app.route('/clientes')
 def clientes():
