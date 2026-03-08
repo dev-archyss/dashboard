@@ -1,1327 +1,821 @@
-
 <!DOCTYPE html>
-<html lang="es" class="dark">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DASHBOARD CAPTA</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Sparking</title>
 
-    <style>
-        :root {
-            --accent: #6366f1;
-            --accent-glow: rgba(99,102,241,0.25);
-            --surface: #0f1117;
-            --surface-2: #161b27;
-            --surface-3: #1e2535;
-            --border: rgba(255,255,255,0.07);
-            --text-primary: #f0f2f8;
-            --text-muted: #6b7280;
-            --green: #10b981;
-            --red: #f43f5e;
-            --amber: #f59e0b;
-        }
+  <!-- Design system -->
+  <link rel="stylesheet" href="/static/sparking-theme.css">
 
-        * { box-sizing: border-box; }
+  <!-- Tailwind (utilities de respaldo) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
 
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--surface);
-            color: var(--text-primary);
-            min-height: 100vh;
-        }
+  <!-- Chart.js & Supabase (CDN, sin key expuesta) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        h1, h2, h3, .font-display { font-family: 'Syne', sans-serif; }
+  <style>
+    /* ── Page extras no cubiertos por el design system ── */
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 8px;
+    }
+    .photo-grid img {
+      width: 100%; aspect-ratio: 1; object-fit: cover;
+      border-radius: 10px; cursor: pointer;
+      transition: transform .2s;
+    }
+    .photo-grid img:hover { transform: scale(1.06); }
 
-        /* ── Scrollbar elegante ── */
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: var(--surface-2); }
-        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+    /* KPI trend line (sparkline visual) */
+    .kpi-bar-mini {
+      height: 3px;
+      border-radius: 99px;
+      background: var(--surface-input);
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .kpi-bar-mini-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width .8s cubic-bezier(.4,0,.2,1);
+    }
 
-        /* ── Navbar ── */
-        .navbar {
-            background: rgba(15,17,23,0.85);
-            backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border);
-            position: sticky; top: 0; z-index: 50;
-        }
-
-        .nav-link {
-            color: var(--text-muted);
-            transition: color .2s, background .2s;
-            border-radius: 8px;
-            padding: 6px 12px;
-            font-size: .8125rem;
-            font-weight: 500;
-            white-space: nowrap;
-            display: flex; align-items: center; gap: 6px;
-        }
-        .nav-link:hover, .nav-link.active { color: var(--text-primary); background: var(--surface-3); }
-        .nav-link.active { color: #a5b4fc; }
-
-        /* ── KPI Cards ── */
-        .kpi-card {
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px 24px;
-            position: relative;
-            overflow: hidden;
-            transition: transform .2s, box-shadow .2s;
-        }
-        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.4); }
-        .kpi-card::before {
-            content: '';
-            position: absolute; inset: 0;
-            background: linear-gradient(135deg, var(--glow-color, transparent) 0%, transparent 60%);
-            opacity: 0.07;
-            pointer-events: none;
-        }
-        .kpi-card.indigo { --glow-color: #6366f1; }
-        .kpi-card.green  { --glow-color: #10b981; }
-        .kpi-card.amber  { --glow-color: #f59e0b; }
-        .kpi-card.rose   { --glow-color: #f43f5e; }
-        .kpi-card.purple { --glow-color: #a855f7; }
-
-        .kpi-value {
-            font-family: 'Syne', sans-serif;
-            font-size: 2rem;
-            font-weight: 800;
-            line-height: 1;
-        }
-
-        /* ── Realtime pulse ── */
-        @keyframes pulse-dot {
-            0%,100% { opacity: 1; transform: scale(1); }
-            50%      { opacity: .5; transform: scale(1.4); }
-        }
-        .live-dot {
-            width: 7px; height: 7px;
-            border-radius: 50%;
-            background: var(--green);
-            animation: pulse-dot 2s ease-in-out infinite;
-        }
-
-        /* ── Panel de filtros ── */
-        .filter-panel {
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px 24px;
-        }
-
-        .input-field {
-            background: var(--surface-3);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-primary);
-            padding: 8px 12px;
-            font-size: .875rem;
-            width: 100%;
-            transition: border-color .2s, box-shadow .2s;
-            outline: none;
-            height: 40px;
-        }
-        .input-field:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-        .input-field option { background: #1e2535; }
-
-        /* ── Tabla ── */
-        .data-table {
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-        }
-        .data-table table { width: 100%; border-collapse: collapse; }
-        .data-table thead th {
-            background: var(--surface-3);
-            color: #94a3b8;
-            font-size: .7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            padding: 12px 14px;
-            text-align: left;
-            position: sticky; top: 0; z-index: 2;
-        }
-        .data-table tbody tr {
-            border-top: 1px solid var(--border);
-            transition: background .15s;
-        }
-        .data-table tbody tr:hover { background: var(--surface-3); }
-        .data-table td { padding: 11px 14px; font-size: .8125rem; vertical-align: middle; }
-
-        /* ── Badges ── */
-        .badge {
-            display: inline-flex; align-items: center;
-            padding: 3px 9px;
-            border-radius: 99px;
-            font-size: .7rem;
-            font-weight: 600;
-            letter-spacing: .04em;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
-        .badge-confirmed   { background: rgba(16,185,129,.15); color: #34d399; border: 1px solid rgba(16,185,129,.3); }
-        .badge-unconfirmed { background: rgba(244,63,94,.15);  color: #fb7185; border: 1px solid rgba(244,63,94,.3); }
-        .badge-unknown     { background: rgba(107,114,128,.15); color: #9ca3af; border: 1px solid rgba(107,114,128,.3); }
-        .badge-nogps       { background: rgba(245,158,11,.15); color: #fcd34d; border: 1px solid rgba(245,158,11,.3); }
-
-        /* ── Progress bar promotor ── */
-        .promoter-card {
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
-            transition: border-color .2s;
-        }
-        .promoter-card:hover { border-color: var(--accent); }
-        .progress-bar-track {
-            background: rgba(255,255,255,.07);
-            border-radius: 99px;
-            height: 6px;
-            overflow: hidden;
-        }
-        .progress-bar-fill {
-            height: 100%;
-            border-radius: 99px;
-            transition: width .8s cubic-bezier(.4,0,.2,1);
-        }
-
-        /* ── Modal ── */
-        .modal-overlay {
-            display: none;
-            position: fixed; inset: 0; z-index: 1000;
-            background: rgba(0,0,0,.75);
-            backdrop-filter: blur(6px);
-            justify-content: center; align-items: center; padding: 1rem;
-        }
-        .modal-overlay.open { display: flex; }
-        .modal-box {
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            max-width: 900px; width: 100%;
-            max-height: 90vh; overflow-y: auto;
-            position: relative;
-        }
-        .modal-close {
-            position: absolute; top: 16px; right: 20px;
-            background: var(--surface-3);
-            border: none; color: var(--text-muted);
-            width: 32px; height: 32px; border-radius: 8px;
-            cursor: pointer; font-size: 1.1rem;
-            display: flex; align-items: center; justify-content: center;
-            transition: color .2s, background .2s;
-        }
-        .modal-close:hover { background: var(--red); color: white; }
-
-        /* ── Foto grid ── */
-        .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 8px; }
-        .photo-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; cursor: pointer; transition: transform .2s; }
-        .photo-grid img:hover { transform: scale(1.05); }
-
-        /* ── Lightbox ── */
-        .lightbox {
-            position: fixed; inset: 0; z-index: 9999;
-            background: rgba(0,0,0,.92);
-            display: flex; align-items: center; justify-content: center;
-            cursor: zoom-out;
-        }
-        .lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 12px; box-shadow: 0 32px 80px rgba(0,0,0,.6); }
-
-        /* ── Error banner ── */
-        .error-banner {
-            background: rgba(244,63,94,.1);
-            border: 1px solid rgba(244,63,94,.3);
-            color: #fb7185;
-            border-radius: 10px;
-            padding: 12px 16px;
-            display: flex; align-items: center; gap: 10px;
-            font-size: .875rem;
-        }
-
-        /* ── Toast notification ── */
-        @keyframes slide-in { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes slide-out { from { transform: translateX(0); opacity: 1; } to { transform: translateX(110%); opacity: 0; } }
-        .toast {
-            position: fixed; bottom: 24px; right: 24px; z-index: 9000;
-            background: var(--surface-3);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 12px 18px;
-            display: flex; align-items: center; gap: 10px;
-            font-size: .875rem;
-            box-shadow: 0 12px 40px rgba(0,0,0,.4);
-            animation: slide-in .3s ease forwards;
-            max-width: 340px;
-        }
-        .toast.exit { animation: slide-out .3s ease forwards; }
-
-        /* ── Skeleton loader ── */
-        @keyframes shimmer {
-            0%   { background-position: -600px 0; }
-            100% { background-position: 600px 0; }
-        }
-        .skeleton {
-            background: linear-gradient(90deg, var(--surface-3) 25%, var(--surface-2) 50%, var(--surface-3) 75%);
-            background-size: 600px 100%;
-            animation: shimmer 1.4s infinite;
-            border-radius: 8px;
-        }
-
-        /* ── Botones ── */
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 9px 18px;
-            font-size: .875rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity .2s, transform .15s;
-            display: inline-flex; align-items: center; gap: 6px;
-        }
-        .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
-        .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-
-        .btn-ghost {
-            background: var(--surface-3);
-            color: var(--text-muted);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 8px 16px;
-            font-size: .875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: color .2s, background .2s;
-            display: inline-flex; align-items: center; gap: 6px;
-        }
-        .btn-ghost:hover { color: var(--text-primary); background: #2a3347; }
-        .btn-ghost:disabled { opacity: .35; cursor: not-allowed; }
-
-        .btn-danger {
-            background: rgba(244,63,94,.12);
-            color: #fb7185;
-            border: 1px solid rgba(244,63,94,.3);
-            border-radius: 10px;
-            padding: 8px 16px;
-            font-size: .875rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background .2s;
-            display: inline-flex; align-items: center; gap: 6px;
-        }
-        .btn-danger:hover { background: rgba(244,63,94,.25); }
-        .btn-danger:disabled { opacity: .35; cursor: not-allowed; }
-
-        /* ── Chart container ── */
-        .chart-card {
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px 24px;
-        }
-
-        /* ── Responsive ── */
-        @media (max-width: 768px) {
-            .kpi-value { font-size: 1.5rem; }
-            .data-table { border-radius: 10px; }
-            .data-table td, .data-table thead th { padding: 8px 10px; }
-            .filter-panel { padding: 14px 16px; }
-        }
-
-        /* ── Paginación ── */
-        .pagination-btn {
-            background: var(--surface-3);
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            border-radius: 8px;
-            padding: 6px 14px;
-            font-size: .8125rem;
-            cursor: pointer;
-            transition: all .2s;
-        }
-        .pagination-btn:hover:not(:disabled) { color: var(--text-primary); border-color: var(--accent); }
-        .pagination-btn:disabled { opacity: .3; cursor: not-allowed; }
-        .pagination-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
-
-        /* ── No-scrollbar ── */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
+    /* Promoter card extra */
+    .promoter-alert { border-color: rgba(245,158,11,.5) !important; }
+  </style>
 </head>
 
 <body>
-    <!-- ══════════════════════════════════
-         NAVBAR
-    ══════════════════════════════════ -->
-    {% include 'navbar.html' %}
+  {% include 'navbar.html' %}
 
-    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+  <main class="sp-page">
 
-        <!-- ── Header ── -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-display font-bold tracking-tight">Dashboard</h1>
-                <p class="text-sm text-gray-500 mt-0.5" id="lastUpdatedLabel">Actualizando...</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <div class="live-dot"></div>
-                <span class="text-xs text-gray-500 font-medium">EN VIVO</span>
-            </div>
-        </div>
-
-        <!-- ── Error banner (oculto por defecto) ── -->
-        <div id="errorBanner" class="error-banner hidden">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span id="errorMsg">Error cargando datos</span>
-            <button onclick="retryLoad()" class="ml-auto text-xs underline cursor-pointer hover:text-white">Reintentar</button>
-        </div>
-
-        <!-- ── KPI Cards ── -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="kpiGrid">
-            <div class="kpi-card indigo">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                        <i class="fas fa-users text-indigo-400"></i>
-                    </div>
-                    <span class="text-xs text-gray-500 mt-1">Total</span>
-                </div>
-                <div class="kpi-value text-indigo-300" id="kpiPromoters">—</div>
-                <p class="text-xs text-gray-500 mt-1">Promotores activos</p>
-            </div>
-            <div class="kpi-card green">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                        <i class="fas fa-map-marker-alt text-emerald-400"></i>
-                    </div>
-                    <span class="text-xs text-gray-500 mt-1">Filtradas</span>
-                </div>
-                <div class="kpi-value text-emerald-300" id="kpiVisits">—</div>
-                <p class="text-xs text-gray-500 mt-1">Visitas</p>
-            </div>
-            <div class="kpi-card amber">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                        <i class="fas fa-check-circle text-amber-400"></i>
-                    </div>
-                    <span class="text-xs text-gray-500 mt-1">GPS</span>
-                </div>
-                <div class="kpi-value text-amber-300" id="kpiConfirmation">—</div>
-                <p class="text-xs text-gray-500 mt-1">Tasa confirmación</p>
-            </div>
-            <div class="kpi-card purple">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                        <i class="fas fa-bullseye text-purple-400"></i>
-                    </div>
-                    <span class="text-xs text-gray-500 mt-1">Semanal</span>
-                </div>
-                <div class="kpi-value text-purple-300" id="kpiGoal">—</div>
-                <div class="progress-bar-track mt-2">
-                    <div id="kpiGoalBar" class="progress-bar-fill bg-purple-500" style="width:0%"></div>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">Meta general</p>
-            </div>
-        </div>
-
-        <!-- ── Filtros + Gráfica ── -->
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-            <!-- Filtros -->
-            <div class="xl:col-span-2 filter-panel">
-                <h2 class="font-display font-semibold text-sm uppercase tracking-widest text-gray-400 mb-4">Filtros</h2>
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Desde</label>
-                        <input type="date" id="dateFrom" class="input-field">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Hasta</label>
-                        <input type="date" id="dateTo" class="input-field">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Promotor</label>
-                        <select id="promoter" class="input-field">
-                            <option value="all">Todos</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Estado</label>
-                        <select id="state" class="input-field">
-                            <option value="all">Todos</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Zona</label>
-                        <select id="zone" class="input-field" disabled>
-                            <option value="all">Todas</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Confirmación</label>
-                        <select id="confirmation" class="input-field">
-                            <option value="all">Todos</option>
-                            <option value="verificado">Confirmados</option>
-                            <option value="no_verificado">No Confirmados</option>
-                            <option value="desconocido">Cliente Desconocido</option>
-                            <option value="sin_coordenadas">Sin Coordenadas</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Año</label>
-                        <select id="yearSelect" class="input-field">
-                            <option value="">Año</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Semana</label>
-                        <select id="weekSelect" class="input-field" disabled>
-                            <option value="">Semana</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="flex flex-wrap gap-3 mt-4 pt-4 border-t border-white/5">
-                    <button id="btnApply" onclick="applyFilters()" class="btn-primary">
-                        <i class="fas fa-filter"></i> Aplicar
-                    </button>
-                    <button id="exportCSV" class="btn-ghost">
-                        <i class="fas fa-file-csv"></i> Exportar CSV
-                    </button>
-                    <button id="deleteSelected" class="btn-danger" disabled>
-                        <i class="fas fa-trash-alt"></i> Eliminar (<span id="selectedCount">0</span>)
-                    </button>
-                </div>
-            </div>
-
-            <!-- Gráfica visitas por promotor -->
-            <div class="chart-card flex flex-col">
-                <h2 class="font-display font-semibold text-sm uppercase tracking-widest text-gray-400 mb-4">
-                    Visitas por promotor
-                </h2>
-                <div class="flex-1 relative min-h-[160px]">
-                    <canvas id="chartPromoters"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- ── Progreso semanal promotores ── -->
-        <div class="filter-panel">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="font-display font-semibold text-sm uppercase tracking-widest text-gray-400">
-                    Meta semanal
-                </h2>
-                <label class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
-                    <input type="checkbox" id="hideNoVisits" class="accent-indigo-500">
-                    Ocultar sin visitas
-                </label>
-            </div>
-            <div id="promoterProgressContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                <!-- Skeletons mientras carga -->
-                <div class="skeleton h-24"></div>
-                <div class="skeleton h-24"></div>
-                <div class="skeleton h-24"></div>
-            </div>
-        </div>
-
-        <!-- ── Tabla de visitas ── -->
-        <div>
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="font-display font-semibold">Detalle de visitas</h2>
-                <span id="tableCountLabel" class="text-xs text-gray-500"></span>
-            </div>
-            <div class="data-table">
-                <div class="overflow-x-auto max-h-[68vh]">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="w-10">
-                                    <input type="checkbox" id="selectAll" class="accent-indigo-500 cursor-pointer">
-                                </th>
-                                <th>Fecha</th>
-                                <th>Promotor</th>
-                                <th>Comercio</th>
-                                <th>Estado / Zona</th>
-                                <th>Distancia</th>
-                                <th>Confirmación</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody">
-                            <tr>
-                                <td colspan="8" class="text-center py-10 text-gray-500" id="tableMsg">
-                                    <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl"></i>
-                                    <p class="mt-2 text-sm">Cargando datos...</p>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <!-- Paginación -->
-                <div class="flex items-center justify-between px-4 py-3 border-t border-white/5">
-                    <div class="flex items-center gap-2">
-                        <button id="prevPage" class="pagination-btn" disabled>
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <div id="pageNumbers" class="flex gap-1"></div>
-                        <button id="nextPage" class="pagination-btn" disabled>
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-500" id="pageInfo">—</span>
-                        <select id="pageSizeSelect" class="input-field" style="width:80px;height:32px;padding:4px 8px;font-size:.75rem;">
-                            <option value="25">25</option>
-                            <option value="50" selected>50</option>
-                            <option value="100">100</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div><!-- /main container -->
-
-    <!-- ══════════════════════════════════
-         MODAL DETALLE VISITA
-    ══════════════════════════════════ -->
-    <div id="detailsModal" class="modal-overlay">
-        <div class="modal-box">
-            <button class="modal-close" id="modalCloseBtn"><i class="fas fa-times"></i></button>
-            <div id="modalBody" class="p-6 sm:p-8"></div>
-        </div>
+    <!-- ── Page header ── -->
+    <div class="sp-page-header flex items-center justify-between">
+      <div>
+        <h1 class="sp-page-title">Dashboard</h1>
+        <p class="sp-page-sub" id="lastUpdatedLabel">Cargando...</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="sp-live-dot"></div>
+        <span style="font-size:.7rem;color:var(--text-muted);font-weight:600;letter-spacing:.06em;">EN VIVO</span>
+      </div>
     </div>
 
-    <!-- ══════════════════════════════════
-         JAVASCRIPT
-    ══════════════════════════════════ -->
-    <script>
-    // ─────────────────────────────────────────────────────────────────────────
-    // CONFIGURACIÓN
-    // La API key de Supabase NO se expone aquí. Todo pasa por el backend Flask.
-    // ─────────────────────────────────────────────────────────────────────────
+    <!-- ── Error banner ── -->
+    <div id="errorBanner" style="display:none;background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.25);border-radius:var(--radius-md);padding:12px 16px;display:none;align-items:center;gap:10px;font-size:.875rem;color:var(--red);margin-bottom:16px;">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span id="errorMsg">Error</span>
+      <button onclick="retryLoad()" style="margin-left:auto;font-size:.75rem;text-decoration:underline;background:none;border:none;cursor:pointer;color:var(--red);">Reintentar</button>
+    </div>
 
-    // empresa_id viene de la sesión Flask — el backend lo valida.
-    const empresaId     = localStorage.getItem('empresa_id');
-    const empresaNombre = localStorage.getItem('empresa_nombre') || '';
+    <!-- ═══ KPI CARDS ════════════════════════════════════════════ -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
-    if (!empresaId) {
-        window.location.href = '/';
-    }
+      <!-- Promotores -->
+      <div class="sp-card sp-kpi indigo">
+        <div class="sp-kpi-icon"><i class="fas fa-users"></i></div>
+        <div class="flex items-end gap-3 justify-between">
+          <div>
+            <div class="sp-kpi-value" id="kpiPromoters">—</div>
+            <div class="sp-kpi-label">Promotores</div>
+          </div>
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(79,70,229,.08);display:flex;align-items:center;justify-content:center;">
+            <i class="fas fa-user-tie" style="color:#818cf8;font-size:.9rem;"></i>
+          </div>
+        </div>
+        <div class="kpi-bar-mini"><div class="kpi-bar-mini-fill" id="kpiPromotersBar" style="width:100%;background:#6366f1;"></div></div>
+      </div>
 
-    // ── Estado global ──────────────────────────────────────────────────────
-    let allRecords      = [];
-    let filteredRecords = [];
-    let promoters       = [];
-    let estados         = [];
-    let zonas           = [];
-    let selectedRecords = new Set();
-    let currentPage     = 1;
-    let totalPages      = 1;
-    let totalCount      = 0;
-    let isLoading       = false;
-    let retryCount      = 0;
-    let chart           = null;
+      <!-- Visitas -->
+      <div class="sp-card sp-kpi green">
+        <div class="sp-kpi-icon"><i class="fas fa-map-marker-alt"></i></div>
+        <div class="flex items-end gap-3 justify-between">
+          <div>
+            <div class="sp-kpi-value" id="kpiVisits">—</div>
+            <div class="sp-kpi-label">Visitas filtradas</div>
+          </div>
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(16,185,129,.08);display:flex;align-items:center;justify-content:center;">
+            <i class="fas fa-check-double" style="color:#10b981;font-size:.9rem;"></i>
+          </div>
+        </div>
+        <div class="kpi-bar-mini"><div class="kpi-bar-mini-fill" id="kpiVisitsBar" style="width:0%;background:#10b981;"></div></div>
+      </div>
 
-    // Caché cliente-side con TTL de 90s para no re-pedir catalogs
-    const clientCache   = new Map();
-    const CLIENT_TTL    = 90_000;
+      <!-- Confirmación -->
+      <div class="sp-card sp-kpi amber">
+        <div class="sp-kpi-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="flex items-end gap-3 justify-between">
+          <div>
+            <div class="sp-kpi-value" id="kpiConfirmation">—</div>
+            <div class="sp-kpi-label">Tasa confirmación</div>
+          </div>
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(245,158,11,.08);display:flex;align-items:center;justify-content:center;">
+            <i class="fas fa-satellite-dish" style="color:#f59e0b;font-size:.9rem;"></i>
+          </div>
+        </div>
+        <div class="kpi-bar-mini"><div class="kpi-bar-mini-fill" id="kpiConfirmBar" style="width:0%;background:#f59e0b;"></div></div>
+      </div>
 
-    function cacheGet(key) {
-        const e = clientCache.get(key);
-        if (e && Date.now() - e.ts < CLIENT_TTL) return e.data;
-        return null;
-    }
-    function cacheSet(key, data) { clientCache.set(key, { data, ts: Date.now() }); }
-    function cacheInvalidate(prefix) {
-        for (const k of clientCache.keys()) { if (k.startsWith(prefix)) clientCache.delete(k); }
-    }
+      <!-- Meta -->
+      <div class="sp-card sp-kpi purple">
+        <div class="sp-kpi-icon"><i class="fas fa-bullseye"></i></div>
+        <div class="flex items-end gap-3 justify-between">
+          <div>
+            <div class="sp-kpi-value" id="kpiGoal">—</div>
+            <div class="sp-kpi-label">Meta semanal</div>
+          </div>
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(139,92,246,.08);display:flex;align-items:center;justify-content:center;">
+            <i class="fas fa-trophy" style="color:#a78bfa;font-size:.9rem;"></i>
+          </div>
+        </div>
+        <div class="kpi-bar-mini"><div class="kpi-bar-mini-fill" id="kpiGoalBar" style="width:0%;background:#8b5cf6;"></div></div>
+      </div>
 
-    // ── Toast ──────────────────────────────────────────────────────────────
-    function showToast(msg, type = 'info') {
-        const icon  = type === 'success' ? 'fa-check-circle text-emerald-400'
-                    : type === 'error'   ? 'fa-exclamation-circle text-rose-400'
-                    :                      'fa-info-circle text-indigo-400';
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.innerHTML = `<i class="fas ${icon}"></i><span>${msg}</span>`;
-        document.body.appendChild(toast);
-        setTimeout(() => {
-            toast.classList.add('exit');
-            toast.addEventListener('animationend', () => toast.remove());
-        }, 3500);
-    }
+    </div>
 
-    // ── Error banner ───────────────────────────────────────────────────────
-    function showError(msg) {
-        document.getElementById('errorMsg').textContent = msg;
-        document.getElementById('errorBanner').classList.remove('hidden');
-    }
-    function hideError() {
-        document.getElementById('errorBanner').classList.add('hidden');
-    }
+    <!-- ═══ FILTROS + GRÁFICA ════════════════════════════════════ -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
 
-    // ── Fetch con retry automático ─────────────────────────────────────────
-    async function fetchWithRetry(url, opts = {}, maxRetries = 3) {
-        for (let i = 0; i < maxRetries; i++) {
-            try {
-                const res = await fetch(url, { ...opts, signal: AbortSignal.timeout(15000) });
-                if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-                return await res.json();
-            } catch (err) {
-                if (i === maxRetries - 1) throw err;
-                await new Promise(r => setTimeout(r, 600 * (i + 1)));
-            }
-        }
-    }
+      <!-- Filtros -->
+      <div class="sp-card xl:col-span-2">
+        <p class="sp-section-title">Filtros</p>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <div>
+            <label class="sp-label">Desde</label>
+            <input type="date" id="dateFrom" class="sp-input">
+          </div>
+          <div>
+            <label class="sp-label">Hasta</label>
+            <input type="date" id="dateTo" class="sp-input">
+          </div>
+          <div>
+            <label class="sp-label">Promotor</label>
+            <select id="promoter" class="sp-select">
+              <option value="all">Todos</option>
+            </select>
+          </div>
+          <div>
+            <label class="sp-label">Estado</label>
+            <select id="state" class="sp-select">
+              <option value="all">Todos</option>
+            </select>
+          </div>
+          <div>
+            <label class="sp-label">Zona</label>
+            <select id="zone" class="sp-select" disabled>
+              <option value="all">Todas</option>
+            </select>
+          </div>
+          <div>
+            <label class="sp-label">Confirmación</label>
+            <select id="confirmation" class="sp-select">
+              <option value="all">Todos</option>
+              <option value="verificado">Confirmados</option>
+              <option value="no_verificado">No confirmados</option>
+              <option value="desconocido">Cliente desconocido</option>
+              <option value="sin_coordenadas">Sin coordenadas</option>
+            </select>
+          </div>
+          <div>
+            <label class="sp-label">Año</label>
+            <select id="yearSelect" class="sp-select">
+              <option value="">Año</option>
+            </select>
+          </div>
+          <div>
+            <label class="sp-label">Semana</label>
+            <select id="weekSelect" class="sp-select" disabled>
+              <option value="">Semana</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2 pt-3" style="border-top:1px solid var(--border);">
+          <button onclick="applyFilters()" class="sp-btn sp-btn-primary">
+            <i class="fas fa-filter"></i> Aplicar filtros
+          </button>
+          <button id="exportCSV" class="sp-btn sp-btn-secondary">
+            <i class="fas fa-file-csv"></i> Exportar CSV
+          </button>
+          <button id="deleteSelected" class="sp-btn sp-btn-danger" disabled>
+            <i class="fas fa-trash-alt"></i> Eliminar (<span id="selectedCount">0</span>)
+          </button>
+        </div>
+      </div>
 
-    // ── Cargar registros del servidor (paginado) ───────────────────────────
-    async function loadRecords(page = 1) {
-        if (isLoading) return;
-        isLoading = true;
-        setTableLoading(true);
-        hideError();
+      <!-- Gráfica -->
+      <div class="sp-card flex flex-col">
+        <p class="sp-section-title">Visitas por promotor</p>
+        <div class="flex-1 relative" style="min-height:180px;">
+          <canvas id="chartPromoters"></canvas>
+        </div>
+      </div>
+    </div>
 
-        const dateFrom   = document.getElementById('dateFrom').value;
-        const dateTo     = document.getElementById('dateTo').value;
-        const promoterId = document.getElementById('promoter').value;
-        const pageSize   = +document.getElementById('pageSizeSelect').value;
+    <!-- ═══ META SEMANAL ══════════════════════════════════════════ -->
+    <div class="sp-card mb-5">
+      <div class="flex items-center justify-between mb-4">
+        <p class="sp-section-title" style="margin:0;">Meta semanal por promotor</p>
+        <label style="display:flex;align-items:center;gap:7px;font-size:.8rem;color:var(--text-muted);cursor:pointer;">
+          <input type="checkbox" id="hideNoVisits"> Ocultar sin visitas
+        </label>
+      </div>
+      <div id="promoterProgressContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div class="sp-skeleton" style="height:90px;"></div>
+        <div class="sp-skeleton" style="height:90px;"></div>
+        <div class="sp-skeleton" style="height:90px;"></div>
+        <div class="sp-skeleton" style="height:90px;"></div>
+      </div>
+    </div>
 
-        const params = new URLSearchParams({
-            empresa_id: empresaId,
-            page,
-            page_size: pageSize,
-        });
-        if (dateFrom)              params.set('date_from', dateFrom);
-        if (dateTo)                params.set('date_to', dateTo);
-        if (promoterId !== 'all')  params.set('promoter_id', promoterId);
+    <!-- ═══ TABLA ═════════════════════════════════════════════════ -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h2 style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;">Detalle de visitas</h2>
+        <span id="tableCountLabel" style="font-size:.75rem;color:var(--text-muted);"></span>
+      </div>
 
-        const cacheKey = `records:${params.toString()}`;
-        const cached   = cacheGet(cacheKey);
-
-        try {
-            let data;
-            if (cached) {
-                data = cached;
-            } else {
-                data = await fetchWithRetry(`/api/records?${params}`);
-                cacheSet(cacheKey, data);
-            }
-
-            allRecords   = data.records   || [];
-            promoters    = data.promoters || promoters;
-            estados      = data.estados   || estados;
-            zonas        = data.zonas     || zonas;
-            totalCount   = data.total_count || 0;
-            totalPages   = data.total_pages || 1;
-            currentPage  = data.page || page;
-
-            // Poblar selects solo la primera vez
-            if (page === 1) populateSelects();
-
-            applyClientSideFilters();
-            retryCount = 0;
-            document.getElementById('lastUpdatedLabel').textContent =
-                'Actualizado ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-
-        } catch (err) {
-            retryCount++;
-            showError(`Error al cargar datos: ${err.message}. Intento ${retryCount}/3`);
-            if (allRecords.length > 0) {
-                // Mantener datos anteriores — no limpiar tabla
-                showToast('Usando datos en caché', 'info');
-            }
-        } finally {
-            isLoading = false;
-            setTableLoading(false);
-        }
-    }
-
-    function retryLoad() { loadRecords(currentPage); }
-
-    // ── Filtros client-side (estado, zona, confirmación) ──────────────────
-    function applyClientSideFilters() {
-        const stateSel    = document.getElementById('state');
-        const zoneSel     = document.getElementById('zone');
-        const confSel     = document.getElementById('confirmation');
-        const stateName   = stateSel.options[stateSel.selectedIndex]?.text || 'all';
-        const zoneName    = zoneSel.options[zoneSel.selectedIndex]?.text || 'all';
-        const confVal     = confSel.value;
-
-        filteredRecords = allRecords.filter(r => {
-            if (stateName !== 'Todos' && r.state !== stateName) return false;
-            if (zoneName  !== 'Todas'  && r.zone !== zoneName)  return false;
-            if (confVal !== 'all') {
-                const confirmed  = r.verified === 'Confirmado';
-                const noCoords   = r.client_coords === 'N/A';
-                const noGps      = r.verified === 'Sin GPS Visita' || r.verified === 'Sin Coordenadas Cliente';
-                if (confVal === 'verificado'    && !confirmed)                    return false;
-                if (confVal === 'no_verificado' && (confirmed || noCoords))       return false;
-                if (confVal === 'desconocido'   && !noCoords)                     return false;
-                if (confVal === 'sin_coordenadas' && !noGps)                      return false;
-            }
-            return true;
-        });
-
-        currentPage = 1;
-        renderTable();
-        updateKPIs();
-        updateChart();
-        updateWeeklyProgress();
-    }
-
-    // ── Render tabla ───────────────────────────────────────────────────────
-    function renderTable() {
-        const tbody    = document.getElementById('tableBody');
-        const pageSize = +document.getElementById('pageSizeSelect').value;
-        const start    = (currentPage - 1) * pageSize;
-        const slice    = filteredRecords.slice(start, start + pageSize);
-
-        if (filteredRecords.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-gray-500">
-                <i class="fas fa-inbox text-2xl mb-2 block"></i>Sin registros para los filtros seleccionados
-            </td></tr>`;
-            updatePagination(0, 0);
-            return;
-        }
-
-        const STORAGE = 'https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/';
-
-        tbody.innerHTML = slice.map(r => {
-            const date     = r.created_at ? new Date(r.created_at).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' }) : '—';
-            const time_str = r.created_at ? new Date(r.created_at).toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' }) : '';
-            const badgeCls = r.verified === 'Confirmado'   ? 'badge-confirmed'
-                           : r.verified === 'No Confirmado' ? 'badge-unconfirmed'
-                           : r.verified === 'Sin GPS Visita' || r.verified === 'Sin Coordenadas Cliente'
-                                                              ? 'badge-nogps'
-                           : 'badge-unknown';
-
-            const distStr = r.distance > 0 ? `<span class="${r.distance<=150?'text-emerald-400':'text-rose-400'}">${r.distance}m</span>` : '<span class="text-gray-600">—</span>';
-
-            return `<tr data-id="${r.id}">
-                <td><input type="checkbox" class="selectRecord accent-indigo-500 cursor-pointer" data-id="${r.id}" onchange="toggleRecord(this)"></td>
-                <td>
-                    <span class="text-gray-100 font-medium">${date}</span>
-                    <span class="text-gray-500 text-xs block">${time_str}</span>
+      <div class="sp-table-wrap">
+        <div style="overflow-x:auto;max-height:68vh;">
+          <table class="sp-table">
+            <thead>
+              <tr>
+                <th style="width:36px;"><input type="checkbox" id="selectAll"></th>
+                <th>Fecha</th>
+                <th>Promotor</th>
+                <th>Comercio</th>
+                <th>Estado / Zona</th>
+                <th>Dist.</th>
+                <th>Confirmación</th>
+                <th>Ver</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr>
+                <td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">
+                  <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;color:var(--accent);"></i>
+                  <p style="margin-top:10px;font-size:.875rem;">Cargando datos...</p>
                 </td>
-                <td class="font-medium text-indigo-300">${r.promoter_name || '—'}</td>
-                <td class="text-gray-300 max-w-[180px] truncate" title="${r.trade || ''}">${r.trade || '—'}</td>
-                <td>
-                    <span class="text-gray-300">${r.state || '—'}</span>
-                    <span class="text-gray-500 text-xs block">${r.zone || ''}</span>
-                </td>
-                <td>${distStr}</td>
-                <td><span class="badge ${badgeCls}">${r.verified || '—'}</span></td>
-                <td>
-                    <button onclick='openModal(${JSON.stringify(r).replace(/'/g,"\\'")})'
-                        class="text-xs text-indigo-400 hover:text-indigo-200 transition font-medium">
-                        Ver <i class="fas fa-arrow-right ml-0.5"></i>
-                    </button>
-                </td>
-            </tr>`;
-        }).join('');
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        const localPages = Math.ceil(filteredRecords.length / pageSize);
-        updatePagination(currentPage, localPages);
-        document.getElementById('tableCountLabel').textContent = `${filteredRecords.length} registros`;
+        <!-- Paginación -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button id="prevPage" class="sp-btn sp-btn-secondary sp-btn-sm" disabled>
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <div id="pageNumbers" style="display:flex;gap:4px;"></div>
+            <button id="nextPage" class="sp-btn sp-btn-secondary sp-btn-sm" disabled>
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="pageInfo" style="font-size:.75rem;color:var(--text-muted);">—</span>
+            <select id="pageSizeSelect" class="sp-select" style="width:76px;height:32px;padding:4px 8px;font-size:.75rem;">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══ MODAL DETALLE ════════════════════════════════════════ -->
+  <div id="detailsModal" class="sp-modal-overlay">
+    <div class="sp-modal sp-modal-lg">
+      <div class="sp-modal-header">
+        <div>
+          <h2 id="modalTitle" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem;">Detalle</h2>
+          <p id="modalSub" style="font-size:.8rem;color:var(--text-muted);margin-top:2px;"></p>
+        </div>
+        <button class="sp-modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="sp-modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       JAVASCRIPT
+       ═══════════════════════════════════════════════════════════ -->
+  <script>
+  const empresaId = localStorage.getItem('empresa_id');
+  if (!empresaId) window.location.href = '/';
+
+  // ── Estado ────────────────────────────────────────────────────
+  let allRecords      = [];
+  let filteredRecords = [];
+  let promoters       = [];
+  let estados         = [];
+  let zonas           = [];
+  let selectedRecords = new Set();
+  let currentPage     = 1;
+  let isLoading       = false;
+  let chart           = null;
+
+  const clientCache = new Map();
+  const TTL = 90_000;
+  const cacheGet = k => { const e = clientCache.get(k); return e && Date.now()-e.ts < TTL ? e.data : null; };
+  const cacheSet = (k,d) => clientCache.set(k, { data:d, ts:Date.now() });
+  const cacheInvalidate = p => { for (const k of clientCache.keys()) if (k.startsWith(p)) clientCache.delete(k); };
+
+  // ── Toast ─────────────────────────────────────────────────────
+  function toast(msg, type='info') {
+    const icons = { success:'fa-check-circle', error:'fa-exclamation-circle', info:'fa-info-circle' };
+    const colors= { success:'var(--green)', error:'var(--red)', info:'var(--accent)' };
+    const el = document.createElement('div');
+    el.className = 'sp-toast';
+    el.innerHTML = `<i class="fas ${icons[type]||icons.info}" style="color:${colors[type]||colors.info};flex-shrink:0;"></i><span>${msg}</span>`;
+    document.body.appendChild(el);
+    setTimeout(()=>{ el.classList.add('exit'); el.addEventListener('animationend',()=>el.remove()); }, 3200);
+  }
+
+  // ── Error banner ──────────────────────────────────────────────
+  const $errBanner = () => document.getElementById('errorBanner');
+  function showError(msg) { const b=$errBanner(); b.style.display='flex'; document.getElementById('errorMsg').textContent=msg; }
+  function hideError()    { $errBanner().style.display='none'; }
+
+  // ── Fetch con retry ───────────────────────────────────────────
+  async function apiFetch(url, maxRetries=3) {
+    for (let i=0; i<maxRetries; i++) {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch(e) {
+        if (i === maxRetries-1) throw e;
+        await new Promise(r => setTimeout(r, 700*(i+1)));
+      }
     }
+  }
 
-    // ── Paginación ─────────────────────────────────────────────────────────
-    function updatePagination(page, pages) {
-        document.getElementById('prevPage').disabled = page <= 1;
-        document.getElementById('nextPage').disabled = page >= pages;
-        document.getElementById('pageInfo').textContent = pages > 0 ? `Pág ${page} / ${pages}` : '—';
+  // ── Cargar registros ──────────────────────────────────────────
+  async function loadRecords(page=1) {
+    if (isLoading) return;
+    isLoading = true;
+    setLoading(true);
+    hideError();
 
-        const nums = document.getElementById('pageNumbers');
-        nums.innerHTML = '';
-        const range = Array.from({ length: Math.min(5, pages) }, (_, i) => {
-            const p = Math.max(1, Math.min(pages - 4, page - 2)) + i;
-            return p;
-        });
-        range.forEach(p => {
-            const btn = document.createElement('button');
-            btn.className = 'pagination-btn' + (p === page ? ' active' : '');
-            btn.textContent = p;
-            btn.onclick = () => { currentPage = p; renderTable(); };
-            nums.appendChild(btn);
-        });
+    const dateFrom   = document.getElementById('dateFrom').value;
+    const dateTo     = document.getElementById('dateTo').value;
+    const promoterId = document.getElementById('promoter').value;
+    const pageSize   = +document.getElementById('pageSizeSelect').value;
+
+    const p = new URLSearchParams({ empresa_id:empresaId, page, page_size:pageSize });
+    if (dateFrom) p.set('date_from', dateFrom);
+    if (dateTo)   p.set('date_to', dateTo);
+    if (promoterId !== 'all') p.set('promoter_id', promoterId);
+
+    const ck = 'rec:'+p.toString();
+    try {
+      let data = cacheGet(ck);
+      if (!data) { data = await apiFetch(`/api/records?${p}`); cacheSet(ck, data); }
+
+      allRecords = data.records   || [];
+      if ((data.promoters||[]).length) promoters = data.promoters;
+      if ((data.estados||[]).length)   estados   = data.estados;
+      if ((data.zonas||[]).length)     zonas     = data.zonas;
+
+      if (page === 1) populateSelects();
+      applyLocalFilters();
+
+      document.getElementById('lastUpdatedLabel').textContent =
+        'Actualizado ' + new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    } catch(e) {
+      showError('Error al cargar: ' + e.message);
+      if (!allRecords.length) setLoading(false);
+    } finally {
+      isLoading = false;
+      setLoading(false);
     }
+  }
 
-    // ── KPIs ───────────────────────────────────────────────────────────────
-    function updateKPIs() {
-        document.getElementById('kpiPromoters').textContent = promoters.filter(p => p.promoter_name !== 'promotor_prueba').length;
-        document.getElementById('kpiVisits').textContent    = filteredRecords.length;
+  function retryLoad() { loadRecords(currentPage); }
 
-        const confirmed = filteredRecords.filter(r => r.verified === 'Confirmado').length;
-        const rate      = filteredRecords.length > 0 ? (confirmed / filteredRecords.length * 100).toFixed(1) : 0;
-        document.getElementById('kpiConfirmation').textContent = rate + '%';
-    }
+  // ── Filtros locales ───────────────────────────────────────────
+  function applyLocalFilters() {
+    const stateSel = document.getElementById('state');
+    const zoneSel  = document.getElementById('zone');
+    const confVal  = document.getElementById('confirmation').value;
+    const stateNm  = stateSel.options[stateSel.selectedIndex]?.text || '';
+    const zoneNm   = zoneSel.options[zoneSel.selectedIndex]?.text || '';
 
-    // ── Gráfica promotores ─────────────────────────────────────────────────
-    function updateChart() {
-        const counts = {};
-        filteredRecords.forEach(r => {
-            if (r.promoter_name && r.promoter_name !== 'promotor_prueba') {
-                counts[r.promoter_name] = (counts[r.promoter_name] || 0) + 1;
-            }
-        });
-        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
-        const labels = sorted.map(([name]) => name.split(' ')[0]);
-        const data   = sorted.map(([, v]) => v);
-
-        const palette = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f59e0b','#10b981','#06b6d4','#3b82f6'];
-
-        if (chart) {
-            chart.data.labels        = labels;
-            chart.data.datasets[0].data = data;
-            chart.update('none');
-            return;
-        }
-
-        const ctx = document.getElementById('chartPromoters').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    data,
-                    backgroundColor: palette,
-                    borderRadius: 8,
-                    borderSkipped: false,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#1e2535',
-                        titleColor: '#f0f2f8',
-                        bodyColor: '#94a3b8',
-                        borderColor: 'rgba(255,255,255,.08)',
-                        borderWidth: 1,
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#6b7280', font: { size: 10 } },
-                        grid: { display: false },
-                        border: { display: false },
-                    },
-                    y: {
-                        ticks: { color: '#6b7280', font: { size: 10 } },
-                        grid: { color: 'rgba(255,255,255,.05)' },
-                        border: { display: false },
-                    }
-                }
-            }
-        });
-    }
-
-    // ── Progress semanal ───────────────────────────────────────────────────
-    async function updateWeeklyProgress() {
-        const year = document.getElementById('yearSelect').value;
-        const week = document.getElementById('weekSelect').value;
-        if (!year) return;
-
-        const promoterFilter = document.getElementById('promoter').value;
-
-        const params = new URLSearchParams({ empresa_id: empresaId });
-        if (week && year) { params.set('week', week); params.set('year', year); }
-
-        let weekRecords = [];
-        try {
-            const ck = `weekly:${params}`;
-            let data = cacheGet(ck);
-            if (!data) {
-                data = await fetchWithRetry(`/api/records?${params}&page=1&page_size=999`);
-                cacheSet(ck, data);
-            }
-            weekRecords = data.records || [];
-        } catch (e) {
-            return;
-        }
-
-        const container = document.getElementById('promoterProgressContainer');
-        const relevant  = promoters.filter(p =>
-            p.promoter_name !== 'promotor_prueba' &&
-            (promoterFilter === 'all' || p.promoter_name === promoterFilter)
-        );
-
-        const visitsByPromoter = {};
-        const daysByPromoter   = {};
-        weekRecords.forEach(r => {
-            if (r.verified !== 'Confirmado') return;
-            const n = r.promoter_name;
-            visitsByPromoter[n] = (visitsByPromoter[n] || 0) + 1;
-            const d = r.created_at?.split('T')[0];
-            if (d) {
-                daysByPromoter[n] = daysByPromoter[n] || new Set();
-                daysByPromoter[n].add(d);
-            }
-        });
-
-        let items = relevant.map(p => ({
-            ...p,
-            visited:  visitsByPromoter[p.promoter_name] || 0,
-            days:     daysByPromoter[p.promoter_name]?.size || 0,
-            progress: p.clientes_asig > 0
-                ? Math.min(100, (visitsByPromoter[p.promoter_name] || 0) / p.clientes_asig * 100)
-                : 0,
-        }));
-
-        if (document.getElementById('hideNoVisits').checked) {
-            items = items.filter(p => p.visited > 0);
-        }
-        items.sort((a, b) => b.progress - a.progress);
-
-        // KPI goal
-        const totalVisited = items.reduce((s, p) => s + p.visited, 0);
-        const totalGoal    = items.reduce((s, p) => s + (p.clientes_asig || 0), 0);
-        const goalPct      = totalGoal > 0 ? (totalVisited / totalGoal * 100).toFixed(1) : '0.0';
-        document.getElementById('kpiGoal').textContent = goalPct + '%';
-        document.getElementById('kpiGoalBar').style.width = Math.min(100, +goalPct) + '%';
-
-        if (items.length === 0) {
-            container.innerHTML = `<p class="text-gray-500 text-sm col-span-full">No hay promotores para mostrar.</p>`;
-            return;
-        }
-
-        container.innerHTML = items.map(p => {
-            const color   = p.progress >= 80 ? '#10b981' : p.progress >= 50 ? '#f59e0b' : '#f43f5e';
-            const alert   = p.days > (p.dias_trabajo || 99);
-            return `<div class="promoter-card ${alert ? 'border-amber-500/50' : ''}">
-                <div class="flex items-start justify-between mb-2">
-                    <p class="font-semibold text-sm text-gray-100 leading-tight">${p.promoter_name}</p>
-                    <span class="text-xs font-bold" style="color:${color}">${p.progress.toFixed(0)}%</span>
-                </div>
-                <p class="text-xs text-gray-500 mb-2">${p.visited} / ${p.clientes_asig || 0} clientes
-                    <span class="ml-2">· ${p.days} / ${p.dias_trabajo || '?'} días</span>
-                </p>
-                <div class="progress-bar-track">
-                    <div class="progress-bar-fill" style="width:${p.progress}%;background:${color}"></div>
-                </div>
-                ${alert ? '<p class="text-amber-400 text-xs mt-1 font-medium">⚠ Excede días asignados</p>' : ''}
-            </div>`;
-        }).join('');
-    }
-
-    // ── Selects ────────────────────────────────────────────────────────────
-    function populateSelects() {
-        const pSel = document.getElementById('promoter');
-        const current = pSel.value;
-        pSel.innerHTML = '<option value="all">Todos</option>';
-        [...new Set(promoters.filter(p => p.promoter_name !== 'promotor_prueba').map(p => p.promoter_name))].sort().forEach(n => {
-            const o = document.createElement('option');
-            o.value = n; o.textContent = n;
-            if (n === current) o.selected = true;
-            pSel.appendChild(o);
-        });
-
-        const sSel = document.getElementById('state');
-        const sCur = sSel.value;
-        sSel.innerHTML = '<option value="all">Todos</option>';
-        estados.forEach(e => {
-            const o = document.createElement('option');
-            o.value = e.id; o.textContent = e.nombre;
-            if (String(e.id) === sCur) o.selected = true;
-            sSel.appendChild(o);
-        });
-    }
-
-    function updateZoneFilter() {
-        const stateId  = document.getElementById('state').value;
-        const zoneSel  = document.getElementById('zone');
-        zoneSel.innerHTML = '<option value="all">Todas</option>';
-        zoneSel.disabled  = stateId === 'all';
-        if (stateId !== 'all') {
-            zonas.filter(z => String(z.estado_id) === String(stateId)).forEach(z => {
-                const o = document.createElement('option');
-                o.value = z.nombre; o.textContent = z.nombre;
-                zoneSel.appendChild(o);
-            });
-        }
-        applyClientSideFilters();
-    }
-
-    async function populateYears() {
-        const y = document.getElementById('yearSelect');
-        const cur = new Date().getFullYear();
-        for (let yr = cur; yr >= cur - 3; yr--) {
-            const o = document.createElement('option');
-            o.value = yr; o.textContent = yr;
-            if (yr === cur) o.selected = true;
-            y.appendChild(o);
-        }
-        await populateWeeks(cur);
-    }
-
-    async function populateWeeks(year) {
-        const w = document.getElementById('weekSelect');
-        w.innerHTML = '<option value="">Semana</option>';
-        w.disabled  = true;
-        if (!year) return;
-        try {
-            const data = await fetchWithRetry(`/api/weeks_with_visits?empresa_id=${empresaId}&year=${year}`);
-            (data.weeks || []).forEach(wk => {
-                const o = document.createElement('option');
-                o.value = wk; o.textContent = `Semana ${wk}`;
-                w.appendChild(o);
-            });
-            w.disabled = false;
-            if (w.options.length > 1) w.selectedIndex = 1;
-        } catch (e) {
-            console.warn('No se pudieron cargar semanas:', e);
-        }
-    }
-
-    // ── Filtros de fecha automáticos ───────────────────────────────────────
-    function setDefaultDates() {
-        const today = new Date();
-        const start = new Date(today);
-        start.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
-        document.getElementById('dateFrom').value = start.toISOString().split('T')[0];
-        document.getElementById('dateTo').value   = today.toISOString().split('T')[0];
-    }
-
-    // ── Apply filters (recarga desde servidor) ─────────────────────────────
-    function applyFilters() {
-        currentPage = 1;
-        cacheInvalidate('records:');
-        cacheInvalidate('weekly:');
-        loadRecords(1);
-    }
-
-    // ── Selección de registros ─────────────────────────────────────────────
-    function toggleRecord(cb) {
-        const id = cb.dataset.id;
-        if (cb.checked) selectedRecords.add(id);
-        else selectedRecords.delete(id);
-        document.getElementById('selectedCount').textContent = selectedRecords.size;
-        document.getElementById('deleteSelected').disabled   = selectedRecords.size === 0;
-    }
-
-    async function deleteRecords(ids) {
-        if (!confirm(`¿Eliminar ${ids.length} registro(s)? Esta acción no se puede deshacer.`)) return;
-        try {
-            const res = await fetch('/delete_records', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids, empresa_id: empresaId }),
-            });
-            const data = await res.json();
-            if (data.success) {
-                showToast(`${ids.length} registro(s) eliminado(s)`, 'success');
-                selectedRecords.clear();
-                document.getElementById('selectedCount').textContent = '0';
-                document.getElementById('deleteSelected').disabled = true;
-                cacheInvalidate('records:');
-                loadRecords(currentPage);
-            } else {
-                showToast('Error al eliminar', 'error');
-            }
-        } catch (e) {
-            showToast('Error de red al eliminar', 'error');
-        }
-    }
-
-    // ── Skeleton / loading ─────────────────────────────────────────────────
-    function setTableLoading(on) {
-        if (on) {
-            document.getElementById('tableBody').innerHTML = `<tr>
-                <td colspan="8" class="py-12 text-center">
-                    <div class="flex flex-col items-center gap-3 text-gray-500">
-                        <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl"></i>
-                        <span class="text-sm">Cargando registros...</span>
-                    </div>
-                </td>
-            </tr>`;
-        }
-    }
-
-    // ── Modal detalle ──────────────────────────────────────────────────────
-    const STORAGE_BASE = 'https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/';
-
-    function openModal(record) {
-        const bp = (record.before_photos || []).map(p => `<img src="${STORAGE_BASE}before/${p}" onclick="showLightbox('${STORAGE_BASE}before/${p}')" loading="lazy">`).join('') || '<p class="text-gray-500 text-sm">Sin fotos</p>';
-        const ap = (record.after_photos  || []).map(p => `<img src="${STORAGE_BASE}after/${p}"  onclick="showLightbox('${STORAGE_BASE}after/${p}')"  loading="lazy">`).join('') || '<p class="text-gray-500 text-sm">Sin fotos</p>';
-
-        const myItems = (record.myitems || []).map(i => `
-            <tr class="border-t border-white/5">
-                <td class="py-2 pr-4 text-gray-300">${i.presentation || '—'}</td>
-                <td class="py-2 pr-4 text-emerald-300">${i.price || '—'} ${i.currency || ''}</td>
-                <td class="py-2 pr-4 text-gray-400">${i.stock_shelf ?? '—'}</td>
-                <td class="py-2 pr-4 text-gray-400">${i.stock_warehouse ?? '—'}</td>
-                <td class="py-2 text-amber-300">${i.faces_before ?? '—'} → ${i.faces_after ?? '—'}</td>
-            </tr>`).join('');
-
-        const compItems = (record.competitoritems || []).map(i => `
-            <tr class="border-t border-white/5">
-                <td class="py-2 pr-4 text-gray-300">${i.presentation || '—'}</td>
-                <td class="py-2 text-rose-300">${i.price || '—'} ${i.currency || ''}</td>
-            </tr>`).join('');
-
-        document.getElementById('modalBody').innerHTML = `
-            <h2 class="font-display text-xl font-bold mb-1">${record.trade || '—'}</h2>
-            <p class="text-xs text-gray-500 mb-6">${record.created_at ? new Date(record.created_at).toLocaleString('es-MX') : '—'} · ${record.promoter_name}</p>
-
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                ${[
-                    ['Estado', record.state],
-                    ['Zona', record.zone],
-                    ['Distancia', record.distance > 0 ? record.distance + ' m' : 'N/A'],
-                    ['Confirmación', record.verified],
-                    ['Mayorista', record.p_mayorista],
-                    ['Cliente cerrado', record.cliente_cerrado],
-                ].map(([l,v]) => `<div class="bg-white/5 rounded-xl p-3"><p class="text-xs text-gray-500 mb-0.5">${l}</p><p class="text-sm font-medium">${v || '—'}</p></div>`).join('')}
-            </div>
-
-            ${myItems ? `
-            <h3 class="font-display font-semibold text-sm uppercase tracking-widest text-gray-400 mb-2">Nuestros productos</h3>
-            <div class="overflow-x-auto mb-6">
-                <table class="w-full text-xs">
-                    <thead><tr class="text-gray-500">
-                        <th class="pb-2 pr-4 text-left font-medium">Presentación</th>
-                        <th class="pb-2 pr-4 text-left font-medium">Precio</th>
-                        <th class="pb-2 pr-4 text-left font-medium">Stock anaquel</th>
-                        <th class="pb-2 pr-4 text-left font-medium">Stock bodega</th>
-                        <th class="pb-2 text-left font-medium">Caras</th>
-                    </tr></thead>
-                    <tbody>${myItems}</tbody>
-                </table>
-            </div>` : ''}
-
-            ${compItems ? `
-            <h3 class="font-display font-semibold text-sm uppercase tracking-widest text-gray-400 mb-2">Competencia</h3>
-            <div class="overflow-x-auto mb-6">
-                <table class="w-full text-xs">
-                    <thead><tr class="text-gray-500">
-                        <th class="pb-2 pr-4 text-left font-medium">Presentación</th>
-                        <th class="pb-2 text-left font-medium">Precio</th>
-                    </tr></thead>
-                    <tbody>${compItems}</tbody>
-                </table>
-            </div>` : ''}
-
-            ${record.comments ? `
-            <div class="bg-white/5 rounded-xl p-4 mb-6">
-                <p class="text-xs text-gray-500 mb-1">Comentarios</p>
-                <p class="text-sm">${record.comments}</p>
-            </div>` : ''}
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                    <p class="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wider">Fotos Antes</p>
-                    <div class="photo-grid">${bp}</div>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wider">Fotos Después</p>
-                    <div class="photo-grid">${ap}</div>
-                </div>
-            </div>
-        `;
-        document.getElementById('detailsModal').classList.add('open');
-    }
-
-    function showLightbox(src) {
-        const lb = document.createElement('div');
-        lb.className = 'lightbox';
-        lb.innerHTML = `<img src="${src}" alt="foto">`;
-        lb.onclick = () => lb.remove();
-        document.body.appendChild(lb);
-    }
-
-    // ── Export CSV ─────────────────────────────────────────────────────────
-    function exportCSV() {
-        if (!filteredRecords.length) { showToast('No hay registros para exportar', 'error'); return; }
-        const headers = ['ID','Fecha','Promotor','Comercio','Estado','Zona','Distancia(m)','Confirmación','Coords Visita','Coords Cliente','Comentarios'];
-        const rows = filteredRecords.map(r => [
-            r.id,
-            r.created_at ? new Date(r.created_at).toLocaleString('es-MX') : '',
-            r.promoter_name, r.trade, r.state, r.zone,
-            r.distance, r.verified, r.visit_coords || '', r.client_coords || '',
-            (r.comments || '').replace(/,/g, ';'),
-        ]);
-        const csv  = [headers, ...rows].map(r => r.join(',')).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const a    = document.createElement('a');
-        a.href     = URL.createObjectURL(blob);
-        a.download = `visitas_${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        showToast('CSV exportado', 'success');
-    }
-
-    // ── Realtime polling (cada 90s) ────────────────────────────────────────
-    // Nota: Supabase Realtime requiere la anon key en el cliente.
-    // Para no exponerla en el dashboard de supervisores usamos polling ligero
-    // al endpoint /api/records/stats que NO retorna datos sensibles.
-    async function pollStats() {
-        const dateFrom = document.getElementById('dateFrom').value;
-        const dateTo   = document.getElementById('dateTo').value;
-        const params   = new URLSearchParams({ empresa_id: empresaId });
-        if (dateFrom) params.set('date_from', dateFrom);
-        if (dateTo)   params.set('date_to', dateTo);
-        try {
-            const data = await fetchWithRetry(`/api/records/stats?${params}`);
-            if (!data.from_cache) {
-                // Hay datos nuevos — recarga silenciosa
-                cacheInvalidate('records:');
-                await loadRecords(currentPage);
-                showToast('Datos actualizados', 'success');
-            }
-        } catch (e) {
-            // Silencioso — no molestar con errores de polling
-        }
-    }
-
-    // ── Init ───────────────────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', async () => {
-        setDefaultDates();
-        await populateYears();
-        await loadRecords(1);
-
-        // Eventos
-        document.getElementById('prevPage').onclick     = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
-        document.getElementById('nextPage').onclick     = () => { const pages = Math.ceil(filteredRecords.length / +document.getElementById('pageSizeSelect').value); if (currentPage < pages) { currentPage++; renderTable(); } };
-        document.getElementById('pageSizeSelect').onchange = () => { currentPage = 1; renderTable(); };
-        document.getElementById('selectAll').onchange  = e => {
-            document.querySelectorAll('.selectRecord').forEach(cb => {
-                cb.checked = e.target.checked;
-                toggleRecord(cb);
-            });
-        };
-        document.getElementById('deleteSelected').onclick = () => deleteRecords(Array.from(selectedRecords));
-        document.getElementById('exportCSV').onclick      = exportCSV;
-        document.getElementById('state').onchange         = updateZoneFilter;
-        document.getElementById('zone').onchange          = applyClientSideFilters;
-        document.getElementById('confirmation').onchange  = applyClientSideFilters;
-        document.getElementById('hideNoVisits').onchange  = updateWeeklyProgress;
-        document.getElementById('yearSelect').onchange    = async e => { await populateWeeks(e.target.value); updateWeeklyProgress(); };
-        document.getElementById('weekSelect').onchange    = updateWeeklyProgress;
-        document.getElementById('modalCloseBtn').onclick  = () => document.getElementById('detailsModal').classList.remove('open');
-        document.getElementById('detailsModal').onclick   = e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); };
-
-        // Polling cada 90s
-        setInterval(pollStats, 90_000);
-
-        // Marcar nav activo
-        document.querySelectorAll('.nav-link').forEach(a => {
-            if (a.getAttribute('href') === '/dashboard') a.classList.add('active');
-        });
+    filteredRecords = allRecords.filter(r => {
+      if (stateNm && stateNm !== 'Todos' && r.state !== stateNm) return false;
+      if (zoneNm  && zoneNm  !== 'Todas' && r.zone  !== zoneNm)  return false;
+      if (confVal !== 'all') {
+        const ok  = r.verified === 'Confirmado';
+        const noC = r.client_coords === 'N/A';
+        const noG = r.verified?.includes('Sin') || r.verified?.includes('Error');
+        if (confVal === 'verificado'      && !ok)                  return false;
+        if (confVal === 'no_verificado'   && (ok || noC))          return false;
+        if (confVal === 'desconocido'     && !noC)                 return false;
+        if (confVal === 'sin_coordenadas' && !noG)                 return false;
+      }
+      return true;
     });
-    </script>
+
+    currentPage = 1;
+    renderTable();
+    updateKPIs();
+    updateChart();
+    updateWeeklyProgress();
+  }
+
+  function applyFilters() {
+    currentPage = 1;
+    cacheInvalidate('rec:');
+    cacheInvalidate('wk:');
+    loadRecords(1);
+  }
+
+  // ── Render tabla ──────────────────────────────────────────────
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    const ps    = +document.getElementById('pageSizeSelect').value;
+    const start = (currentPage-1)*ps;
+    const slice = filteredRecords.slice(start, start+ps);
+
+    if (!filteredRecords.length) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">
+        <i class="fas fa-inbox" style="font-size:1.5rem;display:block;margin-bottom:8px;"></i>
+        Sin registros para los filtros seleccionados
+      </td></tr>`;
+      updatePagination(0,0); return;
+    }
+
+    const STORE = 'https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/';
+    tbody.innerHTML = slice.map(r => {
+      const dt = r.created_at ? new Date(r.created_at) : null;
+      const dateStr = dt ? dt.toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '—';
+      const timeStr = dt ? dt.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '';
+
+      const badgeCls = r.verified==='Confirmado'    ? 'sp-badge sp-badge-success'
+                     : r.verified==='No Confirmado'  ? 'sp-badge sp-badge-danger'
+                     : r.verified?.includes('Sin')   ? 'sp-badge sp-badge-warning'
+                     : 'sp-badge sp-badge-default';
+
+      const distColor = r.distance>0 && r.distance<=150 ? 'var(--green)' : r.distance>150 ? 'var(--red)' : 'var(--text-muted)';
+      const distStr   = r.distance>0 ? `<span style="color:${distColor};font-weight:600;">${r.distance}m</span>` : '<span style="color:var(--text-muted);">—</span>';
+
+      const safeR = JSON.stringify(r).replace(/`/g,'\\`');
+      return `<tr>
+        <td><input type="checkbox" class="selectRecord" data-id="${r.id}" onchange="toggleRecord(this)"></td>
+        <td class="primary">${dateStr}<br><span style="font-size:.7rem;color:var(--text-muted);">${timeStr}</span></td>
+        <td style="color:var(--accent);font-weight:500;">${r.promoter_name||'—'}</td>
+        <td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.trade||''}">${r.trade||'—'}</td>
+        <td>${r.state||'—'}<br><span style="font-size:.7rem;color:var(--text-muted);">${r.zone||''}</span></td>
+        <td>${distStr}</td>
+        <td><span class="${badgeCls}">${r.verified||'—'}</span></td>
+        <td>
+          <button onclick='openModal(`${safeR}`)' style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:.8rem;font-weight:600;padding:4px 8px;border-radius:6px;transition:background .15s;" onmouseenter="this.style.background='var(--accent-soft)'" onmouseleave="this.style.background='none'">
+            Ver <i class="fas fa-arrow-right" style="font-size:.65rem;"></i>
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    const pages = Math.ceil(filteredRecords.length / ps);
+    updatePagination(currentPage, pages);
+    document.getElementById('tableCountLabel').textContent = `${filteredRecords.length.toLocaleString()} registros`;
+  }
+
+  // ── Paginación ────────────────────────────────────────────────
+  function updatePagination(page, pages) {
+    document.getElementById('prevPage').disabled = page<=1;
+    document.getElementById('nextPage').disabled = page>=pages;
+    document.getElementById('pageInfo').textContent = pages ? `Pág ${page} / ${pages}` : '—';
+
+    const nums = document.getElementById('pageNumbers');
+    nums.innerHTML = '';
+    if (pages <= 1) return;
+    const from = Math.max(1, Math.min(pages-4, page-2));
+    for (let p=from; p<=Math.min(from+4,pages); p++) {
+      const btn = Object.assign(document.createElement('button'),{
+        textContent: p,
+        className: 'sp-btn sp-btn-secondary sp-btn-sm',
+      });
+      if (p === page) { btn.style.background='var(--accent)'; btn.style.color='white'; btn.style.borderColor='var(--accent)'; }
+      btn.onclick = () => { currentPage=p; renderTable(); };
+      nums.appendChild(btn);
+    }
+  }
+
+  // ── KPIs ──────────────────────────────────────────────────────
+  function updateKPIs() {
+    const total     = filteredRecords.length;
+    const confirmed = filteredRecords.filter(r => r.verified==='Confirmado').length;
+    const rate      = total ? (confirmed/total*100) : 0;
+    const promos    = promoters.filter(p=>p.promoter_name!=='promotor_prueba').length;
+
+    animateNumber('kpiPromoters', promos);
+    animateNumber('kpiVisits', total);
+    document.getElementById('kpiConfirmation').textContent = rate.toFixed(1)+'%';
+
+    document.getElementById('kpiConfirmBar').style.width = rate.toFixed(1)+'%';
+    document.getElementById('kpiVisitsBar').style.width  = Math.min(100, total>0?80:0)+'%';
+  }
+
+  function animateNumber(id, target) {
+    const el = document.getElementById(id);
+    const start = parseInt(el.textContent) || 0;
+    if (start === target) { el.textContent = target; return; }
+    const dur = 600, step = 16;
+    const steps = dur/step;
+    let i = 0;
+    const iv = setInterval(() => {
+      i++;
+      el.textContent = Math.round(start + (target-start) * (i/steps));
+      if (i >= steps) { el.textContent = target; clearInterval(iv); }
+    }, step);
+  }
+
+  // ── Gráfica ───────────────────────────────────────────────────
+  function updateChart() {
+    const counts = {};
+    filteredRecords.forEach(r => {
+      if (r.promoter_name && r.promoter_name!=='promotor_prueba')
+        counts[r.promoter_name] = (counts[r.promoter_name]||0)+1;
+    });
+    const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const labels = sorted.map(([n])=>n.split(' ')[0]);
+    const data   = sorted.map(([,v])=>v);
+    const palette= ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f59e0b','#10b981','#06b6d4','#3b82f6'];
+
+    if (chart) { chart.data.labels=labels; chart.data.datasets[0].data=data; chart.update('none'); return; }
+
+    const isDk = document.documentElement.classList.contains('dark');
+    chart = new Chart(document.getElementById('chartPromoters').getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets:[{ data, backgroundColor:palette, borderRadius:8, borderSkipped:false }] },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'var(--surface-card)', titleColor:'var(--text-primary)', bodyColor:'var(--text-secondary)', borderColor:'var(--border)', borderWidth:1 }},
+        scales:{
+          x:{ ticks:{color:'var(--text-muted)',font:{size:10}}, grid:{display:false}, border:{display:false}},
+          y:{ ticks:{color:'var(--text-muted)',font:{size:10}}, grid:{color:'var(--border)'}, border:{display:false}}
+        }
+      }
+    });
+  }
+
+  // ── Weekly progress ───────────────────────────────────────────
+  async function updateWeeklyProgress() {
+    const year = document.getElementById('yearSelect').value;
+    const week = document.getElementById('weekSelect').value;
+    const pf   = document.getElementById('promoter').value;
+    if (!year) return;
+
+    const p = new URLSearchParams({ empresa_id:empresaId });
+    if (week) { p.set('week',week); p.set('year',year); }
+
+    let weekRecs = [];
+    try {
+      const ck = 'wk:'+p;
+      let data = cacheGet(ck);
+      if (!data) { data = await apiFetch(`/api/records?${p}&page=1&page_size=999`); cacheSet(ck,data); }
+      weekRecs = data.records||[];
+    } catch(e) { return; }
+
+    const visits = {}, days = {};
+    weekRecs.forEach(r => {
+      if (r.verified!=='Confirmado') return;
+      visits[r.promoter_name] = (visits[r.promoter_name]||0)+1;
+      const d = r.created_at?.split('T')[0];
+      if (d) { days[r.promoter_name]=days[r.promoter_name]||new Set(); days[r.promoter_name].add(d); }
+    });
+
+    const relevant = promoters.filter(p=>p.promoter_name!=='promotor_prueba'&&(pf==='all'||p.promoter_name===pf));
+    let items = relevant.map(p=>({
+      ...p,
+      visited:  visits[p.promoter_name]||0,
+      days:     days[p.promoter_name]?.size||0,
+      progress: p.clientes_asig>0 ? Math.min(100,(visits[p.promoter_name]||0)/p.clientes_asig*100) : 0,
+    }));
+    if (document.getElementById('hideNoVisits').checked) items=items.filter(p=>p.visited>0);
+    items.sort((a,b)=>b.progress-a.progress);
+
+    const tV=items.reduce((s,p)=>s+p.visited,0);
+    const tG=items.reduce((s,p)=>s+(p.clientes_asig||0),0);
+    const gPct = tG>0?(tV/tG*100):0;
+    document.getElementById('kpiGoal').textContent = gPct.toFixed(1)+'%';
+    document.getElementById('kpiGoalBar').style.width = Math.min(100,gPct)+'%';
+
+    const container = document.getElementById('promoterProgressContainer');
+    if (!items.length) { container.innerHTML=`<p style="color:var(--text-muted);font-size:.875rem;">Sin promotores para mostrar.</p>`; return; }
+
+    container.innerHTML = items.map(p => {
+      const color = p.progress>=80?'var(--green)':p.progress>=50?'var(--amber)':'var(--red)';
+      const alert = p.days>(p.dias_trabajo||99);
+      return `<div class="sp-card sp-card-sm" style="border-color:${alert?'rgba(245,158,11,.4)':'var(--border)'};">
+        <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:8px;">
+          <p style="font-weight:600;font-size:.875rem;color:var(--text-primary);line-height:1.3;">${p.promoter_name}</p>
+          <span style="font-weight:800;font-size:.875rem;color:${color};font-family:'Syne',sans-serif;">${p.progress.toFixed(0)}%</span>
+        </div>
+        <p style="font-size:.72rem;color:var(--text-muted);margin-bottom:8px;">
+          ${p.visited}/${p.clientes_asig||0} clientes &nbsp;·&nbsp; ${p.days}/${p.dias_trabajo||'?'} días
+        </p>
+        <div class="sp-progress-track"><div class="sp-progress-fill" style="width:${p.progress}%;background:${color};"></div></div>
+        ${alert?'<p style="font-size:.68rem;color:var(--amber);margin-top:5px;font-weight:600;">⚠ Excede días asignados</p>':''}
+      </div>`;
+    }).join('');
+  }
+
+  // ── Selects ───────────────────────────────────────────────────
+  function populateSelects() {
+    const pSel = document.getElementById('promoter');
+    const curP = pSel.value;
+    pSel.innerHTML = '<option value="all">Todos</option>';
+    [...new Set(promoters.filter(p=>p.promoter_name!=='promotor_prueba').map(p=>p.promoter_name))].sort().forEach(n=>{
+      const o=document.createElement('option'); o.value=n; o.textContent=n; if(n===curP)o.selected=true; pSel.appendChild(o);
+    });
+
+    const sSel = document.getElementById('state');
+    const curS = sSel.value;
+    sSel.innerHTML = '<option value="all">Todos</option>';
+    estados.forEach(e=>{ const o=document.createElement('option'); o.value=e.id; o.textContent=e.nombre; if(String(e.id)===curS)o.selected=true; sSel.appendChild(o); });
+  }
+
+  function updateZoneFilter() {
+    const sid = document.getElementById('state').value;
+    const zSel= document.getElementById('zone');
+    zSel.innerHTML='<option value="all">Todas</option>';
+    zSel.disabled = sid==='all';
+    if (sid!=='all') zonas.filter(z=>String(z.estado_id)===String(sid)).forEach(z=>{ const o=document.createElement('option'); o.value=z.nombre; o.textContent=z.nombre; zSel.appendChild(o); });
+    applyLocalFilters();
+  }
+
+  async function populateYears() {
+    const el=document.getElementById('yearSelect'), cur=new Date().getFullYear();
+    for(let y=cur;y>=cur-3;y--){ const o=document.createElement('option'); o.value=y; o.textContent=y; if(y===cur)o.selected=true; el.appendChild(o); }
+    await populateWeeks(cur);
+  }
+
+  async function populateWeeks(year) {
+    const el=document.getElementById('weekSelect');
+    el.innerHTML='<option value="">Semana</option>'; el.disabled=true;
+    if (!year) return;
+    try {
+      const data = await apiFetch(`/api/weeks_with_visits?empresa_id=${empresaId}&year=${year}`);
+      (data.weeks||[]).forEach(w=>{ const o=document.createElement('option'); o.value=w; o.textContent=`Sem. ${w}`; el.appendChild(o); });
+      el.disabled=false; if(el.options.length>1) el.selectedIndex=1;
+    } catch(e) {}
+  }
+
+  function setDefaultDates() {
+    const today=new Date(), start=new Date(today);
+    start.setDate(today.getDate()-(today.getDay()===0?6:today.getDay()-1));
+    document.getElementById('dateFrom').value=start.toISOString().split('T')[0];
+    document.getElementById('dateTo').value=today.toISOString().split('T')[0];
+  }
+
+  // ── Selección ─────────────────────────────────────────────────
+  function toggleRecord(cb) {
+    cb.checked ? selectedRecords.add(cb.dataset.id) : selectedRecords.delete(cb.dataset.id);
+    document.getElementById('selectedCount').textContent=selectedRecords.size;
+    document.getElementById('deleteSelected').disabled=!selectedRecords.size;
+  }
+
+  async function deleteRecordsAction(ids) {
+    if (!confirm(`¿Eliminar ${ids.length} registro(s)?`)) return;
+    try {
+      const res = await fetch('/delete_records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids,empresa_id:empresaId})});
+      const d = await res.json();
+      if (d.success) { toast(`${ids.length} registro(s) eliminado(s)`,'success'); selectedRecords.clear(); document.getElementById('selectedCount').textContent=0; document.getElementById('deleteSelected').disabled=true; cacheInvalidate('rec:'); loadRecords(currentPage); }
+      else toast('Error al eliminar','error');
+    } catch(e) { toast('Error de red','error'); }
+  }
+
+  // ── Modal ─────────────────────────────────────────────────────
+  const STORE = 'https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/visits_photos/';
+
+  function openModal(json) {
+    const r = typeof json==='string' ? JSON.parse(json) : json;
+    document.getElementById('modalTitle').textContent = r.trade || '—';
+    document.getElementById('modalSub').textContent   = [r.promoter_name, r.created_at?new Date(r.created_at).toLocaleString('es-MX'):''].filter(Boolean).join('  ·  ');
+
+    const field = (l,v) => `<div class="sp-card sp-card-sm"><p style="font-size:.68rem;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;">${l}</p><p style="font-size:.875rem;font-weight:500;">${v||'—'}</p></div>`;
+
+    const myRows = (r.myitems||[]).map(i=>`<tr style="border-top:1px solid var(--border);">
+      <td style="padding:8px 10px;font-size:.8rem;">${i.presentation||'—'}</td>
+      <td style="padding:8px 10px;font-size:.8rem;color:var(--green);">${i.price||'—'} ${i.currency||''}</td>
+      <td style="padding:8px 10px;font-size:.8rem;">${i.stock_shelf??'—'}</td>
+      <td style="padding:8px 10px;font-size:.8rem;">${i.stock_warehouse??'—'}</td>
+      <td style="padding:8px 10px;font-size:.8rem;color:var(--amber);">${i.faces_before??'—'}→${i.faces_after??'—'}</td>
+    </tr>`).join('');
+
+    const compRows = (r.competitoritems||[]).map(i=>`<tr style="border-top:1px solid var(--border);">
+      <td style="padding:8px 10px;font-size:.8rem;">${i.presentation||'—'}</td>
+      <td style="padding:8px 10px;font-size:.8rem;color:var(--red);">${i.price||'—'} ${i.currency||''}</td>
+    </tr>`).join('');
+
+    const photos = (arr, folder) => arr?.length ? arr.map(p=>`<img src="${STORE}${folder}/${p}" onclick="lightbox('${STORE}${folder}/${p}')" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;cursor:pointer;transition:transform .2s;" onmouseenter="this.style.transform='scale(1.05)'" onmouseleave="this.style.transform=''">`).join('') : `<p style="color:var(--text-muted);font-size:.8rem;">Sin fotos</p>`;
+
+    document.getElementById('modalBody').innerHTML = `
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
+        ${field('Estado',r.state)}${field('Zona',r.zone)}
+        ${field('Distancia',r.distance>0?r.distance+'m':'N/A')}
+        ${field('Confirmación',r.verified)}
+        ${field('Mayorista',r.p_mayorista)}
+        ${field('Cliente cerrado',r.cliente_cerrado)}
+      </div>
+      ${myRows?`<p class="sp-section-title">Nuestros productos</p>
+      <div style="overflow-x:auto;margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius-md);">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:var(--surface-input);">
+            ${['Presentación','Precio','Stock anaquel','Stock bodega','Caras'].map(h=>`<th style="padding:8px 10px;font-size:.68rem;text-align:left;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">${h}</th>`).join('')}
+          </tr></thead><tbody>${myRows}</tbody>
+        </table>
+      </div>`:''}
+      ${compRows?`<p class="sp-section-title">Competencia</p>
+      <div style="overflow-x:auto;margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius-md);">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:var(--surface-input);">
+            ${['Presentación','Precio'].map(h=>`<th style="padding:8px 10px;font-size:.68rem;text-align:left;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">${h}</th>`).join('')}
+          </tr></thead><tbody>${compRows}</tbody>
+        </table>
+      </div>`:''}
+      ${r.comments?`<div class="sp-card sp-card-sm" style="margin-bottom:16px;"><p style="font-size:.68rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Comentarios</p><p style="font-size:.875rem;">${r.comments}</p></div>`:''}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div><p class="sp-section-title">Fotos Antes</p><div class="photo-grid">${photos(r.before_photos,'before')}</div></div>
+        <div><p class="sp-section-title">Fotos Después</p><div class="photo-grid">${photos(r.after_photos,'after')}</div></div>
+      </div>
+    `;
+    document.getElementById('detailsModal').classList.add('open');
+  }
+
+  function closeModal() { document.getElementById('detailsModal').classList.remove('open'); }
+
+  function lightbox(src) {
+    const lb=document.createElement('div'); lb.className='sp-lightbox';
+    lb.innerHTML=`<img src="${src}" alt="foto">`; lb.onclick=()=>lb.remove();
+    document.body.appendChild(lb);
+  }
+
+  // ── Export CSV ────────────────────────────────────────────────
+  function exportCSV() {
+    if (!filteredRecords.length) { toast('Sin datos para exportar','error'); return; }
+    const h=['ID','Fecha','Promotor','Comercio','Estado','Zona','Dist(m)','Confirmación','Comentarios'];
+    const rows=filteredRecords.map(r=>[r.id,r.created_at?new Date(r.created_at).toLocaleString('es-MX'):'',r.promoter_name,r.trade,r.state,r.zone,r.distance,r.verified,(r.comments||'').replace(/,/g,';')]);
+    const csv=[h,...rows].map(r=>r.join(',')).join('\n');
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download=`visitas_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+    toast('CSV exportado','success');
+  }
+
+  // ── Polling realtime ──────────────────────────────────────────
+  async function pollStats() {
+    const p=new URLSearchParams({empresa_id:empresaId});
+    const df=document.getElementById('dateFrom').value; if(df) p.set('date_from',df);
+    const dt=document.getElementById('dateTo').value;   if(dt) p.set('date_to',dt);
+    try {
+      const d=await apiFetch(`/api/records/stats?${p}`);
+      if (!d.from_cache) { cacheInvalidate('rec:'); await loadRecords(currentPage); toast('Datos actualizados','success'); }
+    } catch(e) {}
+  }
+
+  // ── Loading state ─────────────────────────────────────────────
+  function setLoading(on) {
+    if (!on) return;
+    document.getElementById('tableBody').innerHTML=`<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">
+      <i class="fas fa-spinner fa-spin" style="font-size:1.4rem;color:var(--accent);display:block;margin-bottom:8px;"></i>
+      Cargando registros...
+    </td></tr>`;
+  }
+
+  // ── Init ──────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', async () => {
+    setDefaultDates();
+    await populateYears();
+    await loadRecords(1);
+
+    document.getElementById('prevPage').onclick     = () => { if(currentPage>1){ currentPage--; renderTable(); } };
+    document.getElementById('nextPage').onclick     = () => { const ps=+document.getElementById('pageSizeSelect').value, pages=Math.ceil(filteredRecords.length/ps); if(currentPage<pages){ currentPage++; renderTable(); } };
+    document.getElementById('pageSizeSelect').onchange = () => { currentPage=1; renderTable(); };
+    document.getElementById('selectAll').onchange   = e => { document.querySelectorAll('.selectRecord').forEach(cb=>{ cb.checked=e.target.checked; toggleRecord(cb); }); };
+    document.getElementById('deleteSelected').onclick = () => deleteRecordsAction(Array.from(selectedRecords));
+    document.getElementById('exportCSV').onclick    = exportCSV;
+    document.getElementById('state').onchange       = updateZoneFilter;
+    document.getElementById('zone').onchange        = applyLocalFilters;
+    document.getElementById('confirmation').onchange= applyLocalFilters;
+    document.getElementById('hideNoVisits').onchange= updateWeeklyProgress;
+    document.getElementById('yearSelect').onchange  = async e => { await populateWeeks(e.target.value); updateWeeklyProgress(); };
+    document.getElementById('weekSelect').onchange  = updateWeeklyProgress;
+    document.getElementById('detailsModal').onclick = e => { if(e.target===e.currentTarget) closeModal(); };
+    document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
+    setInterval(pollStats, 90_000);
+  });
+  </script>
 </body>
 </html>
-
-

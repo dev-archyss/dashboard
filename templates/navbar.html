@@ -1,91 +1,288 @@
-<nav class="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50 transition-colors duration-300 backdrop-blur-md bg-opacity-90 dark:bg-opacity-90">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16">
-            <!-- Logo y Empresa -->
-            <div class="flex items-center gap-3 min-w-fit">
-                <div class="bg-gradient-to-br from-indigo-600 to-purple-600 text-white p-2 rounded-lg shadow-lg shadow-indigo-500/30">
-                    <i class="fas fa-bolt text-lg"></i>
-                </div>
-                <div class="hidden md:block">
-                    <h1 class="text-lg font-bold text-gray-800 dark:text-white leading-tight tracking-tight">Sparking Dashboard</h1>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium truncate max-w-[150px]" id="navEmpresaNombre">Cargando...</p>
-                </div>
-            </div>
-
-            <!-- Links de Navegación (Desktop) -->
-            <div class="hidden xl:flex space-x-1 items-center ml-4 overflow-x-auto no-scrollbar">
-                <a href="/dashboard" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-home"></i> Dashboard</a>
-                <a href="/analisis" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-chart-pie"></i> Análisis</a>
-                <a href="/clientes" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-store"></i> Clientes</a>
-                <a href="/promotores" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-user-tie"></i> Promotores</a>
-                <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-2"></div>
-                <a href="/lineas" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-layer-group"></i> Líneas</a>
-                <a href="/productos" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-box-open"></i> Productos</a>
-                <a href="/competencia" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-tag"></i> Competencia</a>
-                <a href="/stock" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-boxes"></i> Stock</a>
-                <a href="/planograma" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-image"></i> Planograma</a>
-                <a href="/gps" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-map-marked-alt"></i> GPS</a>
-                <a href="/caras" class="nav-link px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"><i class="fas fa-eye"></i> Caras</a>
-            </div>
-
-            <!-- Botones Derecha -->
-            <div class="flex items-center gap-3">
-                <button onclick="toggleTheme()" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-700 transition-colors focus:outline-none" title="Cambiar Tema">
-                    <i class="fas fa-moon hidden dark:block"></i>
-                    <i class="fas fa-sun block dark:hidden"></i>
-                </button>
-                <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="xl:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-slate-700 focus:outline-none">
-                    <i class="fas fa-bars text-xl"></i>
-                </button>
-                <a href="/logout" class="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Cerrar Sesión">
-                    <i class="fas fa-sign-out-alt"></i>
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Menú Móvil -->
-    <div id="mobile-menu" class="hidden xl:hidden bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 shadow-lg absolute w-full left-0">
-        <div class="px-4 pt-2 pb-4 space-y-1 grid grid-cols-2 gap-2">
-            <a href="/dashboard" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Dashboard</a>
-            <a href="/analisis" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Análisis</a>
-            <a href="/clientes" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Clientes</a>
-            <a href="/promotores" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Promotores</a>
-            <a href="/lineas" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Líneas</a>
-            <a href="/productos" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Productos</a>
-            <a href="/competencia" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Competencia</a>
-            <a href="/stock" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Stock</a>
-            <a href="/planograma" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Planograma</a>
-            <a href="/gps" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">GPS</a>
-            <a href="/caras" class="mobile-nav-link block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Caras</a>
-        </div>
-    </div>
-</nav>
+<!-- ═══════════════════════════════════════════════════════════
+     SPARKING NAVBAR  —  Auto-ajuste inteligente, dark/light toggle
+     ═══════════════════════════════════════════════════════════ -->
 
 <script>
-    function initTheme() {
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+  /* Tema — se ejecuta antes del render para evitar flash */
+  (function(){
+    const saved = localStorage.getItem('sp-theme');
+    const sys   = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (saved === 'dark' || (!saved && sys)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
-    initTheme();
-    function toggleTheme() {
-        if (document.documentElement.classList.contains('dark')) {
-            document.documentElement.classList.remove('dark'); localStorage.theme = 'light';
-        } else {
-            document.documentElement.classList.add('dark'); localStorage.theme = 'dark';
-        }
-    }
-    document.addEventListener('DOMContentLoaded', () => {
-        const path = window.location.pathname;
-        document.querySelectorAll('.nav-link').forEach(link => {
-            if (link.getAttribute('href') === path) link.classList.add('bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-900/50', 'dark:text-indigo-300');
-            else link.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:text-indigo-600', 'dark:text-gray-300', 'dark:hover:bg-slate-700');
-        });
-        const empresaNombre = localStorage.getItem('empresa_nombre') || 'Empresa';
-        const navDisplay = document.getElementById('navEmpresaNombre');
-        if (navDisplay) navDisplay.textContent = empresaNombre;
+  })();
+</script>
+
+<nav class="sp-navbar" id="spNavbar">
+  <div class="sp-navbar-inner">
+
+    <!-- ── Logo ── -->
+    <a href="/dashboard" class="sp-logo">
+      <div class="sp-logo-icon">
+        <i class="fas fa-bolt"></i>
+      </div>
+      <div class="sp-logo-text" id="logoText">
+        <div class="sp-logo-name">Sparking</div>
+        <div class="sp-logo-company" id="navEmpresaNombre">—</div>
+      </div>
+    </a>
+
+    <!-- ── Links (desktop — auto-fit) ── -->
+    <nav class="sp-nav-links" id="navLinks" aria-label="Navegación principal">
+      <!-- Los links visibles se calculan dinámicamente -->
+      <a href="/dashboard"  class="sp-nav-link" data-nav><i class="fas fa-home"></i> Dashboard</a>
+      <a href="/analisis"   class="sp-nav-link" data-nav><i class="fas fa-chart-pie"></i> Análisis</a>
+      <a href="/clientes"   class="sp-nav-link" data-nav><i class="fas fa-store"></i> Clientes</a>
+      <a href="/promotores" class="sp-nav-link" data-nav><i class="fas fa-user-tie"></i> Promotores</a>
+      <span class="sp-nav-divider" data-nav-divider></span>
+      <a href="/lineas"     class="sp-nav-link" data-nav><i class="fas fa-layer-group"></i> Líneas</a>
+      <a href="/productos"  class="sp-nav-link" data-nav><i class="fas fa-box-open"></i> Productos</a>
+      <a href="/competencia"class="sp-nav-link" data-nav><i class="fas fa-tag"></i> Competencia</a>
+      <a href="/stock"      class="sp-nav-link" data-nav><i class="fas fa-boxes"></i> Stock</a>
+      <a href="/planograma" class="sp-nav-link" data-nav><i class="fas fa-image"></i> Planograma</a>
+      <a href="/gps"        class="sp-nav-link" data-nav><i class="fas fa-map-marked-alt"></i> GPS</a>
+      <a href="/caras"      class="sp-nav-link" data-nav><i class="fas fa-eye"></i> Caras</a>
+    </nav>
+
+    <!-- ── Botón "Más" (overflow) ── -->
+    <div class="sp-nav-more" id="navMore" style="display:none;">
+      <button class="sp-nav-more-btn" id="navMoreBtn" aria-label="Más opciones">
+        <span>Más</span><i class="fas fa-chevron-down" style="font-size:.6rem;transition:transform .2s"></i>
+      </button>
+      <div class="sp-nav-dropdown" id="navDropdown"></div>
+    </div>
+
+    <!-- ── Acciones ── -->
+    <div class="sp-nav-actions">
+      <!-- Toggle tema -->
+      <button class="sp-icon-btn" id="themeToggle" title="Cambiar tema" onclick="toggleTheme()">
+        <i class="fas fa-moon" id="themeIconDark" style="display:none;"></i>
+        <i class="fas fa-sun"  id="themeIconLight" style="display:none;"></i>
+      </button>
+      <!-- Menú móvil -->
+      <button class="sp-icon-btn" id="mobileMenuBtn" style="display:none;" onclick="openMobileDrawer()" aria-label="Menú">
+        <i class="fas fa-bars"></i>
+      </button>
+      <!-- Logout -->
+      <a href="/logout" class="sp-icon-btn danger" title="Cerrar sesión">
+        <i class="fas fa-sign-out-alt"></i>
+      </a>
+    </div>
+
+  </div>
+</nav>
+
+<!-- ── Mobile Drawer ── -->
+<div class="sp-mobile-drawer" id="mobileDrawer">
+  <div class="sp-drawer-overlay" onclick="closeMobileDrawer()"></div>
+  <div class="sp-drawer-panel" id="drawerPanel">
+    <!-- Logo en drawer -->
+    <div class="sp-logo" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <div class="sp-logo-icon"><i class="fas fa-bolt"></i></div>
+      <div class="sp-logo-text">
+        <div class="sp-logo-name">Sparking</div>
+        <div class="sp-logo-company" id="drawerEmpresaNombre">—</div>
+      </div>
+    </div>
+
+    <a href="/dashboard"   class="sp-drawer-link" data-drawer><i class="fas fa-home"></i> Dashboard</a>
+    <a href="/analisis"    class="sp-drawer-link" data-drawer><i class="fas fa-chart-pie"></i> Análisis</a>
+    <a href="/clientes"    class="sp-drawer-link" data-drawer><i class="fas fa-store"></i> Clientes</a>
+    <a href="/promotores"  class="sp-drawer-link" data-drawer><i class="fas fa-user-tie"></i> Promotores</a>
+    <div class="sp-drawer-divider"></div>
+    <a href="/lineas"      class="sp-drawer-link" data-drawer><i class="fas fa-layer-group"></i> Líneas</a>
+    <a href="/productos"   class="sp-drawer-link" data-drawer><i class="fas fa-box-open"></i> Productos</a>
+    <a href="/competencia" class="sp-drawer-link" data-drawer><i class="fas fa-tag"></i> Competencia</a>
+    <a href="/stock"       class="sp-drawer-link" data-drawer><i class="fas fa-boxes"></i> Stock</a>
+    <a href="/planograma"  class="sp-drawer-link" data-drawer><i class="fas fa-image"></i> Planograma</a>
+    <a href="/gps"         class="sp-drawer-link" data-drawer><i class="fas fa-map-marked-alt"></i> GPS</a>
+    <a href="/caras"       class="sp-drawer-link" data-drawer><i class="fas fa-eye"></i> Caras</a>
+
+    <div class="sp-drawer-divider"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;">
+      <span style="font-size:.8rem;color:var(--text-muted);">Tema</span>
+      <button onclick="toggleTheme()" class="sp-btn sp-btn-secondary sp-btn-sm" style="gap:6px;">
+        <i class="fas fa-moon" id="drawerThemeIconDark" style="display:none;"></i>
+        <i class="fas fa-sun"  id="drawerThemeIconLight" style="display:none;"></i>
+        <span id="drawerThemeLabel">—</span>
+      </button>
+    </div>
+    <a href="/logout" class="sp-drawer-link" style="color:var(--red);margin-top:4px;">
+      <i class="fas fa-sign-out-alt" style="color:var(--red);"></i> Cerrar sesión
+    </a>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     NAVBAR SCRIPT
+     ═══════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  // ── Tema ────────────────────────────────────────────────────
+  function isDark() { return document.documentElement.classList.contains('dark'); }
+
+  function syncThemeIcons() {
+    const dark = isDark();
+    // Navbar
+    document.getElementById('themeIconDark').style.display  = dark ? 'inline' : 'none';
+    document.getElementById('themeIconLight').style.display = dark ? 'none'   : 'inline';
+    // Drawer
+    document.getElementById('drawerThemeIconDark').style.display  = dark ? 'inline' : 'none';
+    document.getElementById('drawerThemeIconLight').style.display = dark ? 'none'   : 'inline';
+    document.getElementById('drawerThemeLabel').textContent = dark ? 'Oscuro' : 'Claro';
+  }
+
+  window.toggleTheme = function () {
+    const dark = isDark();
+    document.documentElement.classList.toggle('dark');
+    localStorage.setItem('sp-theme', dark ? 'light' : 'dark');
+    syncThemeIcons();
+  };
+
+  // ── Empresa nombre ───────────────────────────────────────────
+  function loadEmpresaNombre() {
+    const nombre = localStorage.getItem('empresa_nombre') || '';
+    const els = ['navEmpresaNombre', 'drawerEmpresaNombre'];
+    els.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = nombre;
     });
+  }
+
+  // ── Marcar link activo ───────────────────────────────────────
+  function markActive() {
+    const path = window.location.pathname;
+    document.querySelectorAll('[data-nav], [data-drawer]').forEach(a => {
+      if (a.tagName !== 'A') return;
+      if (a.getAttribute('href') === path) a.classList.add('active');
+      else a.classList.remove('active');
+    });
+  }
+
+  // ── Auto-fit: oculta links que no caben y los mueve al dropdown ──
+  const BREAKPOINT_MOBILE = 640; // px — por debajo usa drawer
+
+  function fitNavLinks() {
+    const navbar   = document.getElementById('spNavbar');
+    const links    = document.getElementById('navLinks');
+    const moreBtn  = document.getElementById('navMore');
+    const dropdown = document.getElementById('navDropdown');
+    const mobileBtn= document.getElementById('mobileMenuBtn');
+
+    const W = navbar.offsetWidth;
+
+    // En mobile: oculta nav links, muestra hamburguesa
+    if (W < BREAKPOINT_MOBILE) {
+      links.style.display    = 'none';
+      moreBtn.style.display  = 'none';
+      mobileBtn.style.display= 'flex';
+      return;
+    }
+
+    // Desktop: muestra nav links
+    mobileBtn.style.display = 'none';
+    links.style.display = 'flex';
+
+    // Resetea visibilidad de todos
+    const allNavItems = links.querySelectorAll('[data-nav], [data-nav-divider]');
+    allNavItems.forEach(el => { el.style.display = ''; });
+    moreBtn.style.display = 'none';
+    dropdown.innerHTML = '';
+
+    // Espacio disponible = navbar width - logo - actions - padding
+    const logoEl    = navbar.querySelector('.sp-logo');
+    const actionsEl = navbar.querySelector('.sp-nav-actions');
+    const MORE_BTN_W = 80;
+    const PADDING    = 32;
+    const available  = W - (logoEl?.offsetWidth || 160) - (actionsEl?.offsetWidth || 100) - PADDING - MORE_BTN_W;
+
+    // Medimos cuántos caben
+    let usedWidth = 0;
+    const overflowLinks = [];
+
+    allNavItems.forEach(el => {
+      const w = el.offsetWidth || 0;
+      if (usedWidth + w <= available) {
+        usedWidth += w;
+      } else {
+        el.style.display = 'none';
+        if (el.tagName === 'A') overflowLinks.push(el);
+      }
+    });
+
+    if (overflowLinks.length > 0) {
+      moreBtn.style.display = 'flex';
+      overflowLinks.forEach(a => {
+        const clone = document.createElement('a');
+        clone.href = a.getAttribute('href');
+        clone.innerHTML = a.innerHTML;
+        if (a.classList.contains('active')) clone.classList.add('active');
+        dropdown.appendChild(clone);
+      });
+    }
+  }
+
+  // ── Mobile Drawer ────────────────────────────────────────────
+  window.openMobileDrawer = function () {
+    const drawer = document.getElementById('mobileDrawer');
+    drawer.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeMobileDrawer = function () {
+    const drawer = document.getElementById('mobileDrawer');
+    drawer.classList.remove('open');
+    document.body.style.overflow = '';
+  };
+
+  // Cerrar con Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeMobileDrawer();
+  });
+
+  // ── Dropdown "Más" toggle ────────────────────────────────────
+  document.getElementById('navMoreBtn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const dd  = document.getElementById('navDropdown');
+    const ico = document.getElementById('navMoreBtn').querySelector('i');
+    dd.classList.toggle('open');
+    if (ico) ico.style.transform = dd.classList.contains('open') ? 'rotate(180deg)' : '';
+  });
+
+  document.addEventListener('click', e => {
+    const dd = document.getElementById('navDropdown');
+    if (dd && !document.getElementById('navMore')?.contains(e.target)) {
+      dd.classList.remove('open');
+      const ico = document.getElementById('navMoreBtn')?.querySelector('i');
+      if (ico) ico.style.transform = '';
+    }
+  });
+
+  // ── ResizeObserver — reajusta en tiempo real ─────────────────
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => fitNavLinks());
+    ro.observe(document.getElementById('spNavbar'));
+  } else {
+    window.addEventListener('resize', fitNavLinks);
+  }
+
+  // ── Init ─────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    syncThemeIcons();
+    loadEmpresaNombre();
+    markActive();
+    // Pequeño delay para que el DOM esté pintado y las medidas sean exactas
+    requestAnimationFrame(() => requestAnimationFrame(fitNavLinks));
+  });
+
+  // En caso de que DOMContentLoaded ya haya pasado
+  if (document.readyState !== 'loading') {
+    syncThemeIcons();
+    loadEmpresaNombre();
+    markActive();
+    requestAnimationFrame(() => requestAnimationFrame(fitNavLinks));
+  }
+})();
 </script>
