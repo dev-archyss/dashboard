@@ -1,395 +1,164 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seguimiento por GPS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <link rel="stylesheet" href="/static/sparking-theme.css">
-    <style>
-        /* Scrollbar oculta para el menú */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        :root {
-            --color-primary: #4F46E5;
-            --azul-pastel: #A7C7E7;
-            --azul-oscuro-suave: #5A9BD4;
-        }
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.3rem 0.6rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border-radius: 9999px; 
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
-        .badge-success { background-color: #D1FAE5; color: #065F46; }
-        .badge-destructive { background-color: #FEE2E2; color: #991B1B; }
-        .badge-warning { background-color: #FEF3C7; color: #92400E; }
-        .badge-info { background-color: #E0F2FE; color: #0C4A6E; }
-        .badge-default { background-color: #F3F4F6; color: #4B5563; }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.6);
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background-color: white;
-            padding: 30px;
-            border-radius: 12px;
-            max-width: 95%;
-            max-height: 90%;
-            width: 800px;
-            overflow-y: auto;
-            position: relative;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #4B5563;
-            background-color: #ADD8E6;
-            color: black;
-            border: none;
-            padding: 5px 10px;
-        }
-        .close-btn:hover {
-            background-color: #87CEEB;
-        }
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPS — CAPTA</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+#map{height:580px;border-radius:var(--r2);overflow:hidden;border:1px solid var(--brd)}
+</style>
 </head>
-<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans leading-normal tracking-normal transition-colors duration-300">
-    <script>tailwind.config = { darkMode: 'class' }</script>
-    {% include 'navbar.html' %}
+<body>
+{% include 'navbar.html' %}
 
-    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
-        <h1 class="text-3xl font-extrabold mb-6 text-center text-gray-800 dark:text-white">Seguimiento por GPS</h1>
-        
-        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-100 dark:border-slate-700">
-            <h2 class="text-2xl font-semibold text-gray-700 dark:text-white mb-4">Filtros</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-                <div class="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg shadow-inner text-center col-span-1">
-                    <p class="text-xl font-bold text-indigo-600" id="totalPromoters">0</p>
-                    <p class="text-sm text-indigo-400 dark:text-indigo-300">Promotores</p>
-                </div>
-                <div class="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg shadow-inner text-center col-span-1">
-                    <p class="text-xl font-bold text-green-600" id="totalRecords">0</p>
-                    <p class="text-sm text-green-400 dark:text-green-300">Visitas Filtradas</p>
-                </div>
-                <div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg shadow-inner text-center col-span-1">
-                    <p class="text-xl font-bold text-blue-600" id="confirmationRate">0%</p>
-                    <p class="text-sm text-blue-400 dark:text-blue-300">Confirmación %</p>
-                </div>
-                <div class="col-span-2 sm:col-span-1">
-                    <label for="dateFrom" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Fecha Desde:</label>
-                    <input type="date" id="dateFrom" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                <div class="col-span-2 sm:col-span-1">
-                    <label for="dateTo" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Fecha Hasta:</label>
-                    <input type="date" id="dateTo" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                <div class="col-span-2 md:col-span-1">
-                    <label for="promoter" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Promotor:</label>
-                    <select id="promoter" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="all">Todos los promotores</option>
-                    </select>
-                </div>
-                <div class="col-span-2 md:col-span-1">
-                    <label for="state" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Estado:</label>
-                    <select id="state" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="all">Todos los estados</option>
-                    </select>
-                </div>
-                <div class="col-span-2 md:col-span-1">
-                    <label for="zone" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Zona:</label>
-                    <select id="zone" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500" disabled>
-                        <option value="all">Todas las zonas</option>
-                    </select>
-                </div>
-                <div class="col-span-2 md:col-span-1">
-                    <label for="confirmation" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Confirmación:</label>
-                    <select id="confirmation" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="all">Todos</option>
-                        <option value="verificado">Confirmados</option>
-                        <option value="no_verificado">No Confirmados</option>
-                        <option value="desconocido">Cliente Desconocido</option>
-                        <option value="sin_coordenadas">Sin Coordenadas</option>
-                        <option value="cliente_sin_coordenadas">Cliente Sin Coordenadas</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex flex-wrap gap-3 justify-end border-t pt-4">
-                <button id="exportCSV" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all w-auto">
-                    <i class="fas fa-file-csv mr-2"></i> Exportar CSV
-                </button>
-            </div>
-        </div>
-        <div class="bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-100 dark:border-slate-700">
-            <h2 class="text-2xl font-semibold text-gray-700 dark:text-white mb-4">Mapa Interactivo de Visitas</h2>
-            <div id="map" style="height: 600px;"></div>
-        </div>
+<main class="sp-page">
+  <div class="sp-page-hdr">
+    <div>
+      <h1 class="sp-page-title">Seguimiento GPS</h1>
+      <p class="sp-page-sub">Mapa de visitas con geolocalización de promotores.</p>
     </div>
+  </div>
 
-    <script>
-        // Validación de sesión
-        const empresaId = localStorage.getItem('empresa_id');
-        if (!empresaId) {
-            alert('Debes iniciar sesión primero.');
-            window.location.href = '/login.html';
-        }
+  <!-- KPIs -->
+  <div class="sp-grid sp-g4 sp-gap4" style="margin-bottom:20px">
+    <div class="sp-card sp-kpi indigo">
+      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-map-marker-alt"></i></div>
+        <div style="text-align:right"><div class="sp-kpi-val" id="totalVisits">—</div><div class="sp-kpi-lbl">Total visitas</div></div></div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:70%;background:var(--accent)"></div></div>
+    </div>
+    <div class="sp-card sp-kpi green">
+      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-check-circle"></i></div>
+        <div style="text-align:right"><div class="sp-kpi-val" id="confirmedVisits">—</div><div class="sp-kpi-lbl">Confirmadas</div></div></div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="confFill" style="width:0%;background:var(--green)"></div></div>
+    </div>
+    <div class="sp-card sp-kpi rose">
+      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-times-circle"></i></div>
+        <div style="text-align:right"><div class="sp-kpi-val" id="unconfirmedVisits">—</div><div class="sp-kpi-lbl">No confirmadas</div></div></div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:0%;background:var(--red)"></div></div>
+    </div>
+    <div class="sp-card sp-kpi amber">
+      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-percentage"></i></div>
+        <div style="text-align:right"><div class="sp-kpi-val" id="confirmationRate">—</div><div class="sp-kpi-lbl">Tasa confirmación</div></div></div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="rateFill" style="width:0%;background:var(--amber)"></div></div>
+    </div>
+  </div>
 
-        let allRecords = []; 
-        let filteredRecords = []; 
-        let promoters = [];
-        let estados = [];
-        let zonas = [];
-        let map;
+  <!-- Filtros -->
+  <div class="sp-card" style="margin-bottom:20px">
+    <p class="sp-sec-title">Filtros</p>
+    <div class="sp-grid sp-g5 sp-gap4" style="margin-bottom:12px">
+      <div><label class="sp-label">Desde</label><input type="date" id="dateFrom" class="sp-input"></div>
+      <div><label class="sp-label">Hasta</label><input type="date" id="dateTo" class="sp-input"></div>
+      <div><label class="sp-label">Promotor</label><select id="promoter" class="sp-select"><option value="all">Todos</option></select></div>
+      <div><label class="sp-label">Estado</label><select id="state" class="sp-select"><option value="all">Todos</option></select></div>
+      <div><label class="sp-label">Confirmación</label>
+        <select id="confirmation" class="sp-select">
+          <option value="all">Todos</option>
+          <option value="verificado">Confirmados</option>
+          <option value="no_verificado">No Confirmados</option>
+          <option value="desconocido">Cliente Desconocido</option>
+          <option value="sin_coordenadas">Sin Coordenadas</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="filterRecords()" class="sp-btn sp-btn-primary"><i class="fas fa-filter"></i> Filtrar</button>
+  </div>
 
-        function getTodayMinus4Hours() {
-            const now = new Date();
-            now.setHours(now.getHours() - 4);
-            return now.toISOString().split('T')[0];
-        }
+  <!-- Mapa -->
+  <div class="sp-card">
+    <p class="sp-sec-title">Mapa interactivo</p>
+    <div id="map"></div>
+  </div>
+</main>
 
-        function getConfirmationBadge(record) {
-            let className = 'badge-default', icon = 'fas fa-question-circle', displayText = record.verified || 'Desconocido';
-            if (record.verified && record.verified.includes('Desconocido')) {
-                className = 'badge-destructive';
-                icon = 'fas fa-search';
-                displayText = 'Cliente Desconocido';
-            } else if (record.visit_coords === null || record.visit_coords === 'N/A') {
-                className = 'badge-info';
-                icon = 'fas fa-exclamation-triangle';
-                displayText = 'Visita sin Coordenadas';
-            } else if (record.client_coords === null || record.client_coords === 'N/A') {
-                className = 'badge-warning';
-                icon = 'fas fa-map-pin';
-                displayText = 'Cliente sin Coordenadas';
-            } else if (record.distance < 150) {
-                className = 'badge-success';
-                icon = 'fas fa-check-circle';
-                displayText = 'Confirmado';
-            } else {
-                className = 'badge-destructive';
-                icon = 'fas fa-times-circle';
-                displayText = 'No Confirmado';
-            }
-            return `<span class="badge ${className}"><i class="${icon} mr-1"></i> ${displayText}</span>`;
-        }
+<script>
+const empresaId=localStorage.getItem('empresa_id');
+if(!empresaId)window.location.href='/';
+let allRecords=[],filteredRecords=[],promoters=[],estados=[],zonas=[],map=null;
 
-        function isConfirmed(record) {
-            const hasVisitCoords = record.visit_coords !== null && record.visit_coords !== 'N/A';
-            const hasClientCoords = record.client_coords !== null && record.client_coords !== 'N/A';
-            return hasVisitCoords && hasClientCoords && record.distance < 150;
-        }
+function getTodayMinus4Hours(){const d=new Date(Date.now()-4*3600000);return d.toISOString().split('T')[0];}
 
-        function updateZoneFilter() {
-            const stateSelect = document.getElementById('state');
-            const zoneSelect = document.getElementById('zone');
-            const selectedStateId = stateSelect.value;
-            zoneSelect.innerHTML = '<option value="all">Todas las zonas</option>';
-            if (selectedStateId === 'all') { 
-                zoneSelect.disabled = true; 
-                filterRecords();
-                return; 
-            }
-            zoneSelect.disabled = false;
-            const zonesInState = zonas.filter(z => String(z.estado_id) === String(selectedStateId));
-            zonesInState.forEach(z => {
-                const option = document.createElement('option');
-                option.value = z.nombre; 
-                option.textContent = z.nombre;
-                zoneSelect.appendChild(option);
-            });
-            filterRecords(); 
-        }
+async function fetchRecordsFromAPI(filters){
+  const p=new URLSearchParams();
+  if(filters.dateFrom)p.append('date_from',filters.dateFrom);
+  if(filters.dateTo)p.append('date_to',filters.dateTo);
+  if(filters.promoterId&&filters.promoterId!=='all')p.append('promoter_id',filters.promoterId);
+  p.append('empresa_id',empresaId);
+  try{
+    const r=await fetch(`/api/records?${p.toString()}`);const d=await r.json();
+    promoters=d.promoters||[];estados=d.estados||[];zonas=d.zonas||[];
+    return d.records||[];
+  }catch(e){console.error(e);return[];}
+}
 
-        async function fetchRecordsFromAPI(filters) {
-            const params = new URLSearchParams();
-            if (filters.dateFrom) params.append('date_from', filters.dateFrom);
-            if (filters.dateTo) params.append('date_to', filters.dateTo);
-            if (filters.promoterId !== 'all') params.append('promoter_id', filters.promoterId);
-            params.append('empresa_id', empresaId); // ← FILTRO POR EMPRESA
+function isConfirmed(r){return r.verified==='Confirmado';}
 
-            try {
-                const response = await fetch(`/api/records?${params.toString()}`);
-                const serverData = await response.json();
-                promoters = serverData.promoters || [];
-                estados = serverData.estados || [];
-                zonas = serverData.zonas || [];
-                document.getElementById('totalPromoters').textContent = serverData.total_promoters_in_db || 0;
-                return serverData.records || [];
-            } catch (error) {
-                console.error('Error fetching records:', error);
-                return [];
-            }
-        }
+function updateStats(){
+  const total=filteredRecords.length;const conf=filteredRecords.filter(isConfirmed).length;
+  const rate=total?(conf/total*100):0;
+  document.getElementById('totalVisits').textContent=total;
+  document.getElementById('confirmedVisits').textContent=conf;
+  document.getElementById('unconfirmedVisits').textContent=total-conf;
+  document.getElementById('confirmationRate').textContent=rate.toFixed(1)+'%';
+  document.getElementById('confFill').style.width=Math.min(100,rate)+'%';
+  document.getElementById('rateFill').style.width=Math.min(100,rate)+'%';
+}
 
-        async function filterRecords() {
-            const dateFromValue = document.getElementById('dateFrom').value;
-            const dateToValue = document.getElementById('dateTo').value;
-            const promoterName = document.getElementById('promoter').value;
-            const stateName = document.getElementById('state').options[document.getElementById('state').selectedIndex].text;
-            const zoneName = document.getElementById('zone').options[document.getElementById('zone').selectedIndex].text;
-            const confirmationValue = document.getElementById('confirmation').value;
+function updateMap(){
+  if(!map){
+    map=L.map('map').setView([10.5,-66.9],6);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);
+  }else{
+    map.eachLayer(l=>{if(l instanceof L.Marker||l instanceof L.CircleMarker)map.removeLayer(l);});
+  }
+  let bounds=L.latLngBounds([]);
+  filteredRecords.forEach(r=>{
+    if(r.latitude&&r.longitude){
+      const lat=parseFloat(r.latitude),lng=parseFloat(r.longitude);
+      if(!isNaN(lat)&&!isNaN(lng)){
+        const color=isConfirmed(r)?'#10b981':'#f43f5e';
+        const icon=L.divIcon({className:'',html:`<div style="background:${color};width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,.4)"></div>`,iconSize:[12,12],iconAnchor:[6,6]});
+        L.marker([lat,lng],{icon}).addTo(map).bindPopup(`<b>${r.promoter_name||'—'}</b><br>${r.trade||'—'}<br><small>${new Date(r.created_at).toLocaleString('es-MX')}</small><br><span style="color:${color}">${r.verified||'—'}</span>`);
+        bounds.extend([lat,lng]);
+      }
+    }
+  });
+  if(bounds.isValid())map.fitBounds(bounds,{padding:[50,50]});else map.setView([10.5,-66.9],6);
+}
 
-            const promoter = promoters.find(p => p.promoter_name === promoterName);
-            const promoterId = (promoterName === 'all' || !promoter) ? 'all' : promoter.promoter_id; 
+function populateSelects(){
+  const pSel=document.getElementById('promoter');pSel.innerHTML='<option value="all">Todos</option>';
+  [...new Set(promoters.map(p=>p.promoter_name))].sort().forEach(n=>pSel.innerHTML+=`<option value="${n}">${n}</option>`);
+  const sSel=document.getElementById('state');sSel.innerHTML='<option value="all">Todos</option>';
+  [...new Map(estados.map(e=>[e.id,e])).values()].sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(e=>sSel.innerHTML+=`<option value="${e.nombre}">${e.nombre}</option>`);
+}
 
-            const apiFilters = { dateFrom: dateFromValue, dateTo: dateToValue, promoterId };
-            allRecords = await fetchRecordsFromAPI(apiFilters);
+async function filterRecords(){
+  const df=document.getElementById('dateFrom').value,dt=document.getElementById('dateTo').value;
+  const prom=document.getElementById('promoter').value,conf=document.getElementById('confirmation').value;
+  const stateNm=document.getElementById('state').options[document.getElementById('state').selectedIndex].text;
+  allRecords=await fetchRecordsFromAPI({dateFrom:df,dateTo:dt,promoterId:prom});
+  populateSelects();
+  filteredRecords=allRecords.filter(r=>{
+    if(stateNm!=='Todos'&&r.state!==stateNm)return false;
+    if(conf==='verificado'&&!isConfirmed(r))return false;
+    if(conf==='no_verificado'&&(isConfirmed(r)||r.client_coords==='N/A'))return false;
+    if(conf==='desconocido'&&r.client_coords!=='N/A')return false;
+    if(conf==='sin_coordenadas'&&r.latitude)return false;
+    return true;
+  });
+  updateStats();updateMap();
+}
 
-            filteredRecords = allRecords.filter(record => {
-                const isPromoterMatch = promoterName === 'all' || record.promoter_name === promoterName;
-                const isStateMatch = stateName === 'Todos los estados' || record.state === stateName;
-                const isZoneMatch = zoneName === 'Todas las zonas' || record.zone === zoneName;
+async function init(){
+  const today=getTodayMinus4Hours();
+  document.getElementById('dateFrom').value=today;document.getElementById('dateTo').value=today;
+  await filterRecords();
+  document.querySelectorAll('#dateFrom,#dateTo,#promoter,#state,#confirmation').forEach(el=>el.addEventListener('change',filterRecords));
+}
 
-                let isConfirmationMatch = true;
-                if (confirmationValue !== 'all') {
-                    const hasVisitCoords = record.visit_coords !== null && record.visit_coords !== 'N/A';
-                    const hasClientCoords = record.client_coords !== null && record.client_coords !== 'N/A';
-                    if (confirmationValue === 'verificado' && (!hasVisitCoords || !hasClientCoords || record.distance >= 150)) {
-                        isConfirmationMatch = false;
-                    } else if (confirmationValue === 'no_verificado' && (hasVisitCoords && hasClientCoords && record.distance < 150)) {
-                        isConfirmationMatch = false;
-                    } else if (confirmationValue === 'desconocido' && (!record.verified || !record.verified.includes('Desconocido'))) {
-                        isConfirmationMatch = false;
-                    } else if (confirmationValue === 'cliente_sin_coordenadas' && hasClientCoords) {
-                        isConfirmationMatch = false;
-                    } else if (confirmationValue === 'sin_coordenadas' && hasVisitCoords) {
-                        isConfirmationMatch = false;
-                    }
-                }
-                return isPromoterMatch && isStateMatch && isZoneMatch && isConfirmationMatch;
-            });
-
-            updateMetrics();
-            updateConfirmationRate();
-            updateMap();
-        }
-
-        function updateMetrics() { 
-            document.getElementById('totalRecords').textContent = filteredRecords.length; 
-        }
-
-        function updateConfirmationRate() {
-            const totalVisits = filteredRecords.length;
-            const confirmedVisits = filteredRecords.filter(record => isConfirmed(record)).length;
-            const confirmationRate = totalVisits > 0 ? (confirmedVisits / totalVisits) * 100 : 0;
-            document.getElementById('confirmationRate').textContent = `${confirmationRate.toFixed(1)}%`;
-        }
-
-        function updateMap() {
-            if (!map) {
-                map = L.map('map').setView([10.5, -66.9], 6); // Centro aproximado de Venezuela
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                }).addTo(map);
-            } else {
-                map.eachLayer(layer => {
-                    if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
-                        map.removeLayer(layer);
-                    }
-                });
-            }
-
-            let bounds = L.latLngBounds([]);
-            filteredRecords.forEach(record => {
-                if (record.latitude && record.longitude) {
-                    const lat = parseFloat(record.latitude);
-                    const lng = parseFloat(record.longitude);
-                    if (!isNaN(lat) && !isNaN(lng)) {
-                        const markerColor = isConfirmed(record) ? 'green' : 'red';
-                        const icon = L.divIcon({
-                            className: 'custom-div-icon',
-                            html: `<div style="background-color:${markerColor};width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>`,
-                            iconSize: [12, 12],
-                            iconAnchor: [6, 6]
-                        });
-                        const marker = L.marker([lat, lng], { icon }).addTo(map);
-                        const popupContent = `
-                            <b>Promotor:</b> ${record.promoter_name}<br>
-                            <b>Comercio:</b> ${record.trade || 'N/A'}<br>
-                            <b>Fecha:</b> ${new Date(record.created_at).toLocaleString('es-ES')}<br>
-                            <b>Confirmación:</b> ${record.verified || 'N/A'}
-                        `;
-                        marker.bindPopup(popupContent);
-                        bounds.extend([lat, lng]);
-                    }
-                }
-            });
-
-            if (bounds.isValid() && filteredRecords.length > 0) {
-                map.fitBounds(bounds, { padding: [50, 50] });
-            } else {
-                map.setView([10.5, -66.9], 6);
-            }
-        }
-
-        function populateSelects() {
-            const promoterSelect = document.getElementById('promoter');
-            promoterSelect.innerHTML = '<option value="all">Todos los promotores</option>';
-            const uniquePromoterNames = [...new Set(promoters.map(p => p.promoter_name))].sort();
-            uniquePromoterNames.forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                promoterSelect.appendChild(option);
-            });
-
-            const stateSelect = document.getElementById('state');
-            stateSelect.innerHTML = '<option value="all">Todos los estados</option>';
-            const uniqueEstados = [...new Map(estados.map(item => [item['id'], item])).values()];
-            uniqueEstados.sort((a, b) => a.nombre.localeCompare(b.nombre));
-            uniqueEstados.forEach(estado => {
-                const option = document.createElement('option');
-                option.value = estado.id; 
-                option.textContent = estado.nombre; 
-                stateSelect.appendChild(option);
-            });
-
-            updateZoneFilter();
-        }
-
-        async function init() {
-            const today = getTodayMinus4Hours();
-            document.getElementById('dateFrom').value = today;
-            document.getElementById('dateTo').value = today;
-
-            const initialFilters = { dateFrom: today, dateTo: today, promoterId: 'all' };
-            allRecords = await fetchRecordsFromAPI(initialFilters);
-
-            populateSelects();
-
-            // Eventos
-            document.querySelectorAll('#dateFrom, #dateTo').forEach(el => el.addEventListener('change', filterRecords));
-            document.getElementById('promoter').addEventListener('change', filterRecords);
-            document.getElementById('state').addEventListener('change', updateZoneFilter);
-            document.getElementById('zone').addEventListener('change', filterRecords);
-            document.getElementById('confirmation').addEventListener('change', filterRecords);
-            document.getElementById('exportCSV').addEventListener('click', () => alert('Exportar CSV pendiente'));
-
-            filterRecords();
-        }
-
-        init();
-    </script>
+document.addEventListener('DOMContentLoaded',init);
+</script>
 </body>
 </html>

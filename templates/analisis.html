@@ -1,849 +1,277 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Análisis de Precios – Captura de Precios (Admin)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/dist/umd/supabase.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="/static/sparking-theme.css">
-  <style>
-    :root {
-      --pastel-pink: #FDECEF;
-      --pastel-indigo: #EEF2FF;
-      --pastel-green: #F3FDF0;
-      --accent-1: #6D28D9;
-      --accent-2: #7C3AED;
-      --muted: #6B7280;
-    }
-    html, body, #root { width: 100%; }
-    body {
-      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-    .card {
-      border-radius: 1rem;
-      box-shadow: 0 8px 30px rgba(15,23,42,0.06);
-    }
-    /* Dark mode override for card handled via Tailwind classes */
-    .dark .card {
-      background: #1e293b; /* slate-800 */
-      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
-    }
-    .btn-primary {
-      background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
-      color: white; padding: 0.5rem 1rem; border-radius: .75rem;
-    }
-    .btn-ghost {
-      background: transparent; border: 1px solid rgba(15,23,42,0.06);
-      padding: .45rem .9rem; border-radius: .75rem;
-    }
-    .input {
-      border: 1px solid #e6e9ef; padding: .65rem .8rem; border-radius: .75rem;
-    }
-    .input:focus { outline: none; box-shadow: 0 0 0 6px rgba(99,102,241,0.08); border-color: #6366F1; }
-    .dark .input { background-color: #334155; border-color: #475569; color: white; }
-    .price-badge {
-      display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600;
-    }
-    .price-usd { background-color: #dbeafe; color: #1d4ed8; }
-    .price-bs { background-color: #fef3c7; color: #92400e; }
-    .price-cop { background-color: #dcfce7; color: #166534; }
-    .price-comp { background-color: #fde68a; color: #92400e; }
-    .presentation-item {
-      cursor: pointer;
-      padding: 0.25rem 0.5rem;
-      border-radius: 0.5rem;
-      border: 1px solid #e6e9ef;
-      transition: background-color 0.2s;
-    }
-    .presentation-item:hover {
-      background-color: #f3f4f6;
-    }
-    .dark .presentation-item:hover {
-      background-color: #334155;
-    }
-    .presentation-item.selected {
-      background-color: #6366F1;
-      color: white;
-      border-color: #6366F1;
-    }
-    #comercioDropdown {
-      display: none;
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      z-index: 10;
-      background: white;
-      border: 1px solid #e6e9ef;
-      border-radius: .75rem;
-      max-height: 200px;
-      overflow-y: auto;
-      box-shadow: 0 8px 30px rgba(15,23,42,0.06);
-    }
-    .dark #comercioDropdown {
-      background: #1e293b;
-      border-color: #334155;
-    }
-    .comercio-option {
-      padding: 0.5rem;
-      cursor: pointer;
-    }
-    .comercio-option:hover {
-      background-color: #f3f4f6;
-    }
-    .dark .comercio-option:hover {
-      background-color: #334155;
-    }
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis de Precios — CAPTA</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+.presentation-item{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:600;cursor:pointer;border:1px solid var(--brd);background:var(--inp);color:var(--txt2);transition:all .12s;margin:2px}
+.presentation-item:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.presentation-item.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
+</style>
 </head>
-<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-  <script>tailwind.config = { darkMode: 'class' }</script>
-  {% include 'navbar.html' %}
-  <div class="mx-auto p-4 sm:p-6" id="root">
-    <header class="flex items-center justify-between mb-6">
+<body>
+{% include 'navbar.html' %}
+
+<main class="sp-page">
+  <div class="sp-page-hdr">
+    <div>
+      <h1 class="sp-page-title">Análisis de Precios</h1>
+      <p class="sp-page-sub">Comparativa de precios nuestros vs competencia (USD/kg).</p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="sp-card" style="margin-bottom:20px">
+    <p class="sp-sec-title">Filtros</p>
+    <div class="sp-grid sp-g3 sp-gap4" style="margin-bottom:12px">
+      <div><label class="sp-label">Desde</label><input type="date" id="fDesde" class="sp-input"></div>
+      <div><label class="sp-label">Hasta</label><input type="date" id="fHasta" class="sp-input"></div>
+      <div><label class="sp-label">Estado</label><select id="fEstado" class="sp-select"><option value="">Todos</option></select></div>
+      <div><label class="sp-label">Zona</label><select id="fZona" class="sp-select"><option value="">Todas</option></select></div>
+      <div><label class="sp-label">Promotor</label><select id="fPromotor" class="sp-select"><option value="">Todos</option></select></div>
+      <div><label class="sp-label">Tipo comercio</label>
+        <select id="fTipoComercio" class="sp-select"><option>Todos</option><option>Detal</option><option>Mayorista</option></select>
+      </div>
+      <div><label class="sp-label">Nuestra presentación</label>
+        <select id="fNuestraPres" class="sp-select"><option value="">Todas</option></select>
+      </div>
       <div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-white">Análisis de Precios Competitivos</h1>
-        <p class="text-slate-500 dark:text-slate-400 text-sm">Comparación de precios normalizados en USD · Por estado, zona y presentación</p>
+        <label class="sp-label">Comercio (búsqueda)</label>
+        <input type="text" id="fComercioSearch" class="sp-input" placeholder="Escribe para buscar…" oninput="buscarComercio(this.value)">
+        <div id="comercioDropdown" style="display:none;position:absolute;z-index:200;background:var(--card);border:1px solid var(--brd);border-radius:var(--r2);box-shadow:var(--sh3);max-height:180px;overflow-y:auto;min-width:220px"></div>
+        <input type="hidden" id="fComercioSelected">
       </div>
-      <div class="flex gap-2">
-        <button id="btnExportAnalisis" class="btn-primary shadow-lg shadow-indigo-500/30">Exportar CSV</button>
+    </div>
+    <!-- Presentaciones competencia -->
+    <div style="margin-bottom:12px">
+      <label class="sp-label">Presentaciones competencia</label>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px;border:1px solid var(--brd);border-radius:var(--r1);background:var(--inp);min-height:38px;cursor:pointer" onclick="toggleCompPresList()" id="selectedCompPres">
+        <span style="font-size:.72rem;color:var(--muted)">Haz clic para seleccionar</span>
       </div>
-    </header>
-   
-    <section class="card p-4 mb-6 bg-white dark:bg-slate-800">
-      <h2 class="text-lg font-bold text-slate-800 dark:text-white mb-4">Filtros</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Desde</label>
-          <input id="fDesde" type="date" class="input" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Hasta</label>
-          <input id="fHasta" type="date" class="input" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Estado</label>
-          <select id="fEstado" class="input">
-            <option value="">Todos</option>
-          </select>
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Zona</label>
-          <select id="fZona" class="input">
-            <option value="">Todas</option>
-          </select>
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Promotor</label>
-          <select id="fPromotor" class="input">
-            <option value="">Todos</option>
-          </select>
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Comercio</label>
-          <div class="relative">
-            <input id="searchComercio" type="text" placeholder="Elegir comercio..." class="input w-full" />
-            <div id="comercioDropdown" class="hidden">
-              <div id="comercioOptions" class="flex flex-col"></div>
-            </div>
-          </div>
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Nuestra Pres.</label>
-          <select id="fNuestraPres" class="input">
-            <option value="">Todas</option>
-          </select>
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Tipo de Comercio</label>
-          <select id="fTipoComercio" class="input">
-            <option value="Detal" selected>Detal</option>
-            <option value="Mayorista">Mayorista</option>
-            <option value="Todos">Todos</option>
-          </select>
-        </div>
-        <div class="flex flex-col gap-1 lg:col-span-2">
-          <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Presentación Competencia</label>
-          <div class="relative">
-            <div id="selectedCompPres" class="flex flex-wrap gap-2 p-2 border border-dashed rounded-md min-h-[40px] border-slate-300 bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
-              <span class="text-xs text-slate-400 self-center">Haz clic para seleccionar</span>
-            </div>
-            <div id="compPresList" class="hidden absolute top-full left-0 right-0 z-10 card p-3 mt-1 shadow-lg max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border dark:border-slate-600">
-              <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Selecciona presentaciones:</span>
-              <input id="searchCompPres" type="text" placeholder="Buscar..."
-                     class="input mt-2 w-full text-sm" />
-              <div id="compPresItems" class="flex flex-wrap gap-2 mt-2"></div>
-            </div>
-          </div>
-        </div>
+      <div id="compPresList" style="display:none;position:absolute;z-index:200;background:var(--card);border:1px solid var(--brd);border-radius:var(--r2);box-shadow:var(--sh3);padding:10px;max-width:500px;max-height:250px;overflow-y:auto">
+        <input type="text" id="searchCompPres" class="sp-input sp-input-sm" placeholder="Filtrar presentaciones…" style="margin-bottom:8px">
+        <div id="compPresItems" style="display:flex;flex-wrap:wrap;gap:4px"></div>
       </div>
-      <div class="flex gap-2 mt-4">
-        <button id="btnFiltrar" class="btn-primary shadow-md">Aplicar filtros</button>
-        <button id="btnLimpiar" class="btn-ghost dark:text-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">Limpiar</button>
-      </div>
-    </section>
-    <section class="card p-4 mb-6 bg-white dark:bg-slate-800">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold text-slate-800 dark:text-white">Comparativa de Precios (USD/kg)</h3>
-        <select id="chartType" class="input text-sm dark:bg-slate-700 dark:border-slate-600">
-          <option value="bar">Gráfico de Barras</option>
-          <option value="line">Gráfico de Líneas (Tendencia)</option>
-        </select>
-      </div>
-      <canvas id="chartComparativa" height="200"></canvas>
-    </section>
-    <section class="card p-4 bg-white dark:bg-slate-800">
-      <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4">Detalle de Comparación</h3>
-      <div class="overflow-x-auto">
-        <table class="min-w-full text-sm text-slate-700 dark:text-slate-300">
-          <thead>
-            <tr class="border-b dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 text-slate-700 dark:text-slate-200">
-              <th class="text-left p-3">Fecha</th>
-              <th class="text-left p-3">Estado</th>
-              <th class="text-left p-3">Zona</th>
-              <th class="text-left p-3">Comercio</th>
-              <th class="text-left p-3">Tipo</th>
-              <th class="text-left p-3">Nuestra Pres.</th>
-              <th class="text-left p-3">Precio Nuestro <small>(/kg)</small></th>
-              <th class="text-left p-3">Competencia Pres.</th>
-              <th class="text-left p-3">Precio Comp. <small>(/kg)</small></th>
-              <th class="text-left p-3">Diferencia %</th>
-            </tr>
-          </thead>
-          <tbody id="tbodyAnalisis" class="divide-y dark:divide-slate-700"></tbody>
-        </table>
-      </div>
-      <div class="mt-4 text-sm text-slate-500 dark:text-slate-400" id="analisisInfo">—</div>
-    </section>
-    <script>
-      const { createClient } = supabase;
-      const supabaseClient = createClient(
-          'https://djjylikkocemrlsjxscr.supabase.co',
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M'
-      );
-      const empresaId = localStorage.getItem('empresa_id');
-      const empresaNombre = localStorage.getItem('empresa_nombre') || 'Desconocida';
-      if (!empresaId) {
-          alert('Debes iniciar sesión primero.');
-          window.location.href = 'login.html';
-      }
-      const $ = id => document.getElementById(id);
-      const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('es-ES') : '—';
-      const fmtDateShort = iso => iso ? new Date(iso).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : '—';
-      const colores = ['#6366F1', '#F59E0B', '#10B981', '#EF4444', '#3B82F6', '#8B5CF6'];
-      const selectedCompPres = new Set();
-      let selectedComercio = '';
-     
-      let tasasCache = [];
-      let todasPresentaciones = { nuestras: new Set(), competencia: new Set() };
-      let estadosData = [];
-      let zonasData = [];
-      let analisisData = [];
-      document.addEventListener('DOMContentLoaded', () => {
-        const hoy = new Date();
-        $('fDesde').value = hoy.toISOString().slice(0, 10);
-        $('fHasta').value = hoy.toISOString().slice(0, 10);
-        $('fTipoComercio').value = 'Detal';
-        loadCatalogs();
-      });
-      let debounceTimeout;
-      $('searchComercio').addEventListener('input', (e) => {
-        clearTimeout(debounceTimeout);
-        debounceTimeout = setTimeout(() => {
-          if (e.target.value === '') {
-            selectedComercio = '';
-            fetchDataAnalisis();
-          }
-          loadComercios(e.target.value);
-          $('comercioDropdown').style.display = 'block';
-        }, 300);
-      });
-      $('searchComercio').addEventListener('focus', () => {
-        loadComercios($('searchComercio').value);
-        $('comercioDropdown').style.display = 'block';
-      });
-      document.addEventListener('click', (e) => {
-        const comercioInput = $('searchComercio');
-        const comercioDropdown = $('comercioDropdown');
-        if (!comercioInput.contains(e.target) && !comercioDropdown.contains(e.target)) {
-          comercioDropdown.style.display = 'none';
-        }
-      });
-      $('comercioOptions').addEventListener('click', (e) => {
-        if (e.target.classList.contains('comercio-option')) {
-          const selectedValue = e.target.textContent;
-          selectedComercio = selectedValue === 'Todos' ? '' : selectedValue;
-          $('searchComercio').value = selectedValue === 'Todos' ? '' : selectedValue;
-          $('comercioDropdown').style.display = 'none';
-          fetchDataAnalisis();
-        }
-      });
-      async function loadComercios(searchTerm = '') {
-        try {
-          let query = supabaseClient
-            .from('web_precios')
-            .select('trade, created_at')
-            .eq('empresa_id', empresaId)
-            .not('trade', 'is', null)
-            .order('created_at', { ascending: false })
-            .limit(20);
-          if (searchTerm) {
-            query = query.ilike('trade', `%${searchTerm}%`);
-          }
-          const { data, error } = await query;
-          if (error) {
-            console.error('Error loading comercios:', error);
-            return;
-          }
-          const tradeMap = new Map();
-          data.forEach(row => {
-            if (row.trade && !tradeMap.has(row.trade)) {
-              tradeMap.set(row.trade, row.created_at);
-            }
-          });
-          const sortedTrades = Array.from(tradeMap.entries())
-            .sort((a, b) => new Date(b[1]) - new Date(a[1]))
-            .map(entry => entry[0]);
-          const comercioOptions = $('comercioOptions');
-          comercioOptions.innerHTML = ['Todos', ...sortedTrades]
-            .map(c => `<div class="comercio-option">${c}</div>`)
-            .join('');
-          if (sortedTrades.length > 0 || !searchTerm) {
-            $('comercioDropdown').style.display = 'block';
-          } else {
-            $('comercioDropdown').style.display = 'none';
-          }
-        } catch (error) {
-          console.error('Error in loadComercios:', error);
-        }
-      }
-      $('compPresList').addEventListener('click', (e) => {
-        if (e.target.classList.contains('presentation-item')) {
-          const pres = e.target.textContent;
-          if (selectedCompPres.has(pres)) {
-            selectedCompPres.delete(pres);
-          } else {
-            selectedCompPres.add(pres);
-          }
-          renderSelectedCompPres();
-          fetchDataAnalisis();
-        }
-      });
-      $('selectedCompPres').addEventListener('click', () => {
-        const compPresList = $('compPresList');
-        compPresList.classList.toggle('hidden');
-        if (!compPresList.classList.contains('hidden')) {
-          renderCompPresList();
-        }
-      });
-      document.addEventListener('click', (e) => {
-        const compPresList = $('compPresList');
-        const selectedCompPresDiv = $('selectedCompPres');
-        if (!compPresList.classList.contains('hidden') && !selectedCompPresDiv.contains(e.target)) {
-          compPresList.classList.add('hidden');
-        }
-      });
-      function renderCompPresList(filtro = '') {
-        const itemsContainer = $('compPresItems');
-        itemsContainer.innerHTML = '';
-        const lista = [...todasPresentaciones.competencia]
-          .sort()
-          .filter(pres => pres.toLowerCase().includes(filtro.toLowerCase()));
-        lista.forEach(pres => {
-          const item = document.createElement('div');
-          item.className = `presentation-item ${selectedCompPres.has(pres) ? 'selected' : ''}`;
-          item.textContent = pres;
-          itemsContainer.appendChild(item);
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="btnFiltrar" onclick="fetchDataAnalisis()" class="sp-btn sp-btn-primary"><i class="fas fa-filter"></i> Aplicar filtros</button>
+      <button id="btnLimpiar" onclick="limpiarFiltros()" class="sp-btn sp-btn-sec"><i class="fas fa-undo"></i> Limpiar</button>
+    </div>
+  </div>
+
+  <!-- Gráfico -->
+  <div class="sp-card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <p class="sp-sec-title" style="margin-bottom:0">Comparativa de Precios (USD/kg)</p>
+      <select id="chartType" class="sp-select" style="width:auto" onchange="drawChart()">
+        <option value="bar">Barras</option>
+        <option value="line">Línea (Tendencia)</option>
+      </select>
+    </div>
+    <canvas id="chartComparativa" height="160"></canvas>
+  </div>
+
+  <!-- Tabla detalle -->
+  <div class="sp-tbl-wrap">
+    <div style="overflow-x:auto;max-height:65vh">
+      <table class="sp-tbl">
+        <thead><tr>
+          <th>Fecha</th><th>Estado</th><th>Zona</th><th>Comercio</th><th>Tipo</th>
+          <th>Ntra. Pres.</th><th>Precio Nuestro (/kg)</th>
+          <th>Comp. Pres.</th><th>Precio Comp. (/kg)</th><th>Diferencia %</th>
+        </tr></thead>
+        <tbody id="tbodyAnalisis">
+          <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted)">Aplica los filtros para ver datos</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:10px 14px;border-top:1px solid var(--brd)">
+      <p style="font-size:.75rem;color:var(--muted)" id="analisisInfo">—</p>
+    </div>
+  </div>
+</main>
+
+<script>
+const{createClient}=supabase;
+const supabaseClient=createClient('https://djjylikkocemrlsjxscr.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M');
+const empresaId=localStorage.getItem('empresa_id');
+const empresaNombre=localStorage.getItem('empresa_nombre')||'—';
+if(!empresaId)window.location.href='/';
+const $=id=>document.getElementById(id);
+
+let tasasCache=[],analisisData=[],todasPresentaciones={nuestras:new Set(),competencia:new Set()};
+let selectedCompPres=new Set(),selectedComercio='';
+let estadosData=[],zonasData=[],chartInst=null,comercioTimer=null;
+
+/* TASAS */
+async function cargarTasas(){
+  try{const{data}=await supabaseClient.from('web_tasa').select('fecha,tasa_bs_usd,tasa_cop_usd').order('fecha',{ascending:false});tasasCache=data||[];}
+  catch(e){console.error(e);}
+}
+function obtenerTasa(fechaStr){
+  if(!tasasCache.length)return{tasa_bs_usd:36.5,tasa_cop_usd:4200};
+  const fecha=new Date(fechaStr);const sorted=[...tasasCache].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  return sorted.find(t=>new Date(t.fecha)<=fecha)||sorted[0]||{tasa_bs_usd:36.5,tasa_cop_usd:4200};
+}
+function normalizarMoneda(m){
+  if(!m)return'USD';const raw=String(m).trim().toUpperCase();
+  const map={BS:'Bs','B$':'Bs','BS.':'Bs',VES:'Bs',VEF:'Bs',COP:'COP',COL:'COP',USD:'USD','US$':'USD'};
+  return map[raw]||(/^COP$/i.test(raw)?'COP':/^BS/i.test(raw)?'Bs':/^USD$/i.test(raw)?'USD':raw);
+}
+function convertirAPrecioUSD(precio,moneda,fecha){
+  if(!precio)return null;
+  const aNum=v=>{let s=String(v).replace(/[A-Za-z$€¥£₽]|COP|COL|VES|VEF|Bs\.?|B\$|US\$|USD/gi,'').replace(/\s/g,'').replace(/\./g,'').replace(',','.');return parseFloat(s)||NaN;};
+  const n=aNum(precio);if(isNaN(n))return null;
+  const mn=normalizarMoneda(moneda);const t=obtenerTasa(fecha);
+  if(mn==='USD')return n;if(mn==='Bs')return n/parseFloat(t.tasa_bs_usd||1);if(mn==='COP')return n/parseFloat(t.tasa_cop_usd||1);
+  return n;
+}
+function normalizarPesoEnKg(p){
+  if(!p)return null;const l=p.toLowerCase();
+  const mg=l.match(/(\d+\.?\d*)\s*g(r)?\b/);if(mg)return parseFloat(mg[1])/1000;
+  const mk=l.match(/(\d+\.?\d*)\s*k(g)?\b/);if(mk)return parseFloat(mk[1]);
+  const mn=l.match(/(\d+\.?\d*)/);if(mn&&parseFloat(mn[1])>100)return parseFloat(mn[1])/1000;
+  return null;
+}
+
+/* CATÁLOGOS */
+async function loadCatalogs(){
+  try{
+    const{data:estados}=await supabaseClient.from('web_estados').select('id,nombre').order('nombre');
+    estadosData=estados||[];
+    $('fEstado').innerHTML='<option value="">Todos</option>'+estadosData.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join('');
+    const{data:promos}=await supabaseClient.from('web_promotores').select('promoter_name').eq('empresa_id',empresaId).order('promoter_name');
+    $('fPromotor').innerHTML='<option value="">Todos</option>'+(promos||[]).map(p=>`<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
+    const{data:zonas}=await supabaseClient.from('web_zonas').select('id,nombre,estado_id').order('nombre');
+    zonasData=zonas||[];
+    await cargarPresentaciones();
+    $('fEstado').addEventListener('change',()=>{
+      const eid=estadosData.find(e=>e.nombre===$('fEstado').value)?.id;
+      $('fZona').innerHTML='<option value="">Todas</option>';
+      if(eid)(zonasData.filter(z=>z.estado_id===eid)||[]).forEach(z=>$('fZona').innerHTML+=`<option value="${z.nombre}">${z.nombre}</option>`);
+    });
+    fetchDataAnalisis();
+  }catch(e){console.error(e);}
+}
+
+async function cargarPresentaciones(){
+  try{
+    const{data}=await supabaseClient.from('web_precios').select('myitems,competitoritems').eq('empresa_id',empresaId);
+    todasPresentaciones={nuestras:new Set(),competencia:new Set()};
+    (data||[]).forEach(row=>{
+      let mi=Array.isArray(row.myitems)?row.myitems:(typeof row.myitems==='string'?JSON.parse(row.myitems):[]);
+      let ci=Array.isArray(row.competitoritems)?row.competitoritems:(typeof row.competitoritems==='string'?JSON.parse(row.competitoritems):[]);
+      mi.forEach(i=>i?.presentation&&todasPresentaciones.nuestras.add(i.presentation));
+      ci.forEach(i=>i?.presentation&&todasPresentaciones.competencia.add(i.presentation));
+    });
+    $('fNuestraPres').innerHTML='<option value="">Todas</option>'+[...todasPresentaciones.nuestras].sort().map(p=>`<option value="${p}">${p}</option>`).join('');
+    renderCompPresList();
+  }catch(e){console.error(e);}
+}
+
+function renderCompPresList(filter=''){
+  const items=$('compPresItems');items.innerHTML='';
+  const list=[...todasPresentaciones.competencia].sort().filter(p=>!filter||p.toLowerCase().includes(filter.toLowerCase()));
+  list.forEach(pres=>{
+    const el=document.createElement('span');el.className='presentation-item'+(selectedCompPres.has(pres)?' selected':'');
+    el.textContent=pres;el.onclick=()=>{selectedCompPres.has(pres)?selectedCompPres.delete(pres):selectedCompPres.add(pres);renderCompPresList(filter);renderSelectedCompPres();};
+    items.appendChild(el);
+  });
+}
+function renderSelectedCompPres(){
+  const c=$('selectedCompPres');
+  if(!selectedCompPres.size){c.innerHTML='<span style="font-size:.72rem;color:var(--muted)">Haz clic para seleccionar</span>';return;}
+  c.innerHTML=[...selectedCompPres].map(p=>`<span class="presentation-item selected">${p}</span>`).join('');
+}
+function toggleCompPresList(){
+  const l=$('compPresList');l.style.display=l.style.display==='none'?'block':'none';
+  if(l.style.display==='block')renderCompPresList();
+}
+document.addEventListener('click',e=>{const l=$('compPresList');if(l&&!l.contains(e.target)&&e.target.id!=='selectedCompPres'&&!$('selectedCompPres').contains(e.target))l.style.display='none';});
+document.addEventListener('input',e=>{if(e.target.id==='searchCompPres')renderCompPresList(e.target.value);});
+
+function buscarComercio(term){
+  clearTimeout(comercioTimer);const dd=$('comercioDropdown');
+  if(!term.trim()){dd.style.display='none';selectedComercio='';return;}
+  comercioTimer=setTimeout(async()=>{
+    const{data}=await supabaseClient.from('web_precios').select('trade').eq('empresa_id',empresaId).ilike('trade',`%${term}%`).limit(20);
+    const trades=[...new Set((data||[]).map(r=>r.trade).filter(Boolean))].sort();
+    if(!trades.length){dd.style.display='none';return;}
+    dd.innerHTML=trades.map(t=>`<div style="padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--brd)" onmousedown="selecComercio('${t.replace(/'/g,"\\'")}','${t.replace(/'/g,"\\'")}') ">${t}</div>`).join('');
+    dd.style.display='block';
+  },300);
+}
+function selecComercio(trade,display){selectedComercio=trade;$('fComercioSearch').value=display;$('comercioDropdown').style.display='none';}
+
+async function fetchDataAnalisis(){
+  const btn=$('btnFiltrar');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Cargando…';
+  try{
+    await cargarTasas();
+    const desde=$('fDesde').value,hasta=$('fHasta').value,est=$('fEstado').value,zona=$('fZona').value,prom=$('fPromotor').value,nuestraPres=$('fNuestraPres').value,tipoComercio=$('fTipoComercio').value;
+    let q=supabaseClient.from('web_precios').select('*').eq('empresa_id',empresaId);
+    if(desde)q=q.gte('created_at',new Date(desde).toISOString());
+    if(hasta){const to=new Date(hasta);to.setDate(to.getDate()+1);q=q.lt('created_at',to.toISOString());}
+    if(est)q=q.eq('state',est);if(zona)q=q.eq('zone',zona);if(prom)q=q.eq('promoter_name',prom);
+    if(selectedComercio)q=q.eq('trade',selectedComercio);
+    if(tipoComercio!=='Todos')q=q.eq('p_mayorista',tipoComercio==='Detal'?'No':'Si');
+    const{data,error}=await q.order('created_at',{ascending:false});if(error)throw error;
+    const filas=[];
+    (data||[]).forEach(row=>{
+      let mi=Array.isArray(row.myitems)?row.myitems:(typeof row.myitems==='string'?JSON.parse(row.myitems):[]);
+      let ci=Array.isArray(row.competitoritems)?row.competitoritems:(typeof row.competitoritems==='string'?JSON.parse(row.competitoritems):[]);
+      mi.forEach(m=>{
+        if(nuestraPres&&m.presentation!==nuestraPres)return;
+        const nUSD=convertirAPrecioUSD(m.price,m.currency,row.created_at);const nKg=normalizarPesoEnKg(m.presentation);const nPKg=nUSD&&nKg?nUSD/nKg:null;
+        ci.forEach(c=>{
+          if(selectedCompPres.size>0&&!selectedCompPres.has(c.presentation))return;
+          const cUSD=convertirAPrecioUSD(c.price,c.currency,row.created_at);const cKg=normalizarPesoEnKg(c.presentation);const cPKg=cUSD&&cKg?cUSD/cKg:null;
+          if(nPKg&&cPKg)filas.push({...row,nuestraPresentacion:m.presentation,nuestroPrecioPorKg:nPKg,nuestroPrecioOriginal:m.price,monedaOriginal:m.currency,competencia:c.presentation,compPrecioPorKg:cPKg,compPrecioOriginal:c.price,monedaComp:c.currency,fecha:row.created_at,diferenciaPorcentaje:((nPKg-cPKg)/nPKg)*100,p_mayorista:row.p_mayorista});
         });
-      }
-      function renderSelectedCompPres() {
-        const selectedContainer = $('selectedCompPres');
-        if (selectedCompPres.size === 0) {
-          selectedContainer.innerHTML = `<span class="text-xs text-slate-400 self-center">Haz clic para seleccionar</span>`;
-        } else {
-          selectedContainer.innerHTML = '';
-          selectedCompPres.forEach(pres => {
-            const badge = document.createElement('div');
-            badge.className = `presentation-item selected`;
-            badge.textContent = pres;
-            selectedContainer.appendChild(badge);
-          });
-        }
-        const compPresList = $('compPresList');
-        if (!compPresList.classList.contains('hidden')) {
-          renderCompPresList();
-        }
-      }
-      document.addEventListener('input', (e) => {
-        if (e.target.id === 'searchCompPres') {
-          renderCompPresList(e.target.value);
-        }
       });
-      async function cargarTasas() {
-        try {
-          const { data, error } = await supabaseClient
-            .from('web_tasa')
-            .select('fecha, tasa_bs_usd, tasa_cop_usd')
-            .order('fecha', { ascending: false });
-         
-          if (error) {
-            console.error('Error cargando tasas:', error);
-            return [];
-          }
-         
-          tasasCache = data || [];
-          return tasasCache;
-        } catch (err) {
-          console.error('Error en cargarTasas:', err);
-          return [];
-        }
-      }
-      function obtenerTasa(fechaStr) {
-        if (!tasasCache.length) {
-          return { tasa_bs_usd: 36.5, tasa_cop_usd: 4200 };
-        }
-       
-        const fecha = new Date(fechaStr);
-        const tasasOrdenadas = [...tasasCache].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-        const tasa = tasasOrdenadas.find(t => new Date(t.fecha) <= fecha);
-       
-        return tasa || tasasOrdenadas[0] || { tasa_bs_usd: 36.5, tasa_cop_usd: 4200 };
-      }
-      function normalizarMoneda(monedas) {
-        if (!monedas) return 'USD';
-        const raw = String(monedas).trim().toUpperCase();
-        const map = {
-          'BS': 'Bs', 'B$': 'Bs', 'BS.': 'Bs', 'VES': 'Bs', 'VEF': 'Bs', 'VEB': 'Bs', 'BSS': 'Bs', 'BSF': 'Bs', 'BOLIVAR': 'Bs', 'BOLÍVAR': 'Bs',
-          'COP': 'COP', 'COL': 'COP', 'COP$': 'COP', 'COL$': 'COP', 'COLOMBIA': 'COP', 'PESO': 'COP', 'PESOS': 'COP',
-          'USD': 'USD', 'US$': 'USD', '$USD': 'USD', 'DOLAR': 'USD', 'DÓLAR': 'USD'
-        };
-        return map[raw] || (/^COP$/i.test(raw) ? 'COP' : /^BS/i.test(raw) ? 'Bs' : /^USD$/i.test(raw) ? 'USD' : raw);
-      }
-      function convertirAPrecioUSD(precio, moneda, fecha) {
-        if (!precio) return null;
-        const aNumero = (val) => {
-          let s = String(val).replace(/[A-Za-z$€¥£₽]|COP|COL|VES|VEF|Bs\.?|B\$|US\$|USD/gi, '').replace(/\s/g, '');
-          s = s.replace(/\./g, '').replace(',', '.');
-          return parseFloat(s) || NaN;
-        };
-        const precioNum = aNumero(precio);
-        if (isNaN(precioNum)) return null;
-        const monedaNormalizada = normalizarMoneda(moneda);
-        const tasa = obtenerTasa(fecha);
-        if (monedaNormalizada === 'USD') return precioNum;
-        if (monedaNormalizada === 'Bs') return precioNum / parseFloat(tasa.tasa_bs_usd || 1);
-        if (monedaNormalizada === 'COP') return precioNum / parseFloat(tasa.tasa_cop_usd || 1);
-        return precioNum;
-      }
-      function normalizarPesoEnKg(presentacion) {
-        if (!presentacion) return null;
-        const lower = presentacion.toLowerCase();
-        const matchG = lower.match(/(\d+\.?\d*)\s*g(r)?\b/);
-        if (matchG) return parseFloat(matchG[1]) / 1000;
-        const matchK = lower.match(/(\d+\.?\d*)\s*k(g)?\b/);
-        if (matchK) return parseFloat(matchK[1]);
-        const matchNum = lower.match(/(\d+\.?\d*)/);
-        if (matchNum && parseFloat(matchNum[1]) > 100) return parseFloat(matchNum[1]) / 1000;
-        return null;
-      }
-      async function loadCatalogs() {
-        try {
-          const { data: estados } = await supabaseClient.from('web_estados').select('id, nombre').order('nombre');
-          estadosData = estados || [];
-          $('fEstado').innerHTML = '<option value="">Todos</option>' + estadosData.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
-          const { data: promotores } = await supabaseClient.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId).order('promoter_name');
-          $('fPromotor').innerHTML = '<option value="">Todos</option>' + (promotores || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
-          const { data: zonas } = await supabaseClient.from('web_zonas').select('id, nombre, estado_id').order('nombre');
-          zonasData = zonas || [];
-          await loadComercios();
-          await cargarPresentaciones();
-          fetchDataAnalisis();
-          $('fEstado').addEventListener('change', () => {
-            const estadoSel = $('fEstado').value;
-            $('fZona').innerHTML = '<option value="">Todas</option>';
-            if (estadoSel) {
-              const estadoId = estadosData.find(e => e.nombre === estadoSel)?.id;
-              if (estadoId) {
-                const zonasEstado = zonasData.filter(z => z.estado_id === estadoId);
-                $('fZona').innerHTML = '<option value="">Todas</option>' + zonasEstado.map(z => `<option value="${z.nombre}">${z.nombre}</option>`).join('');
-              }
-            }
-          });
-        } catch (error) {
-          console.error('Error en loadCatalogs:', error);
-        }
-      }
-      async function cargarPresentaciones() {
-        try {
-          const { data: precios, error } = await supabaseClient.from('web_precios').select('myitems, competitoritems').eq('empresa_id', empresaId);
-          if (error) throw error;
-          todasPresentaciones = { nuestras: new Set(), competencia: new Set() };
-          (precios || []).forEach(row => {
-            let myitems = Array.isArray(row.myitems) ? row.myitems : (typeof row.myitems === 'string' ? JSON.parse(row.myitems) : []);
-            let competitoritems = Array.isArray(row.competitoritems) ? row.competitoritems : (typeof row.competitoritems === 'string' ? JSON.parse(row.competitoritems) : []);
-            myitems.forEach(item => item?.presentation && todasPresentaciones.nuestras.add(item.presentation));
-            competitoritems.forEach(item => item?.presentation && todasPresentaciones.competencia.add(item.presentation));
-          });
-          $('fNuestraPres').innerHTML = '<option value="">Todas</option>' + [...todasPresentaciones.nuestras].sort().map(p => `<option value="${p}">${p}</option>`).join('');
-          renderCompPresList();
-        } catch (error) {
-          console.error('Error en cargarPresentaciones:', error);
-        }
-      }
-      async function fetchDataAnalisis() {
-        try {
-          await cargarTasas();
-          const desde = $('fDesde').value;
-          const hasta = $('fHasta').value;
-          const est = $('fEstado').value;
-          const zona = $('fZona').value;
-          const prom = $('fPromotor').value;
-          const nuestraPres = $('fNuestraPres').value;
-          const tipoComercio = $('fTipoComercio').value;
-          let query = supabaseClient.from('web_precios').select('*').eq('empresa_id', empresaId);
-         
-          if (desde) query = query.gte('created_at', new Date(desde).toISOString());
-          if (hasta) {
-            const to = new Date(hasta);
-            to.setDate(to.getDate() + 1);
-            query = query.lt('created_at', to.toISOString());
-          }
-          if (est) query = query.eq('state', est);
-          if (zona) query = query.eq('zone', zona);
-          if (prom) query = query.eq('promoter_name', prom);
-          if (selectedComercio) query = query.eq('trade', selectedComercio);
-          if (tipoComercio !== 'Todos') query = query.eq('p_mayorista', tipoComercio === 'Detal' ? 'No' : 'Si');
-          const { data, error } = await query.order('created_at', { ascending: false });
-          if (error) throw error;
-          const filasAnalisis = [];
-          (data || []).forEach(row => {
-            let myitems = Array.isArray(row.myitems) ? row.myitems : (typeof row.myitems === 'string' ? JSON.parse(row.myitems) : []);
-            let competitoritems = Array.isArray(row.competitoritems) ? row.competitoritems : (typeof row.competitoritems === 'string' ? JSON.parse(row.competitoritems) : []);
-            myitems.forEach(mi => {
-              if (nuestraPres && mi.presentation !== nuestraPres) return;
-             
-              const nuestroPrecioUSD = convertirAPrecioUSD(mi.price, mi.currency, row.created_at);
-              const nuestroPesoKg = normalizarPesoEnKg(mi.presentation);
-              const nuestroPrecioPorKg = (nuestroPrecioUSD && nuestroPesoKg) ? (nuestroPrecioUSD / nuestroPesoKg) : null;
-              competitoritems.forEach(ci => {
-                if (selectedCompPres.size > 0 && !selectedCompPres.has(ci.presentation)) return;
-                const compPrecioUSD = convertirAPrecioUSD(ci.price, ci.currency, row.created_at);
-                const compPesoKg = normalizarPesoEnKg(ci.presentation);
-                const compPrecioPorKg = (compPrecioUSD && compPesoKg) ? (compPrecioUSD / compPesoKg) : null;
-                if (nuestroPrecioPorKg !== null && compPrecioPorKg !== null) {
-                  const diferenciaPorcentaje = ((nuestroPrecioPorKg - compPrecioPorKg) / nuestroPrecioPorKg) * 100;
-                 
-                  filasAnalisis.push({
-                    ...row,
-                    nuestraPresentacion: mi.presentation,
-                    nuestroPrecioPorKg,
-                    nuestroPesoKg,
-                    nuestroPrecioOriginal: mi.price,
-                    monedaOriginal: mi.currency,
-                    competencia: ci.presentation,
-                    compPrecioPorKg,
-                    compPesoKg,
-                    compPrecioOriginal: ci.price,
-                    monedaComp: ci.currency,
-                    fecha: row.created_at,
-                    diferenciaPorcentaje,
-                    p_mayorista: row.p_mayorista
-                  });
-                }
-              });
-            });
-          });
-          analisisData = filasAnalisis;
-          renderAnalisis(analisisData);
-          drawChart();
-        
-        } catch (error) {
-          console.error('Error en fetchDataAnalisis:', error);
-          alert('Error procesando datos: ' + error.message);
-        }
-      }
-      function renderAnalisis(filas) {
-        const tbody = $('tbodyAnalisis');
-        tbody.innerHTML = filas.map(f => {
-          const diferenciaTexto = f.diferenciaPorcentaje > 0 ? '+' : '';
-          const tipoComercio = f.p_mayorista === 'Si' ? 'Mayorista' : 'Detal';
-         
-          return `
-          <tr>
-            <td class="p-3 whitespace-nowrap">${fmtDate(f.fecha)}</td>
-            <td class="p-3">${f.state || '—'}</td>
-            <td class="p-3">${f.zone || '—'}</td>
-            <td class="p-3">${f.trade || '—'}</td>
-            <td class="p-3">${tipoComercio}</td>
-            <td class="p-3 font-medium">${f.nuestraPresentacion || '—'}</td>
-            <td class="p-3">
-              <div class="flex flex-col gap-1">
-                <span class="price-badge price-usd dark:bg-blue-900/40 dark:text-blue-200">$${f.nuestroPrecioPorKg?.toFixed(2) || '—'}</span>
-                <div class="text-xs text-slate-500">
-                  ${f.nuestroPesoKg !== null ? `${f.nuestroPesoKg} kg · ` : ''}
-                  ${f.monedaOriginal ? `${normalizarMoneda(f.monedaOriginal)} ${f.nuestroPrecioOriginal}` : ''}
-                </div>
-              </div>
-            </td>
-            <td class="p-3">${f.competencia || '—'}</td>
-            <td class="p-3">
-              <div class="flex flex-col gap-1">
-                <span class="price-badge price-comp dark:bg-amber-900/40 dark:text-amber-200">$${f.compPrecioPorKg?.toFixed(2) || '—'}</span>
-                <div class="text-xs text-slate-500">
-                  ${f.compPesoKg !== null ? `${f.compPesoKg} kg · ` : ''}
-                  ${f.monedaComp ? `${normalizarMoneda(f.monedaComp)} ${f.compPrecioOriginal}` : ''}
-                </div>
-              </div>
-            </td>
-            <td class="p-3 text-black dark:text-white">
-              <span class="font-semibold">
-                ${diferenciaTexto}${f.diferenciaPorcentaje.toFixed(1)}%
-              </span>
-            </td>
-          </tr>
-        `;
-        }).join('');
-        $('analisisInfo').textContent = `Mostrando ${filas.length} registros de comparación`;
-      }
-      function drawChart() {
-        const chartType = $('chartType').value;
-        const data = analisisData;
-        const ctx = document.getElementById('chartComparativa');
-        if (window.analisisChart) {
-          window.analisisChart.destroy();
-        }
-        if (data.length === 0) {
-          window.analisisChart = new Chart(ctx, {
-            type: 'bar',
-            data: { labels: [], datasets: [] },
-            options: {
-              responsive: true,
-              plugins: {
-                title: { display: true, text: 'Sin datos para mostrar' }
-              }
-            }
-          });
-          return;
-        }
-        if (chartType === 'bar') {
-          drawBarChart(ctx, data);
-        } else if (chartType === 'line') {
-          drawLineChart(ctx, data);
-        }
-      }
-      function drawBarChart(ctx, filas) {
-        const grupos = {};
-        filas.forEach(f => {
-          const key = `${f.nuestraPresentacion} vs ${f.competencia}`;
-          if (!grupos[key]) {
-            grupos[key] = {
-              nuestrosPreciosPorKg: [],
-              compPreciosPorKg: [],
-              nombre: key
-            };
-          }
-          grupos[key].nuestrosPreciosPorKg.push(f.nuestroPrecioPorKg);
-          grupos[key].compPreciosPorKg.push(f.compPrecioPorKg);
-        });
-        const labels = Object.keys(grupos);
-        const nuestrosPromedios = labels.map(label => {
-          const precios = grupos[label].nuestrosPreciosPorKg;
-          return precios.reduce((a, b) => a + b, 0) / precios.length;
-        });
-        const compPromedios = labels.map(label => {
-          const precios = grupos[label].compPreciosPorKg;
-          return precios.reduce((a, b) => a + b, 0) / precios.length;
-        });
-        window.analisisChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels,
-            datasets: [
-              {
-                label: 'Nuestro Precio Promedio (USD/kg)',
-                data: nuestrosPromedios,
-                backgroundColor: '#6366F1',
-                borderColor: '#4F46E5',
-                borderWidth: 1
-              },
-              {
-                label: 'Competencia Precio Promedio (USD/kg)',
-                data: compPromedios,
-                backgroundColor: '#F59E0B',
-                borderColor: '#D97706',
-                borderWidth: 1
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: { position: 'top' },
-              title: { display: true, text: 'Comparativa de Precios Promedio por Kilogramo' }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                title: { display: true, text: 'Precio (USD/kg)' },
-                ticks: {
-                  callback: function(value) {
-                    return '$' + value.toFixed(2);
-                  }
-                }
-              }
-            }
-          }
-        });
-      }
-      function drawLineChart(ctx, filas) {
-        const nuestraPresentacion = $('fNuestraPres').value;
-        const dataPorFecha = {};
-        filas.forEach(f => {
-          const fecha = f.fecha.split('T')[0];
-          if (!dataPorFecha[fecha]) {
-            dataPorFecha[fecha] = {};
-          }
-          if (!dataPorFecha[fecha][f.nuestraPresentacion]) {
-            dataPorFecha[fecha][f.nuestraPresentacion] = [];
-          }
-          if (!dataPorFecha[fecha][f.competencia]) {
-            dataPorFecha[fecha][f.competencia] = [];
-          }
-          dataPorFecha[fecha][f.nuestraPresentacion].push(f.nuestroPrecioPorKg);
-          dataPorFecha[fecha][f.competencia].push(f.compPrecioPorKg);
-        });
-        const fechasOrdenadas = Object.keys(dataPorFecha).sort();
-        const labels = fechasOrdenadas.map(fecha => fmtDateShort(fecha));
-        const datasets = [];
-        const nuestroDatos = fechasOrdenadas.map(fecha => {
-          const precios = dataPorFecha[fecha][nuestraPresentacion] || [];
-          return precios.length > 0 ? precios.reduce((a, b) => a + b) / precios.length : null;
-        });
-        datasets.push({
-          label: `Nuestro - ${nuestraPresentacion}`,
-          data: nuestroDatos,
-          borderColor: '#6366F1',
-          backgroundColor: '#6366F1',
-          fill: false,
-          tension: 0.1,
-          pointRadius: 5,
-          pointHoverRadius: 7
-        });
-       
-        let colorIndex = 0;
-        selectedCompPres.forEach(pres => {
-          colorIndex = (colorIndex + 1) % colores.length;
-          const compDatos = fechasOrdenadas.map(fecha => {
-            const precios = dataPorFecha[fecha][pres] || [];
-            return precios.length > 0 ? precios.reduce((a, b) => a + b) / precios.length : null;
-          });
-          datasets.push({
-            label: `Competencia - ${pres}`,
-            data: compDatos,
-            borderColor: colores[colorIndex],
-            backgroundColor: colores[colorIndex],
-            fill: false,
-            tension: 0.1,
-            borderDash: [5, 5]
-          });
-        });
-        window.analisisChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels,
-            datasets
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: { position: 'top' },
-              title: { display: true, text: `Tendencia de Precios por Kilogramo para ${nuestraPresentacion}` }
-            },
-            scales: {
-              y: {
-                beginAtZero: false,
-                title: { display: true, text: 'Precio (USD/kg)' },
-                ticks: {
-                  callback: function(value) {
-                    return '$' + value.toFixed(2);
-                  }
-                }
-              },
-              x: {
-                title: { display: true, text: 'Fecha' }
-              }
-            }
-          }
-        });
-      }
-      $('btnFiltrar').addEventListener('click', fetchDataAnalisis);
-      $('chartType').addEventListener('change', drawChart);
-     
-      $('btnLimpiar').addEventListener('click', () => {
-        const hoy = new Date();
-        $('fHasta').value = hoy.toISOString().slice(0, 10);
-        $('fDesde').value = hoy.toISOString().slice(0, 10);
-        $('fEstado').value = '';
-        $('fZona').innerHTML = '<option value="">Todas</option>';
-        $('fZona').value = '';
-        $('fPromotor').value = '';
-        $('searchComercio').value = '';
-        selectedComercio = '';
-        $('fNuestraPres').value = '';
-        $('fTipoComercio').value = 'Detal';
-        selectedCompPres.clear();
-        renderSelectedCompPres();
-        loadComercios();
-       
-        fetchDataAnalisis();
-      });
-      $('btnExportAnalisis').addEventListener('click', () => {
-        const headers = ['Fecha', 'Estado', 'Zona', 'Comercio', 'Tipo', 'Nuestra Presentación', 'Nuestro Peso (kg)', 'Nuestro Precio ($/kg)', 'Competencia Presentación', 'Competencia Peso (kg)', 'Precio Competencia ($/kg)', 'Diferencia (%)'];
-        const filasData = Array.from($('tbodyAnalisis').querySelectorAll('tr')).map(tr => {
-          const tds = tr.querySelectorAll('td');
-          const fecha = tds[0]?.textContent.trim() || '';
-          const estado = tds[1]?.textContent.trim() || '';
-          const zona = tds[2]?.textContent.trim() || '';
-          const comercio = tds[3]?.textContent.trim() || '';
-          const tipo = tds[4]?.textContent.trim() || '';
-          const nuestraPres = tds[5]?.textContent.trim() || '';
-          const nuestroPrecioKg = tds[6]?.querySelector('.price-badge')?.textContent.trim() || '';
-          const nuestroPesoKg = tds[6]?.querySelector('.text-xs')?.textContent.trim().split('·')[0]?.trim() || '';
-          const compPres = tds[7]?.textContent.trim() || '';
-          const compPrecioKg = tds[8]?.querySelector('.price-badge')?.textContent.trim() || '';
-          const compPesoKg = tds[8]?.querySelector('.text-xs')?.textContent.trim().split('·')[0]?.trim() || '';
-          const diferencia = tds[9]?.textContent.trim() || '';
-          return [
-            `"${fecha}"`,
-            `"${estado}"`,
-            `"${zona}"`,
-            `"${comercio}"`,
-            `"${tipo}"`,
-            `"${nuestraPres}"`,
-            `"${nuestroPesoKg}"`,
-            `"${nuestroPrecioKg}"`,
-            `"${compPres}"`,
-            `"${compPesoKg}"`,
-            `"${compPrecioKg}"`,
-            `"${diferencia}"`
-          ].join(',');
-        });
-       
-        const csv = [headers.join(','), ...filasData].join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `analisis_precios_${new Date().toISOString().slice(0, 10)}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-      });
-    </script>
+    });
+    analisisData=filas;renderAnalisis(filas);drawChart();
+  }catch(e){console.error(e);captaToast('Error: '+e.message,'error');}
+  finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-filter"></i> Aplicar filtros';}
+}
+
+function renderAnalisis(filas){
+  const tbody=$('tbodyAnalisis');
+  $('analisisInfo').textContent=`${filas.length} comparaciones encontradas`;
+  if(!filas.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted)">Sin datos con los filtros actuales</td></tr>';return;}
+  const fmt=n=>n!=null?`$${n.toFixed(2)}`:'—';const fmtD=d=>{const s=d>0?'+':'';const c=d>0?'var(--red)':d<0?'var(--green)':'var(--muted)';return`<span style="color:${c};font-weight:700">${s}${d.toFixed(1)}%</span>`;};
+  const fmtDt=s=>new Date(s).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'});
+  tbody.innerHTML=filas.map(f=>`<tr>
+    <td>${fmtDt(f.fecha)}</td><td>${f.state||'—'}</td><td>${f.zone||'—'}</td><td>${f.trade||'—'}</td>
+    <td>${f.p_mayorista==='Si'?'<span class="sp-bdg sp-bdg-accent">Mayor</span>':'<span class="sp-bdg sp-bdg-def">Detal</span>'}</td>
+    <td class="sp-hi">${f.nuestraPresentacion}</td><td style="color:var(--accent);font-weight:600">${fmt(f.nuestroPrecioPorKg)}</td>
+    <td class="sp-hi">${f.competencia}</td><td>${fmt(f.compPrecioPorKg)}</td>
+    <td>${fmtD(f.diferenciaPorcentaje)}</td>
+  </tr>`).join('');
+}
+
+function drawChart(){
+  const type=$('chartType').value;const dark=document.documentElement.classList.contains('dark');
+  const agrupado={};analisisData.forEach(f=>{const k=f.nuestraPresentacion;if(!agrupado[k])agrupado[k]={n:[],c:[]};agrupado[k].n.push(f.nuestroPrecioPorKg);agrupado[k].c.push(f.compPrecioPorKg);});
+  const labels=Object.keys(agrupado);
+  const avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
+  const datasets=[{label:'Nuestro precio',data:labels.map(k=>avg(agrupado[k].n)),backgroundColor:'rgba(79,70,229,.8)',borderColor:'#4f46e5',borderWidth:2},{label:'Competencia',data:labels.map(k=>avg(agrupado[k].c)),backgroundColor:'rgba(244,63,94,.7)',borderColor:'#f43f5e',borderWidth:2}];
+  const tc=dark?'#94a3b8':'#4b5563';const gc=dark?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';
+  const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:tc,font:{size:11}}}},scales:{x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:10},callback:v=>`$${v.toFixed(2)}`},grid:{color:gc}}}};
+  if(chartInst)chartInst.destroy();
+  chartInst=new Chart($('chartComparativa').getContext('2d'),{type,data:{labels,datasets},options:opts});
+}
+
+function limpiarFiltros(){
+  ['fDesde','fHasta','fComercioSearch'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  ['fEstado','fZona','fPromotor','fNuestraPres','fTipoComercio'].forEach(id=>{const el=$(id);if(el)el.value=el.options[0]?.value||'';});
+  selectedCompPres.clear();selectedComercio='';renderSelectedCompPres();
+}
+
+function setDefaultDates(){const t=new Date(),s=new Date(t);s.setDate(t.getDate()-30);$('fDesde').value=s.toISOString().split('T')[0];$('fHasta').value=t.toISOString().split('T')[0];}
+
+document.addEventListener('DOMContentLoaded',()=>{setDefaultDates();loadCatalogs();});
+</script>
 </body>
 </html>

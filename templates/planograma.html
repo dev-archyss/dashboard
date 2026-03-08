@@ -1,130 +1,77 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Planograma - {{ empresa_nombre }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="/static/sparking-theme.css">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planograma — CAPTA</title>
 </head>
-<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
-    <script>tailwind.config = { darkMode: 'class' }</script>
-    {% include 'navbar.html' %}
+<body>
+{% include 'navbar.html' %}
 
-    <div class="container mx-auto p-6 max-w-4xl">
-        <h1 class="text-3xl font-bold text-indigo-700 dark:text-indigo-400 mb-6">
-            Gestión de Planograma - {{ empresa_nombre }}
-        </h1>
-
-        <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-8 border border-gray-200 dark:border-slate-700">
-            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Subir / Actualizar Planograma</h2>
-            
-            <form id="uploadForm" enctype="multipart/form-data" class="space-y-4">
-                <div>
-                    <label class="block text-gray-700 dark:text-gray-300 font-medium mb-2">
-                        Selecciona imagen (JPG/PNG)
-                    </label>
-                    <input type="file" 
-                           id="planogramaFile" 
-                           accept="image/jpeg,image/png" 
-                           class="w-full p-2 border dark:border-slate-600 dark:bg-slate-700 rounded">
-                </div>
-
-                <button type="submit" 
-                        id="uploadBtn"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded font-medium transition">
-                    Subir Planograma
-                </button>
-            </form>
-
-            <div id="uploadMessage" class="mt-4 text-sm"></div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 border border-gray-200 dark:border-slate-700">
-            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Planograma Actual</h2>
-            
-            <div id="planogramaContainer" class="text-center">
-                <p class="text-gray-500">Cargando...</p>
-            </div>
-        </div>
+<main class="sp-page" style="max-width:860px">
+  <div class="sp-page-hdr">
+    <div>
+      <h1 class="sp-page-title">Planograma</h1>
+      <p class="sp-page-sub">{{ empresa_nombre }}</p>
     </div>
+  </div>
 
-    <script>
-        // Cargar planograma actual al iniciar
-        async function loadPlanograma() {
-            try {
-                const response = await fetch('/api/planograma');
-                const data = await response.json();
+  <!-- Upload -->
+  <div class="sp-card" style="margin-bottom:20px">
+    <p class="sp-sec-title">Subir / Actualizar Planograma</p>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <div style="margin-bottom:12px">
+        <label class="sp-label">Imagen (JPG/PNG)</label>
+        <input type="file" id="planogramaFile" accept="image/jpeg,image/png" class="sp-input" style="padding:6px">
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button type="submit" id="uploadBtn" class="sp-btn sp-btn-primary"><i class="fas fa-upload"></i> Subir Planograma</button>
+        <span id="uploadMessage" style="font-size:.83rem"></span>
+      </div>
+    </form>
+  </div>
 
-                const container = document.getElementById('planogramaContainer');
+  <!-- Visualización -->
+  <div class="sp-card">
+    <p class="sp-sec-title">Planograma actual</p>
+    <div id="planogramaContainer" style="text-align:center;padding:24px">
+      <div class="sp-skel" style="height:300px;border-radius:var(--r2)"></div>
+    </div>
+  </div>
+</main>
 
-                if (!data.success) {
-                    container.innerHTML = `<p class="text-red-600">${data.error}</p>`;
-                    return;
-                }
+<script>
+async function loadPlanograma(){
+  try{
+    const r=await fetch('/api/planograma');
+    const d=await r.json();
+    const c=document.getElementById('planogramaContainer');
+    if(d.url){
+      c.innerHTML=`<img src="${d.url}" alt="Planograma" style="max-width:100%;border-radius:var(--r2);box-shadow:var(--sh2);cursor:zoom-in" onclick="captaLightbox('${d.url}')">
+        <p style="font-size:.72rem;color:var(--muted);margin-top:8px"><i class="fas fa-clock"></i> Actualizado: ${d.updated_at?new Date(d.updated_at).toLocaleString('es-MX'):'—'}</p>`;
+    }else{
+      c.innerHTML=`<div style="padding:60px 0;color:var(--muted)"><i class="fas fa-image" style="font-size:3rem;display:block;margin-bottom:12px;opacity:.3"></i><p>Sin planograma cargado</p></div>`;
+    }
+  }catch(e){document.getElementById('planogramaContainer').innerHTML='<p style="color:var(--red);text-align:center">Error al cargar</p>';}
+}
 
-                if (!data.has_planograma) {
-                    container.innerHTML = '<p class="text-gray-600">No hay planograma cargado aún.</p>';
-                    return;
-                }
+document.getElementById('uploadForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const fileInput=document.getElementById('planogramaFile');
+  if(!fileInput.files.length){captaToast('Selecciona una imagen primero','warn');return;}
+  const btn=document.getElementById('uploadBtn');
+  const msg=document.getElementById('uploadMessage');
+  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Subiendo...';msg.textContent='';
+  try{
+    const formData=new FormData();formData.append('file',fileInput.files[0]);
+    const r=await fetch('/api/planograma/upload',{method:'POST',body:formData});
+    const d=await r.json();
+    if(d.success){msg.innerHTML='<span style="color:var(--green)"><i class="fas fa-check"></i> Subido correctamente</span>';loadPlanograma();fileInput.value='';}
+    else{msg.innerHTML=`<span style="color:var(--red)">${d.error}</span>`;}
+  }catch(err){msg.innerHTML='<span style="color:var(--red)">Error al subir</span>';}
+  finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-upload"></i> Subir Planograma';}
+});
 
-                container.innerHTML = `
-                    <img src="${data.url}" 
-                         alt="Planograma actual" 
-                         class="max-w-full max-h-[70vh] mx-auto object-contain rounded shadow">
-                `;
-            } catch (error) {
-                document.getElementById('planogramaContainer').innerHTML = 
-                    '<p class="text-red-600">Error al cargar el planograma</p>';
-            }
-        }
-
-        // Subir nuevo planograma
-        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const fileInput = document.getElementById('planogramaFile');
-            if (!fileInput.files.length) {
-                alert('Selecciona una imagen primero');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            const btn = document.getElementById('uploadBtn');
-            const message = document.getElementById('uploadMessage');
-            
-            btn.disabled = true;
-            btn.textContent = 'Subiendo...';
-            message.textContent = '';
-
-            try {
-                const response = await fetch('/api/planograma/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    message.innerHTML = '<span class="text-green-600">Planograma subido correctamente</span>';
-                    loadPlanograma(); // recargar imagen
-                    fileInput.value = ''; // limpiar input
-                } else {
-                    message.innerHTML = `<span class="text-red-600">${data.error}</span>`;
-                }
-            } catch (error) {
-                message.innerHTML = '<span class="text-red-600">Error al subir el archivo</span>';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Subir Planograma';
-            }
-        });
-
-        // Cargar al iniciar
-        window.onload = loadPlanograma;
-    </script>
+document.addEventListener('DOMContentLoaded',()=>loadPlanograma());
+</script>
 </body>
 </html>

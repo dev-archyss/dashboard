@@ -1,288 +1,186 @@
-<!-- ═══════════════════════════════════════════════════════════
-     SPARKING NAVBAR  —  Auto-ajuste inteligente, dark/light toggle
-     ═══════════════════════════════════════════════════════════ -->
-
+{# CAPTA — navbar.html universal v2  ({% include 'navbar.html' %}) #}
 <script>
-  /* Tema — se ejecuta antes del render para evitar flash */
-  (function(){
-    const saved = localStorage.getItem('sp-theme');
-    const sys   = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (saved === 'dark' || (!saved && sys)) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  })();
+(function(){var t=localStorage.getItem('sp-theme'),s=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||((!t)&&s))document.documentElement.classList.add('dark');})();
 </script>
 
-<nav class="sp-navbar" id="spNavbar">
-  <div class="sp-navbar-inner">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='sparking-theme.css') }}">
 
-    <!-- ── Logo ── -->
+<nav class="sp-nav" id="mainNav">
+  <div class="sp-nav-inner">
     <a href="/dashboard" class="sp-logo">
-      <div class="sp-logo-icon">
-        <i class="fas fa-bolt"></i>
-      </div>
-      <div class="sp-logo-text" id="logoText">
-        <div class="sp-logo-name">Sparking</div>
-        <div class="sp-logo-company" id="navEmpresaNombre">—</div>
-      </div>
+      <div class="sp-logo-icon"><i class="fas fa-bolt"></i></div>
+      <div><div class="sp-logo-name">CAPTA</div><div class="sp-logo-co" id="navEmpresa">—</div></div>
     </a>
-
-    <!-- ── Links (desktop — auto-fit) ── -->
-    <nav class="sp-nav-links" id="navLinks" aria-label="Navegación principal">
-      <!-- Los links visibles se calculan dinámicamente -->
-      <a href="/dashboard"  class="sp-nav-link" data-nav><i class="fas fa-home"></i> Dashboard</a>
-      <a href="/analisis"   class="sp-nav-link" data-nav><i class="fas fa-chart-pie"></i> Análisis</a>
-      <a href="/clientes"   class="sp-nav-link" data-nav><i class="fas fa-store"></i> Clientes</a>
-      <a href="/promotores" class="sp-nav-link" data-nav><i class="fas fa-user-tie"></i> Promotores</a>
-      <span class="sp-nav-divider" data-nav-divider></span>
-      <a href="/lineas"     class="sp-nav-link" data-nav><i class="fas fa-layer-group"></i> Líneas</a>
-      <a href="/productos"  class="sp-nav-link" data-nav><i class="fas fa-box-open"></i> Productos</a>
-      <a href="/competencia"class="sp-nav-link" data-nav><i class="fas fa-tag"></i> Competencia</a>
-      <a href="/stock"      class="sp-nav-link" data-nav><i class="fas fa-boxes"></i> Stock</a>
-      <a href="/planograma" class="sp-nav-link" data-nav><i class="fas fa-image"></i> Planograma</a>
-      <a href="/gps"        class="sp-nav-link" data-nav><i class="fas fa-map-marked-alt"></i> GPS</a>
-      <a href="/caras"      class="sp-nav-link" data-nav><i class="fas fa-eye"></i> Caras</a>
-    </nav>
-
-    <!-- ── Botón "Más" (overflow) ── -->
-    <div class="sp-nav-more" id="navMore" style="display:none;">
-      <button class="sp-nav-more-btn" id="navMoreBtn" aria-label="Más opciones">
-        <span>Más</span><i class="fas fa-chevron-down" style="font-size:.6rem;transition:transform .2s"></i>
-      </button>
-      <div class="sp-nav-dropdown" id="navDropdown"></div>
+    <div class="sp-nav-links" id="navLinks">
+      <a href="/dashboard"   class="sp-nav-link" data-nav><i class="fas fa-home"></i> Dashboard</a>
+      <a href="/analisis"    class="sp-nav-link" data-nav><i class="fas fa-chart-pie"></i> Análisis</a>
+      <a href="/clientes"    class="sp-nav-link" data-nav><i class="fas fa-store"></i> Clientes</a>
+      <a href="/promotores"  class="sp-nav-link" data-nav><i class="fas fa-user-tie"></i> Promotores</a>
+      <span class="sp-nav-sep"></span>
+      <a href="/lineas"      class="sp-nav-link" data-nav><i class="fas fa-layer-group"></i> Líneas</a>
+      <a href="/productos"   class="sp-nav-link" data-nav><i class="fas fa-box-open"></i> Productos</a>
+      <a href="/competencia" class="sp-nav-link" data-nav><i class="fas fa-tag"></i> Competencia</a>
+      <a href="/stock"       class="sp-nav-link" data-nav><i class="fas fa-boxes"></i> Stock</a>
+      <a href="/planograma"  class="sp-nav-link" data-nav><i class="fas fa-image"></i> Planograma</a>
+      <a href="/gps"         class="sp-nav-link" data-nav><i class="fas fa-map-marked-alt"></i> GPS</a>
+      <a href="/caras"       class="sp-nav-link" data-nav><i class="fas fa-eye"></i> Caras</a>
     </div>
-
-    <!-- ── Acciones ── -->
-    <div class="sp-nav-actions">
-      <!-- Toggle tema -->
-      <button class="sp-icon-btn" id="themeToggle" title="Cambiar tema" onclick="toggleTheme()">
-        <i class="fas fa-moon" id="themeIconDark" style="display:none;"></i>
-        <i class="fas fa-sun"  id="themeIconLight" style="display:none;"></i>
+    <div class="sp-nav-more" id="navMore" style="display:none">
+      <button class="sp-more-btn" id="navMoreBtn">
+        Más <i class="fas fa-chevron-down" id="navMoreIco" style="font-size:.55rem;transition:transform .18s"></i>
       </button>
-      <!-- Menú móvil -->
-      <button class="sp-icon-btn" id="mobileMenuBtn" style="display:none;" onclick="openMobileDrawer()" aria-label="Menú">
+      <div class="sp-dropdown" id="navDropdown"></div>
+    </div>
+    <div class="sp-linea-wrap" id="lineaWrap">
+      <span class="sp-linea-label"><i class="fas fa-layer-group" style="margin-right:3px"></i>Línea</span>
+      <select class="sp-linea-sel" id="navLineaSel" onchange="onLineaChange(this.value)">
+        <option value="">Todas</option>
+      </select>
+    </div>
+    <div class="sp-nav-actions">
+      <button class="sp-icon-btn" onclick="toggleTheme()" title="Cambiar tema">
+        <i class="fas fa-moon" id="icoMoon"></i>
+        <i class="fas fa-sun"  id="icoSun" style="display:none"></i>
+      </button>
+      <button class="sp-icon-btn sp-hamburger" onclick="openDrawer()" style="display:none">
         <i class="fas fa-bars"></i>
       </button>
-      <!-- Logout -->
-      <a href="/logout" class="sp-icon-btn danger" title="Cerrar sesión">
+      <a href="/logout" class="sp-icon-btn sp-danger" title="Cerrar sesión">
         <i class="fas fa-sign-out-alt"></i>
       </a>
     </div>
-
   </div>
 </nav>
 
-<!-- ── Mobile Drawer ── -->
-<div class="sp-mobile-drawer" id="mobileDrawer">
-  <div class="sp-drawer-overlay" onclick="closeMobileDrawer()"></div>
-  <div class="sp-drawer-panel" id="drawerPanel">
-    <!-- Logo en drawer -->
-    <div class="sp-logo" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+<div class="sp-drawer" id="drawer">
+  <div class="sp-drawer-overlay" onclick="closeDrawer()"></div>
+  <div class="sp-drawer-panel">
+    <div class="sp-logo" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--brd)">
       <div class="sp-logo-icon"><i class="fas fa-bolt"></i></div>
-      <div class="sp-logo-text">
-        <div class="sp-logo-name">Sparking</div>
-        <div class="sp-logo-company" id="drawerEmpresaNombre">—</div>
-      </div>
+      <div><div class="sp-logo-name">CAPTA</div><div class="sp-logo-co" id="drawerEmpresa">—</div></div>
     </div>
-
-    <a href="/dashboard"   class="sp-drawer-link" data-drawer><i class="fas fa-home"></i> Dashboard</a>
-    <a href="/analisis"    class="sp-drawer-link" data-drawer><i class="fas fa-chart-pie"></i> Análisis</a>
-    <a href="/clientes"    class="sp-drawer-link" data-drawer><i class="fas fa-store"></i> Clientes</a>
-    <a href="/promotores"  class="sp-drawer-link" data-drawer><i class="fas fa-user-tie"></i> Promotores</a>
-    <div class="sp-drawer-divider"></div>
-    <a href="/lineas"      class="sp-drawer-link" data-drawer><i class="fas fa-layer-group"></i> Líneas</a>
-    <a href="/productos"   class="sp-drawer-link" data-drawer><i class="fas fa-box-open"></i> Productos</a>
-    <a href="/competencia" class="sp-drawer-link" data-drawer><i class="fas fa-tag"></i> Competencia</a>
-    <a href="/stock"       class="sp-drawer-link" data-drawer><i class="fas fa-boxes"></i> Stock</a>
-    <a href="/planograma"  class="sp-drawer-link" data-drawer><i class="fas fa-image"></i> Planograma</a>
-    <a href="/gps"         class="sp-drawer-link" data-drawer><i class="fas fa-map-marked-alt"></i> GPS</a>
-    <a href="/caras"       class="sp-drawer-link" data-drawer><i class="fas fa-eye"></i> Caras</a>
-
-    <div class="sp-drawer-divider"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;">
-      <span style="font-size:.8rem;color:var(--text-muted);">Tema</span>
-      <button onclick="toggleTheme()" class="sp-btn sp-btn-secondary sp-btn-sm" style="gap:6px;">
-        <i class="fas fa-moon" id="drawerThemeIconDark" style="display:none;"></i>
-        <i class="fas fa-sun"  id="drawerThemeIconLight" style="display:none;"></i>
-        <span id="drawerThemeLabel">—</span>
+    <div style="margin-bottom:10px">
+      <div class="sp-label" style="margin-bottom:5px"><i class="fas fa-layer-group"></i> Filtrar por línea</div>
+      <select class="sp-select" id="drawerLineaSel" onchange="onLineaChange(this.value);closeDrawer()">
+        <option value="">Todas las líneas</option>
+      </select>
+    </div>
+    <div class="sp-drawer-sep"></div>
+    <a href="/dashboard"   class="sp-drawer-link"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="/analisis"    class="sp-drawer-link"><i class="fas fa-chart-pie"></i> Análisis</a>
+    <a href="/clientes"    class="sp-drawer-link"><i class="fas fa-store"></i> Clientes</a>
+    <a href="/promotores"  class="sp-drawer-link"><i class="fas fa-user-tie"></i> Promotores</a>
+    <div class="sp-drawer-sep"></div>
+    <a href="/lineas"      class="sp-drawer-link"><i class="fas fa-layer-group"></i> Líneas</a>
+    <a href="/productos"   class="sp-drawer-link"><i class="fas fa-box-open"></i> Productos</a>
+    <a href="/competencia" class="sp-drawer-link"><i class="fas fa-tag"></i> Competencia</a>
+    <a href="/stock"       class="sp-drawer-link"><i class="fas fa-boxes"></i> Stock</a>
+    <a href="/planograma"  class="sp-drawer-link"><i class="fas fa-image"></i> Planograma</a>
+    <a href="/gps"         class="sp-drawer-link"><i class="fas fa-map-marked-alt"></i> GPS</a>
+    <a href="/caras"       class="sp-drawer-link"><i class="fas fa-eye"></i> Caras</a>
+    <div class="sp-drawer-sep"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px">
+      <span style="font-size:.8rem;color:var(--muted)">Tema</span>
+      <button class="sp-btn sp-btn-sec sp-btn-sm" onclick="toggleTheme()">
+        <i class="fas fa-moon" id="drawerMoon"></i>
+        <i class="fas fa-sun"  id="drawerSun" style="display:none"></i>
+        <span id="drawerThemeLbl">—</span>
       </button>
     </div>
-    <a href="/logout" class="sp-drawer-link" style="color:var(--red);margin-top:4px;">
-      <i class="fas fa-sign-out-alt" style="color:var(--red);"></i> Cerrar sesión
+    <a href="/logout" class="sp-drawer-link" style="color:var(--red);margin-top:4px">
+      <i class="fas fa-sign-out-alt" style="color:var(--red)"></i> Cerrar sesión
     </a>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     NAVBAR SCRIPT
-     ═══════════════════════════════════════════════════════════ -->
 <script>
-(function () {
-  // ── Tema ────────────────────────────────────────────────────
-  function isDark() { return document.documentElement.classList.contains('dark'); }
+/* ── CAPTA NAV v2 ── */
+const SUPA_URL='https://djjylikkocemrlsjxscr.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
+let _captaLineas=[]; let _captaLinea=localStorage.getItem('sp-linea')||'';
 
-  function syncThemeIcons() {
-    const dark = isDark();
-    // Navbar
-    document.getElementById('themeIconDark').style.display  = dark ? 'inline' : 'none';
-    document.getElementById('themeIconLight').style.display = dark ? 'none'   : 'inline';
-    // Drawer
-    document.getElementById('drawerThemeIconDark').style.display  = dark ? 'inline' : 'none';
-    document.getElementById('drawerThemeIconLight').style.display = dark ? 'none'   : 'inline';
-    document.getElementById('drawerThemeLabel').textContent = dark ? 'Oscuro' : 'Claro';
-  }
+function syncTheme(){
+  const d=document.documentElement.classList.contains('dark');
+  const s=(id,show)=>{const e=document.getElementById(id);if(e)e.style.display=show?'inline':'none';};
+  s('icoMoon',d);s('icoSun',!d);s('drawerMoon',d);s('drawerSun',!d);
+  const l=document.getElementById('drawerThemeLbl');if(l)l.textContent=d?'Oscuro':'Claro';
+}
+window.toggleTheme=function(){
+  const d=document.documentElement.classList.contains('dark');
+  document.documentElement.classList.toggle('dark');
+  localStorage.setItem('sp-theme',d?'light':'dark');
+  syncTheme();
+};
+window.openDrawer=()=>{document.getElementById('drawer').classList.add('open');document.body.style.overflow='hidden';};
+window.closeDrawer=()=>{document.getElementById('drawer').classList.remove('open');document.body.style.overflow='';};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();}});
 
-  window.toggleTheme = function () {
-    const dark = isDark();
-    document.documentElement.classList.toggle('dark');
-    localStorage.setItem('sp-theme', dark ? 'light' : 'dark');
-    syncThemeIcons();
-  };
+function fitNav(){
+  const nav=document.getElementById('mainNav'),links=document.getElementById('navLinks'),more=document.getElementById('navMore'),drop=document.getElementById('navDropdown'),hamb=document.querySelector('.sp-hamburger');
+  if(!nav||!links)return;
+  const W=nav.offsetWidth;
+  if(W<701){links.style.display='none';if(more)more.style.display='none';if(hamb)hamb.style.display='flex';return;}
+  if(hamb)hamb.style.display='none';links.style.display='flex';
+  const logoW=nav.querySelector('.sp-logo')?.offsetWidth||160,actW=nav.querySelector('.sp-nav-actions')?.offsetWidth||80,lineaW=nav.querySelector('.sp-linea-wrap')?.offsetWidth||160,avail=W-logoW-actW-lineaW-70;
+  const items=links.querySelectorAll('[data-nav],.sp-nav-sep');
+  items.forEach(el=>el.style.display='');
+  if(more){more.style.display='none';drop.innerHTML='';}
+  let used=0;const overflow=[];
+  items.forEach(el=>{const w=el.offsetWidth||0;if(used+w<=avail){used+=w;}else{el.style.display='none';if(el.tagName==='A')overflow.push(el);}});
+  if(overflow.length&&more){more.style.display='flex';overflow.forEach(a=>{const c=document.createElement('a');c.href=a.getAttribute('href');c.innerHTML=a.innerHTML;if(a.classList.contains('active'))c.classList.add('active');drop.appendChild(c);});}
+}
+document.getElementById('navMoreBtn')?.addEventListener('click',e=>{
+  e.stopPropagation();const dd=document.getElementById('navDropdown'),ico=document.getElementById('navMoreIco');
+  dd?.classList.toggle('open');if(ico)ico.style.transform=dd?.classList.contains('open')?'rotate(180deg)':'';
+});
+document.addEventListener('click',()=>{document.getElementById('navDropdown')?.classList.remove('open');});
+if(window.ResizeObserver)new ResizeObserver(fitNav).observe(document.getElementById('mainNav')||document.body);
+else window.addEventListener('resize',fitNav);
 
-  // ── Empresa nombre ───────────────────────────────────────────
-  function loadEmpresaNombre() {
-    const nombre = localStorage.getItem('empresa_nombre') || '';
-    const els = ['navEmpresaNombre', 'drawerEmpresaNombre'];
-    els.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = nombre;
-    });
-  }
+function markActive(){
+  const p=window.location.pathname;
+  document.querySelectorAll('[data-nav]').forEach(a=>{if(a.tagName==='A')a.classList.toggle('active',a.getAttribute('href')===p);});
+  document.querySelectorAll('.sp-drawer-link').forEach(a=>a.classList.toggle('active',a.getAttribute('href')===p));
+}
+function loadEmpresaNombre(){
+  const n=localStorage.getItem('empresa_nombre')||'—';
+  const e1=document.getElementById('navEmpresa');if(e1)e1.textContent=n;
+  const e2=document.getElementById('drawerEmpresa');if(e2)e2.textContent=n;
+}
+async function captaCargarLineas(){
+  const eid=localStorage.getItem('empresa_id');if(!eid)return;
+  try{
+    const r=await fetch(`${SUPA_URL}/rest/v1/web_lineas?empresa_id=eq.${eid}&activa=eq.true&select=id,nombre&order=nombre`,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    _captaLineas=await r.json()||[];
+    const opts='<option value="">Todas las líneas</option>'+_captaLineas.map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('');
+    const s1=document.getElementById('navLineaSel');if(s1){s1.innerHTML=opts;s1.value=_captaLinea;}
+    const s2=document.getElementById('drawerLineaSel');if(s2){s2.innerHTML=opts;s2.value=_captaLinea;}
+    if(_captaLinea)captaShowBanner(_captaLinea);
+  }catch(e){console.warn('Lineas:',e);}
+}
+window.onLineaChange=function(val){
+  _captaLinea=val;localStorage.setItem('sp-linea',val);
+  const s1=document.getElementById('navLineaSel');if(s1)s1.value=val;
+  const s2=document.getElementById('drawerLineaSel');if(s2)s2.value=val;
+  captaShowBanner(val);
+  if(typeof onLineaChanged==='function')onLineaChanged(val);
+};
+function captaShowBanner(val){
+  const b=document.getElementById('lineaBanner');if(!b)return;
+  if(val){const l=_captaLineas.find(x=>x.id===val);const n=document.getElementById('lineaBannerNombre');if(n)n.textContent=l?.nombre||val;b.style.display='flex';}
+  else b.style.display='none';
+}
+window.captaToast=function(msg,type='info'){
+  const ic={success:'fa-check-circle',error:'fa-exclamation-circle',info:'fa-info-circle',warn:'fa-exclamation-triangle'};
+  const cl={success:'var(--green)',error:'var(--red)',info:'var(--accent)',warn:'var(--amber)'};
+  const el=document.createElement('div');el.className='sp-toast';
+  el.innerHTML=`<i class="fas ${ic[type]||ic.info}" style="color:${cl[type]||cl.info};flex-shrink:0"></i><span>${msg}</span>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{el.classList.add('exit');el.addEventListener('animationend',()=>el.remove());},3000);
+};
+window.captaLightbox=function(src){const lb=document.createElement('div');lb.className='sp-lightbox';lb.innerHTML=`<img src="${src}">`;lb.onclick=()=>lb.remove();document.body.appendChild(lb);};
 
-  // ── Marcar link activo ───────────────────────────────────────
-  function markActive() {
-    const path = window.location.pathname;
-    document.querySelectorAll('[data-nav], [data-drawer]').forEach(a => {
-      if (a.tagName !== 'A') return;
-      if (a.getAttribute('href') === path) a.classList.add('active');
-      else a.classList.remove('active');
-    });
-  }
-
-  // ── Auto-fit: oculta links que no caben y los mueve al dropdown ──
-  const BREAKPOINT_MOBILE = 640; // px — por debajo usa drawer
-
-  function fitNavLinks() {
-    const navbar   = document.getElementById('spNavbar');
-    const links    = document.getElementById('navLinks');
-    const moreBtn  = document.getElementById('navMore');
-    const dropdown = document.getElementById('navDropdown');
-    const mobileBtn= document.getElementById('mobileMenuBtn');
-
-    const W = navbar.offsetWidth;
-
-    // En mobile: oculta nav links, muestra hamburguesa
-    if (W < BREAKPOINT_MOBILE) {
-      links.style.display    = 'none';
-      moreBtn.style.display  = 'none';
-      mobileBtn.style.display= 'flex';
-      return;
-    }
-
-    // Desktop: muestra nav links
-    mobileBtn.style.display = 'none';
-    links.style.display = 'flex';
-
-    // Resetea visibilidad de todos
-    const allNavItems = links.querySelectorAll('[data-nav], [data-nav-divider]');
-    allNavItems.forEach(el => { el.style.display = ''; });
-    moreBtn.style.display = 'none';
-    dropdown.innerHTML = '';
-
-    // Espacio disponible = navbar width - logo - actions - padding
-    const logoEl    = navbar.querySelector('.sp-logo');
-    const actionsEl = navbar.querySelector('.sp-nav-actions');
-    const MORE_BTN_W = 80;
-    const PADDING    = 32;
-    const available  = W - (logoEl?.offsetWidth || 160) - (actionsEl?.offsetWidth || 100) - PADDING - MORE_BTN_W;
-
-    // Medimos cuántos caben
-    let usedWidth = 0;
-    const overflowLinks = [];
-
-    allNavItems.forEach(el => {
-      const w = el.offsetWidth || 0;
-      if (usedWidth + w <= available) {
-        usedWidth += w;
-      } else {
-        el.style.display = 'none';
-        if (el.tagName === 'A') overflowLinks.push(el);
-      }
-    });
-
-    if (overflowLinks.length > 0) {
-      moreBtn.style.display = 'flex';
-      overflowLinks.forEach(a => {
-        const clone = document.createElement('a');
-        clone.href = a.getAttribute('href');
-        clone.innerHTML = a.innerHTML;
-        if (a.classList.contains('active')) clone.classList.add('active');
-        dropdown.appendChild(clone);
-      });
-    }
-  }
-
-  // ── Mobile Drawer ────────────────────────────────────────────
-  window.openMobileDrawer = function () {
-    const drawer = document.getElementById('mobileDrawer');
-    drawer.classList.add('open');
-    document.body.style.overflow = 'hidden';
-  };
-
-  window.closeMobileDrawer = function () {
-    const drawer = document.getElementById('mobileDrawer');
-    drawer.classList.remove('open');
-    document.body.style.overflow = '';
-  };
-
-  // Cerrar con Escape
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeMobileDrawer();
-  });
-
-  // ── Dropdown "Más" toggle ────────────────────────────────────
-  document.getElementById('navMoreBtn')?.addEventListener('click', e => {
-    e.stopPropagation();
-    const dd  = document.getElementById('navDropdown');
-    const ico = document.getElementById('navMoreBtn').querySelector('i');
-    dd.classList.toggle('open');
-    if (ico) ico.style.transform = dd.classList.contains('open') ? 'rotate(180deg)' : '';
-  });
-
-  document.addEventListener('click', e => {
-    const dd = document.getElementById('navDropdown');
-    if (dd && !document.getElementById('navMore')?.contains(e.target)) {
-      dd.classList.remove('open');
-      const ico = document.getElementById('navMoreBtn')?.querySelector('i');
-      if (ico) ico.style.transform = '';
-    }
-  });
-
-  // ── ResizeObserver — reajusta en tiempo real ─────────────────
-  if (window.ResizeObserver) {
-    const ro = new ResizeObserver(() => fitNavLinks());
-    ro.observe(document.getElementById('spNavbar'));
-  } else {
-    window.addEventListener('resize', fitNavLinks);
-  }
-
-  // ── Init ─────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
-    syncThemeIcons();
-    loadEmpresaNombre();
-    markActive();
-    // Pequeño delay para que el DOM esté pintado y las medidas sean exactas
-    requestAnimationFrame(() => requestAnimationFrame(fitNavLinks));
-  });
-
-  // En caso de que DOMContentLoaded ya haya pasado
-  if (document.readyState !== 'loading') {
-    syncThemeIcons();
-    loadEmpresaNombre();
-    markActive();
-    requestAnimationFrame(() => requestAnimationFrame(fitNavLinks));
-  }
-})();
+document.addEventListener('DOMContentLoaded',()=>{syncTheme();loadEmpresaNombre();markActive();requestAnimationFrame(()=>requestAnimationFrame(fitNav));captaCargarLineas();});
 </script>
