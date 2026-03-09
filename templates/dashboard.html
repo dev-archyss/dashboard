@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+¿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -57,7 +57,7 @@ input,select{font-family:inherit}
 .nav-logo-co{font-size:.68rem;color:var(--muted);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
 
 /* Links */
-.nav-links{flex:1;display:flex;align-items:center;gap:1px;overflow:hidden;min-width:0}
+.nav-links{flex:1;display:flex;align-items:center;gap:1px;overflow-x:clip;overflow-y:visible;min-width:0}
 .nav-link{
   display:flex;align-items:center;gap:5px;padding:6px 9px;border-radius:var(--r1);
   font-size:.76rem;font-weight:500;color:var(--muted);white-space:nowrap;flex-shrink:0;
@@ -1174,6 +1174,28 @@ async function cargarLineas(){
   }catch(e){ console.warn('Error cargando líneas:',e); }
 }
 
+// Carga estados y zonas directamente de Supabase — independiente del API de records
+async function cargarCatalogosBase(){
+  try{
+    const SUPA_URL='https://djjylikkocemrlsjxscr.supabase.co';
+    const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
+    const H={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY};
+
+    const [rE, rZ] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/web_estados?select=id,nombre&order=nombre`, {headers:H}),
+      fetch(`${SUPA_URL}/rest/v1/web_zonas?select=id,nombre,estado_id&order=nombre`,   {headers:H})
+    ]);
+    const estados = await rE.json() || [];
+    const zonas   = await rZ.json() || [];
+
+    if(estados.length) allEstados = estados;
+    if(zonas.length)   allZonas   = zonas;
+
+    // Poblar el select de estado inmediatamente
+    populateFiltroCatalogos();
+  }catch(e){ console.warn('Error cargando catálogos base:',e); }
+}
+
 // ── Selección ────────────────────────────────────────────────────
 window.toggleSel = function(cb){
   cb.checked?selectedIds.add(cb.dataset.id):selectedIds.delete(cb.dataset.id);
@@ -1299,6 +1321,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   setDefaultDates();
   await poblarAnios();
   await cargarLineas();  // carga líneas + índice productos ANTES de cargar records
+
+  // Cargar estados y zonas directamente de Supabase (independiente de que haya records)
+  await cargarCatalogosBase();
 
   requestAnimationFrame(()=>requestAnimationFrame(fitNav));
 
