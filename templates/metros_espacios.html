@@ -2,13 +2,15 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Caras en Anaquel — CAPTA</title>
+<title>Metros y Espacios — CAPTA</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-.comercio-dropdown{position:absolute;z-index:200;width:100%;background:var(--card);border:1px solid var(--brd);border-radius:var(--r2);max-height:220px;overflow-y:auto;box-shadow:var(--sh3);top:calc(100% + 2px)}
-.comercio-item{padding:9px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--brd);transition:background .12s}
+.metro-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff}
+.comercio-dropdown{position:absolute;z-index:200;width:100%;background:var(--card);border:1px solid var(--brd);border-radius:var(--r2);max-height:220px;overflow-y:auto;box-shadow:var(--sh3)}
+.comercio-item{padding:9px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--brd)}
 .comercio-item:hover{background:var(--hov)}
+.pending-banner{background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(79,70,229,.1));border:1px solid var(--amber);border-radius:var(--r2);padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px}
 </style>
 </head>
 <body>
@@ -17,8 +19,17 @@
 <main class="sp-page">
   <div class="sp-page-hdr">
     <div>
-      <h1 class="sp-page-title">Caras en Anaquel</h1>
-      <p class="sp-page-sub">Análisis de share of shelf (SOS) — vista general y por establecimiento.</p>
+      <h1 class="sp-page-title"><i class="fas fa-ruler-combined" style="color:var(--accent);margin-right:8px"></i>Metros y Espacios</h1>
+      <p class="sp-page-sub">Análisis de metros lineales de anaquel abordados por producto y establecimiento.</p>
+    </div>
+  </div>
+
+  <!-- Banner: campo en desarrollo -->
+  <div class="pending-banner">
+    <i class="fas fa-info-circle" style="color:var(--amber);font-size:1.1rem;flex-shrink:0;margin-top:1px"></i>
+    <div>
+      <p style="font-weight:700;font-size:.85rem;margin-bottom:3px">Captura de metros en progreso</p>
+      <p style="font-size:.78rem;color:var(--muted)">El campo <code style="background:var(--inp);padding:1px 5px;border-radius:4px;font-size:.75rem">shelf_meters</code> se agregará a la tabla <code style="background:var(--inp);padding:1px 5px;border-radius:4px;font-size:.75rem">web_precios</code> en la próxima versión de la PWA. El dashboard ya está listo para recibir y procesar ese dato. Los datos actuales son simulados con las visitas existentes.</p>
     </div>
   </div>
 
@@ -31,110 +42,72 @@
       <div><label class="sp-label">Promotor</label><select id="promoter" class="sp-select"><option value="all">Todos</option></select></div>
       <div><label class="sp-label">Estado</label><select id="state" class="sp-select"><option value="all">Todos</option></select></div>
       <div><label class="sp-label">Zona</label><select id="zone" class="sp-select" disabled><option value="all">Todas</option></select></div>
-      <!-- NUEVO: Filtro por establecimiento -->
       <div style="position:relative" id="comercioWrapper">
-        <label class="sp-label">Establecimiento <span style="font-size:.68rem;color:var(--accent)">(análisis micro)</span></label>
-        <input type="text" id="comercioSearch" class="sp-input" placeholder="Buscar comercio…" oninput="buscarComercio(this.value)" autocomplete="off">
+        <label class="sp-label">Establecimiento</label>
+        <input type="text" id="comercioSearch" class="sp-input" placeholder="Filtrar por comercio…" oninput="buscarComercio(this.value)" autocomplete="off">
         <input type="hidden" id="comercioSelected">
         <div id="comercioDropdown" class="comercio-dropdown" style="display:none"></div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <button onclick="loadData()" class="sp-btn sp-btn-primary"><i class="fas fa-filter"></i> Aplicar</button>
-      <button onclick="clearComercio()" id="btnClearComercio" class="sp-btn sp-btn-sec sp-btn-sm" style="display:none"><i class="fas fa-times"></i> Quitar establecimiento</button>
-    </div>
-  </div>
-
-  <!-- Banner de establecimiento seleccionado -->
-  <div id="comercioBanner" style="display:none;padding:10px 16px;background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;border-radius:var(--r2);margin-bottom:16px;display:none;align-items:center;gap:10px">
-    <i class="fas fa-store" style="font-size:1.1rem"></i>
-    <div>
-      <div style="font-weight:700;font-family:'Syne',sans-serif" id="comercioBannerNombre">—</div>
-      <div style="font-size:.72rem;opacity:.85">Modo análisis de establecimiento — mostrando datos solo de este comercio</div>
-    </div>
+    <button onclick="loadData()" class="sp-btn sp-btn-primary"><i class="fas fa-filter"></i> Aplicar</button>
+    <button onclick="clearComercio()" id="btnClearComercio" class="sp-btn sp-btn-sec sp-btn-sm" style="display:none;margin-left:8px"><i class="fas fa-times"></i> Quitar filtro</button>
   </div>
 
   <!-- KPIs -->
   <div class="sp-grid sp-g4 sp-gap4" style="margin-bottom:20px">
     <div class="sp-card sp-kpi indigo">
-      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-percentage"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="sosDisplay">—</div><div class="sp-kpi-lbl">SOS Total</div></div></div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="sosFill" style="width:0%;background:var(--accent)"></div></div>
+      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-ruler-horizontal"></i></div>
+        <div style="text-align:right"><div class="sp-kpi-val" id="totalMetros">—</div><div class="sp-kpi-lbl">Metros totales</div></div></div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="metrosFill" style="width:0%;background:var(--accent)"></div></div>
+    </div>
+    <div class="sp-card sp-kpi teal">
+      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-store"></i></div>
+        <div style="text-align:right"><div class="sp-kpi-val" id="totalEstablecimientos">—</div><div class="sp-kpi-lbl">Establecimientos</div></div></div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:70%;background:var(--teal)"></div></div>
     </div>
     <div class="sp-card sp-kpi green">
-      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-eye"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="totalAfterDisplay">—</div><div class="sp-kpi-lbl">Caras después</div></div></div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="afterFill" style="width:0%;background:var(--green)"></div></div>
-    </div>
-    <div class="sp-card sp-kpi amber">
-      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-arrow-trend-up"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="netChangeDisplay">—</div><div class="sp-kpi-lbl">Cambio neto</div></div></div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:50%;background:var(--amber)"></div></div>
+      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-chart-bar"></i></div>
+        <div style="text-align:right"><div class="sp-kpi-val" id="promMetrosPorVisita">—</div><div class="sp-kpi-lbl">Metros / visita</div></div></div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:55%;background:var(--green)"></div></div>
     </div>
     <div class="sp-card sp-kpi purple">
-      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-chart-pie"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="totalVisitasDisplay">—</div><div class="sp-kpi-lbl">Visitas</div></div></div>
+      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-boxes"></i></div>
+        <div style="text-align:right"><div class="sp-kpi-val" id="totalVisitas">—</div><div class="sp-kpi-lbl">Visitas</div></div></div>
       <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:60%;background:var(--purple)"></div></div>
     </div>
   </div>
 
-  <!-- Charts + tabla -->
-  <div class="sp-grid sp-gap4" style="grid-template-columns:1fr 320px;margin-bottom:20px;align-items:start">
+  <!-- Charts -->
+  <div class="sp-grid sp-gap4" style="grid-template-columns:1fr 1fr;margin-bottom:20px;align-items:start">
     <div class="sp-card">
-      <p class="sp-sec-title">Detalle por Producto</p>
-      <div style="overflow-x:auto;max-height:480px">
-        <table class="sp-tbl">
-          <thead><tr>
-            <th>Producto</th>
-            <th style="text-align:center">Caras Antes</th>
-            <th style="text-align:center">Caras Después</th>
-            <th style="text-align:center">Δ</th>
-          </tr></thead>
-          <tbody id="facesTableBody">
-            <tr><td colspan="4" style="text-align:center;padding:36px;color:var(--muted)"><i class="fas fa-spinner fa-spin" style="color:var(--accent);font-size:1.2rem;display:block;margin-bottom:8px"></i>Cargando...</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <p class="sp-sec-title">Metros por Producto</p>
+      <div style="position:relative;height:300px"><canvas id="chartProductos"></canvas></div>
     </div>
-    <div class="sp-card" style="display:flex;flex-direction:column">
-      <p class="sp-sec-title">SOS — Share of Shelf</p>
-      <div style="position:relative;height:260px">
-        <canvas id="sosChart"></canvas>
-      </div>
+    <div class="sp-card">
+      <p class="sp-sec-title">Metros por Establecimiento (Top 10)</p>
+      <div style="position:relative;height:300px"><canvas id="chartEstablecimientos"></canvas></div>
     </div>
   </div>
 
-  <!-- SECCIÓN MICRO: análisis de establecimiento -->
-  <div id="microSection" style="display:none">
-    <div class="sp-card" style="margin-bottom:20px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-        <div class="sp-kpi-icon" style="background:linear-gradient(135deg,var(--accent),var(--purple));flex-shrink:0"><i class="fas fa-microscope" style="color:#fff"></i></div>
-        <div>
-          <p class="sp-sec-title" style="margin-bottom:0">Estudio del establecimiento: <span id="microComercioNombre" style="color:var(--accent)">—</span></p>
-          <p style="font-size:.75rem;color:var(--muted)">Historial de visitas y evolución de caras en este comercio</p>
-        </div>
-      </div>
-      <div style="overflow-x:auto">
-        <table class="sp-tbl" id="microTable">
-          <thead><tr>
-            <th>Fecha</th><th>Promotor</th>
-            <th style="text-align:center">Total Anaquel</th>
-            <th style="text-align:center">Nuestras Antes</th>
-            <th style="text-align:center">Nuestras Después</th>
-            <th style="text-align:center">SOS%</th>
-          </tr></thead>
-          <tbody id="microTableBody">
-            <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin datos</td></tr>
-          </tbody>
-        </table>
-      </div>
+  <!-- Tabla detalle -->
+  <div class="sp-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <p class="sp-sec-title" style="margin-bottom:0">Detalle de Metros por Visita</p>
+      <span id="registrosInfo" class="sp-bdg sp-bdg-accent" style="font-size:.75rem">—</span>
     </div>
-    <!-- Gráfico de tendencia del establecimiento -->
-    <div class="sp-card">
-      <p class="sp-sec-title">Tendencia SOS del establecimiento</p>
-      <div style="position:relative;height:280px">
-        <canvas id="microChart"></canvas>
-      </div>
+    <div style="overflow-x:auto;max-height:55vh">
+      <table class="sp-tbl">
+        <thead><tr>
+          <th>Fecha</th><th>Promotor</th><th>Establecimiento</th><th>Estado</th>
+          <th style="text-align:center">Metros lineales</th>
+          <th style="text-align:center">Caras antes</th>
+          <th style="text-align:center">Caras después</th>
+          <th style="text-align:center">Productos</th>
+        </tr></thead>
+        <tbody id="metrosTableBody">
+          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">Aplica filtros para ver datos</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </main>
@@ -144,13 +117,20 @@ const supabaseClient=supabase.createClient('https://djjylikkocemrlsjxscr.supabas
 const empresaId=localStorage.getItem('empresa_id');
 if(!empresaId)window.location.href='/';
 
-let sosChartInst=null,microChartInst=null,allZonas=[],allData=[],comercioTimer=null;
-let comercioSeleccionado=''; // nombre del comercio filtrado
+let chartProd=null,chartEst=null,allZonas=[],comercioSeleccionado='',comercioTimer=null;
+
+// Columnas de metros — cuando exista shelf_meters en web_precios se usará directamente
+// Por ahora: shelf_meters = (our_faces_after * 0.4) como estimación
+function getMetros(r){
+  // Cuando el campo real exista: return r.shelf_meters || 0
+  if(r.shelf_meters!==undefined&&r.shelf_meters!==null)return parseFloat(r.shelf_meters)||0;
+  // Estimación: cada cara es ~40cm de frente en promedio
+  return ((r.our_faces_after||0)*0.4);
+}
 
 async function loadCatalogs(){
   const{data:promos}=await supabaseClient.from('web_promotores').select('promoter_name').eq('empresa_id',empresaId).order('promoter_name');
-  const pSel=document.getElementById('promoter');
-  (promos||[]).forEach(p=>{pSel.innerHTML+=`<option value="${p.promoter_name}">${p.promoter_name}</option>`;});
+  const pSel=document.getElementById('promoter');(promos||[]).forEach(p=>pSel.innerHTML+=`<option value="${p.promoter_name}">${p.promoter_name}</option>`);
   const{data:estados}=await supabaseClient.from('web_estados').select('id,nombre').order('nombre');
   const{data:zonas}=await supabaseClient.from('web_zonas').select('id,nombre,estado_id').order('nombre');
   allZonas=zonas||[];
@@ -167,7 +147,7 @@ async function loadData(){
   const df=document.getElementById('dateFrom').value,dt=document.getElementById('dateTo').value;
   const prom=document.getElementById('promoter').value,st=document.getElementById('state').value;
   const zone=document.getElementById('zone').value;
-  let q=supabaseClient.from('web_precios').select('id,created_at,promoter_name,state,zone,trade,total_faces_before,our_faces_before_manual,our_faces_before_counted,total_faces,our_faces_after,myitems').eq('empresa_id',empresaId);
+  let q=supabaseClient.from('web_precios').select('id,created_at,promoter_name,state,zone,trade,total_faces_before,our_faces_before_counted,total_faces,our_faces_after,myitems,shelf_meters').eq('empresa_id',empresaId);
   if(df)q=q.gte('created_at',`${df}T00:00:00`);
   if(dt)q=q.lte('created_at',`${dt}T23:59:59`);
   if(prom!=='all')q=q.eq('promoter_name',prom);
@@ -175,91 +155,67 @@ async function loadData(){
   if(zone!=='all')q=q.eq('zone',zone);
   if(comercioSeleccionado)q=q.eq('trade',comercioSeleccionado);
   const{data,error}=await q.order('created_at',{ascending:false});
-  if(error){captaToast('Error cargando datos','error');return;}
-  allData=data||[];
-  processData(allData);
-  if(comercioSeleccionado)renderMicro(allData);
+  if(error){captaToast('Error: '+error.message,'error');return;}
+  processData(data||[]);
 }
 
 function processData(records){
-  let totalBeforeCounted=0,totalAfter=0,totalShelf=0;const productStats={};
+  let totalM=0;const porProducto={};const porEstablecimiento={};
   records.forEach(r=>{
-    totalBeforeCounted+=r.our_faces_before_counted||0;
-    totalAfter+=r.our_faces_after||0;
-    totalShelf+=r.total_faces||0;
+    const m=getMetros(r);totalM+=m;
+    const trade=r.trade||'Sin nombre';
+    if(!porEstablecimiento[trade])porEstablecimiento[trade]=0;
+    porEstablecimiento[trade]+=m;
     (r.myitems||[]).forEach(item=>{
-      if(!item.presentation||item.presentation==='SIN STOCK')return;
-      if(!productStats[item.presentation])productStats[item.presentation]={before:0,after:0};
-      productStats[item.presentation].before+=item.faces_before||0;
-      productStats[item.presentation].after+=item.faces_after||0;
+      if(!item.presentation)return;
+      if(!porProducto[item.presentation])porProducto[item.presentation]=0;
+      porProducto[item.presentation]+=((item.faces_after||0)*0.4);
     });
   });
-  const sos=totalShelf>0?((totalAfter/totalShelf)*100).toFixed(1):'0.0';
-  const netChange=totalAfter-totalBeforeCounted;
-  document.getElementById('sosDisplay').textContent=`${sos}%`;
-  document.getElementById('sosFill').style.width=Math.min(100,parseFloat(sos))+'%';
-  document.getElementById('totalAfterDisplay').textContent=totalAfter;
-  document.getElementById('netChangeDisplay').textContent=(netChange>=0?'+':'')+netChange;
-  document.getElementById('totalVisitasDisplay').textContent=records.length;
-  renderTable(productStats);
-  renderSosChart(parseFloat(sos),totalShelf>0?((Math.max(0,totalShelf-totalAfter)/totalShelf)*100).toFixed(1):0);
+  const establecimientos=Object.keys(porEstablecimiento).length;
+  document.getElementById('totalMetros').textContent=totalM.toFixed(1)+' m';
+  document.getElementById('totalEstablecimientos').textContent=establecimientos;
+  document.getElementById('promMetrosPorVisita').textContent=records.length?(totalM/records.length).toFixed(1)+' m':'—';
+  document.getElementById('totalVisitas').textContent=records.length;
+  document.getElementById('registrosInfo').textContent=`${records.length} visitas`;
+  renderCharts(porProducto,porEstablecimiento);
+  renderTable(records);
 }
 
-function renderTable(stats){
-  const tbody=document.getElementById('facesTableBody');
-  const items=Object.entries(stats).sort((a,b)=>b[1].after-a[1].after);
-  if(!items.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px">Sin datos</td></tr>';return;}
-  tbody.innerHTML=items.map(([name,s])=>{
-    const diff=s.after-s.before;const dc=diff>0?'var(--green)':diff<0?'var(--red)':'var(--muted)';
-    return`<tr><td class="sp-hi">${name}</td><td style="text-align:center">${s.before}</td><td style="text-align:center;font-weight:600;color:var(--accent)">${s.after}</td>
-    <td style="text-align:center;font-weight:700;color:${dc}">${diff>0?'+':''}${diff}</td></tr>`;
-  }).join('');
+function renderCharts(porProducto,porEstablecimiento){
+  const dark=document.documentElement.classList.contains('dark');const tc=dark?'#94a3b8':'#4b5563';const gc=dark?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';
+  const sortProd=Object.entries(porProducto).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const sortEst=Object.entries(porEstablecimiento).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const palette=['#4f46e5','#10b981','#f59e0b','#f43f5e','#8b5cf6','#14b8a6','#3b82f6','#ec4899','#6366f1','#84cc16','#22d3ee','#fb923c'];
+  const baseOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:10},callback:v=>`${v.toFixed(1)}m`},grid:{color:gc}}}};
+  const ctx1=document.getElementById('chartProductos').getContext('2d');
+  const ctx2=document.getElementById('chartEstablecimientos').getContext('2d');
+  if(chartProd)chartProd.destroy();
+  if(chartEst)chartEst.destroy();
+  chartProd=new Chart(ctx1,{type:'bar',data:{labels:sortProd.map(([k])=>k.length>18?k.slice(0,16)+'…':k),datasets:[{data:sortProd.map(([,v])=>+v.toFixed(2)),backgroundColor:sortProd.map((_,i)=>palette[i%palette.length]+'cc'),borderRadius:4}]},options:{...baseOpts,indexAxis:'y',scales:{x:{...baseOpts.scales.x},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>v}}}}});
+  chartEst=new Chart(ctx2,{type:'bar',data:{labels:sortEst.map(([k])=>k.length>15?k.slice(0,13)+'…':k),datasets:[{data:sortEst.map(([,v])=>+v.toFixed(2)),backgroundColor:palette.map(c=>c+'cc').slice(0,10),borderRadius:4}]},options:{...baseOpts,indexAxis:'y',scales:{x:{...baseOpts.scales.x},y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>v}}}}});
 }
 
-function renderSosChart(sosPct,compPct){
-  const dark=document.documentElement.classList.contains('dark');
-  const ctx=document.getElementById('sosChart').getContext('2d');
-  const data={labels:['Nuestras','Competencia','Resto'],datasets:[{data:[sosPct,compPct,Math.max(0,100-sosPct-compPct)],backgroundColor:['#4f46e5','#f43f5e','rgba(148,163,184,.3)'],borderWidth:0}]};
-  if(sosChartInst){sosChartInst.data=data;sosChartInst.update('none');return;}
-  sosChartInst=new Chart(ctx,{type:'doughnut',data,options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:dark?'#94a3b8':'#4b5563',font:{size:11},padding:10}},tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed.toFixed(1)}%`}}},cutout:'65%'}});
-}
-
-/* ── MICRO: estudio de establecimiento ── */
-function renderMicro(records){
-  const section=document.getElementById('microSection');section.style.display='block';
-  document.getElementById('microComercioNombre').textContent=comercioSeleccionado;
-  const sorted=[...records].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
-  const tbody=document.getElementById('microTableBody');
-  if(!sorted.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin visitas para este comercio</td></tr>';return;}
+function renderTable(records){
+  const tbody=document.getElementById('metrosTableBody');
+  if(!records.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:36px">Sin datos</td></tr>';return;}
   const fmtDt=s=>new Date(s).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'});
-  const tendencia=[];
-  tbody.innerHTML=sorted.map(r=>{
-    const totalAnaquel=r.total_faces||0;const after=r.our_faces_after||0;const before=r.our_faces_before_counted||0;
-    const sos=totalAnaquel>0?((after/totalAnaquel)*100).toFixed(1):'—';
-    const sosPct=parseFloat(sos)||0;
-    tendencia.push({fecha:fmtDt(r.created_at),sos:sosPct,after,before});
-    const sosBdg=sosPct>=40?'sp-bdg-ok':sosPct>=20?'sp-bdg-warn':'sp-bdg-err';
+  tbody.innerHTML=records.map(r=>{
+    const m=getMetros(r);const mBdg=m>0?`<span class="metro-badge"><i class="fas fa-ruler-horizontal"></i>${m.toFixed(1)}m</span>`:'<span style="color:var(--muted)">—</span>';
     return`<tr>
       <td class="sp-hi">${fmtDt(r.created_at)}</td>
-      <td style="color:var(--accent)">${r.promoter_name||'—'}</td>
-      <td style="text-align:center">${totalAnaquel}</td>
-      <td style="text-align:center;color:var(--muted)">${before}</td>
-      <td style="text-align:center;font-weight:700;color:var(--accent)">${after}</td>
-      <td style="text-align:center"><span class="sp-bdg ${sosBdg}">${sos}%</span></td>
+      <td style="color:var(--accent);font-weight:500">${r.promoter_name||'—'}</td>
+      <td>${r.trade||'—'}</td>
+      <td>${r.state||'—'}</td>
+      <td style="text-align:center">${mBdg}</td>
+      <td style="text-align:center;color:var(--muted)">${r.our_faces_before_counted||0}</td>
+      <td style="text-align:center;font-weight:600;color:var(--accent)">${r.our_faces_after||0}</td>
+      <td style="text-align:center">${(r.myitems||[]).length}</td>
     </tr>`;
   }).join('');
-  renderMicroChart(tendencia);
 }
 
-function renderMicroChart(data){
-  const dark=document.documentElement.classList.contains('dark');const tc=dark?'#94a3b8':'#4b5563';const gc=dark?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';
-  const ctx=document.getElementById('microChart').getContext('2d');
-  const ds={label:'SOS %',data:data.map(d=>d.sos),borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,.1)',fill:true,tension:.4,pointRadius:5,pointBackgroundColor:'#4f46e5'};
-  if(microChartInst){microChartInst.data.labels=data.map(d=>d.fecha);microChartInst.data.datasets=[ds];microChartInst.update();return;}
-  microChartInst=new Chart(ctx,{type:'line',data:{labels:data.map(d=>d.fecha),datasets:[ds]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:tc,font:{size:11}}}},scales:{x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:10},callback:v=>`${v}%`},grid:{color:gc},min:0,max:100}}}});
-}
-
-/* ── BÚSQUEDA DE COMERCIO ── */
+/* BÚSQUEDA COMERCIO */
 function buscarComercio(term){
   clearTimeout(comercioTimer);const dd=document.getElementById('comercioDropdown');
   if(!term.trim()){dd.style.display='none';return;}
@@ -267,31 +223,20 @@ function buscarComercio(term){
     const{data}=await supabaseClient.from('web_precios').select('trade').eq('empresa_id',empresaId).ilike('trade',`%${term}%`).limit(20);
     const trades=[...new Set((data||[]).map(r=>r.trade).filter(Boolean))].sort();
     if(!trades.length){dd.style.display='none';return;}
-    dd.innerHTML=trades.map(t=>`<div class="comercio-item" onmousedown="seleccionarComercio('${t.replace(/'/g,"\\'")}')"> <i class="fas fa-store" style="color:var(--accent);margin-right:6px;font-size:.75rem"></i>${t}</div>`).join('');
+    dd.innerHTML=trades.map(t=>`<div class="comercio-item" onmousedown="seleccionarComercio('${t.replace(/'/g,"\\'")}')"><i class="fas fa-store" style="color:var(--accent);margin-right:6px;font-size:.75rem"></i>${t}</div>`).join('');
     dd.style.display='block';
   },300);
 }
 function seleccionarComercio(trade){
-  comercioSeleccionado=trade;
-  document.getElementById('comercioSearch').value=trade;
-  document.getElementById('comercioSelected').value=trade;
-  document.getElementById('comercioDropdown').style.display='none';
-  document.getElementById('btnClearComercio').style.display='';
-  // Mostrar banner
-  const b=document.getElementById('comercioBanner');b.style.display='flex';
-  document.getElementById('comercioBannerNombre').textContent=trade;
+  comercioSeleccionado=trade;document.getElementById('comercioSearch').value=trade;
+  document.getElementById('comercioDropdown').style.display='none';document.getElementById('btnClearComercio').style.display='';
 }
 function clearComercio(){
-  comercioSeleccionado='';
-  document.getElementById('comercioSearch').value='';
-  document.getElementById('comercioSelected').value='';
-  document.getElementById('btnClearComercio').style.display='none';
-  document.getElementById('comercioBanner').style.display='none';
-  document.getElementById('microSection').style.display='none';
+  comercioSeleccionado='';document.getElementById('comercioSearch').value='';document.getElementById('btnClearComercio').style.display='none';
 }
 document.addEventListener('click',e=>{const w=document.getElementById('comercioWrapper');if(w&&!w.contains(e.target))document.getElementById('comercioDropdown').style.display='none';});
 
-function setDates(){const t=new Date(),s=new Date(t);s.setDate(t.getDate()-(t.getDay()===0?6:t.getDay()-1));document.getElementById('dateFrom').value=s.toISOString().split('T')[0];document.getElementById('dateTo').value=t.toISOString().split('T')[0];}
+function setDates(){const t=new Date(),s=new Date(t);s.setDate(t.getDate()-30);document.getElementById('dateFrom').value=s.toISOString().split('T')[0];document.getElementById('dateTo').value=t.toISOString().split('T')[0];}
 document.addEventListener('DOMContentLoaded',async()=>{setDates();await loadCatalogs();await loadData();});
 </script>
 </body>
