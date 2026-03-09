@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard — Sparking</title>
+<title>Dashboard — CAPTA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -368,7 +368,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:14px;hei
     <a href="/dashboard" class="nav-logo">
       <div class="nav-logo-icon"><i class="fas fa-bolt"></i></div>
       <div>
-        <div class="nav-logo-name">Sparking</div>
+        <div class="nav-logo-name">CAPTA</div>
         <div class="nav-logo-co" id="navEmpresaNombre">—</div>
       </div>
     </a>
@@ -376,7 +376,19 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:14px;hei
     <!-- Links desktop (auto-fit) -->
     <div class="nav-links" id="navLinks">
       <a href="/dashboard"   class="nav-link" data-nav><i class="fas fa-home"></i> Dashboard</a>
-      <a href="/analisis"    class="nav-link" data-nav><i class="fas fa-chart-pie"></i> Análisis</a>
+
+      <!-- Dropdown Análisis -->
+      <div class="nav-dd-wrap" id="analDDWrap" style="position:relative">
+        <span class="nav-link" id="analDDBtn" onclick="toggleAnalDD(event)" style="cursor:pointer;user-select:none">
+          <i class="fas fa-chart-pie"></i> Análisis <i class="fas fa-chevron-down" style="font-size:.5rem;margin-left:2px;opacity:.6"></i>
+        </span>
+        <div id="analDD" style="position:absolute;top:calc(100% + 6px);left:0;min-width:200px;background:var(--card);border:1px solid var(--brd);border-radius:var(--r2);box-shadow:var(--sh3);padding:6px;opacity:0;pointer-events:none;transform:translateY(-6px);transition:all .16s;z-index:500">
+          <a href="/analisis" style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:var(--r1);font-size:.82rem;font-weight:600;color:var(--txt2);text-decoration:none;transition:background .12s"><i class="fas fa-dollar-sign" style="width:16px;color:var(--accent)"></i> Precios (USD/kg)</a>
+          <a href="/caras"    style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:var(--r1);font-size:.82rem;font-weight:600;color:var(--txt2);text-decoration:none;transition:background .12s"><i class="fas fa-eye" style="width:16px;color:var(--accent)"></i> Caras de Anaquel</a>
+          <a href="/metros_espacios" style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:var(--r1);font-size:.82rem;font-weight:600;color:var(--txt2);text-decoration:none;transition:background .12s"><i class="fas fa-ruler-combined" style="width:16px;color:var(--accent)"></i> Metros y Espacios</a>
+        </div>
+      </div>
+
       <a href="/clientes"    class="nav-link" data-nav><i class="fas fa-store"></i> Clientes</a>
       <a href="/promotores"  class="nav-link" data-nav><i class="fas fa-user-tie"></i> Promotores</a>
       <span class="nav-sep" data-nav-item></span>
@@ -386,7 +398,6 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:14px;hei
       <a href="/stock"       class="nav-link" data-nav><i class="fas fa-boxes"></i> Stock</a>
       <a href="/planograma"  class="nav-link" data-nav><i class="fas fa-image"></i> Planograma</a>
       <a href="/gps"         class="nav-link" data-nav><i class="fas fa-map-marked-alt"></i> GPS</a>
-      <a href="/caras"       class="nav-link" data-nav><i class="fas fa-eye"></i> Caras</a>
     </div>
 
     <!-- Botón overflow "Más" -->
@@ -426,7 +437,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:14px;hei
   <div class="drawer-panel">
     <div class="nav-logo" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--brd)">
       <div class="nav-logo-icon"><i class="fas fa-bolt"></i></div>
-      <div><div class="nav-logo-name">Sparking</div><div class="nav-logo-co" id="drawerEmpNombre">—</div></div>
+      <div><div class="nav-logo-name">CAPTA</div><div class="nav-logo-co" id="drawerEmpNombre">—</div></div>
     </div>
     <!-- Filtro línea en drawer -->
     <div style="margin-bottom:10px">
@@ -437,7 +448,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:14px;hei
     </div>
     <div class="drawer-sep"></div>
     <a href="/dashboard"   class="drawer-link"><i class="fas fa-home"></i> Dashboard</a>
-    <a href="/analisis"    class="drawer-link"><i class="fas fa-chart-pie"></i> Análisis</a>
+    <div style="padding:8px 12px 4px;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Análisis</div>
+    <a href="/analisis"         class="drawer-link" style="padding-left:22px"><i class="fas fa-dollar-sign"></i> Precios (USD/kg)</a>
+    <a href="/caras"            class="drawer-link" style="padding-left:22px"><i class="fas fa-eye"></i> Caras de Anaquel</a>
+    <a href="/metros_espacios"  class="drawer-link" style="padding-left:22px"><i class="fas fa-ruler-combined"></i> Metros y Espacios</a>
     <a href="/clientes"    class="drawer-link"><i class="fas fa-store"></i> Clientes</a>
     <a href="/promotores"  class="drawer-link"><i class="fas fa-user-tie"></i> Promotores</a>
     <div class="drawer-sep"></div>
@@ -447,7 +461,6 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:14px;hei
     <a href="/stock"       class="drawer-link"><i class="fas fa-boxes"></i> Stock</a>
     <a href="/planograma"  class="drawer-link"><i class="fas fa-image"></i> Planograma</a>
     <a href="/gps"         class="drawer-link"><i class="fas fa-map-marked-alt"></i> GPS</a>
-    <a href="/caras"       class="drawer-link"><i class="fas fa-eye"></i> Caras</a>
     <div class="drawer-sep"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px">
       <span style="font-size:.8rem;color:var(--muted)">Tema</span>
@@ -861,8 +874,9 @@ async function loadRecords(page=1){
 
     allRecords = data.records||[];
     if((data.promoters||[]).length) allPromoters=data.promoters;
-    if((data.estados||[]).length)   allEstados=data.estados;
-    if((data.zonas||[]).length)     allZonas=data.zonas;
+    // Siempre actualizar catálogos aunque no haya records en el rango de fechas
+    allEstados = data.estados || allEstados;
+    allZonas   = data.zonas   || allZonas;
 
     if(page===1) populateFiltroCatalogos();
     applyLocalFilters();
@@ -879,17 +893,16 @@ window.retryLoad = ()=>loadRecords(currentPage);
 
 // ── Filtros locales (sin re-fetch) ───────────────────────────────
 function applyLocalFilters(){
-  const stateSel = document.getElementById('fEstado');
+  const stateVal = document.getElementById('fEstado').value;  // ahora es el nombre
   const zoneSel  = document.getElementById('fZona');
   const conf     = document.getElementById('fConf').value;
-  const stateNm  = stateSel.options[stateSel.selectedIndex]?.text||'';
   const zoneNm   = zoneSel.options[zoneSel.selectedIndex]?.text||'';
 
   filteredRecords = allRecords.filter(r=>{
     // Filtro línea
     if(!pasaFiltroLinea(r)) return false;
-    // Estado
-    if(stateNm && stateNm!=='Todos' && r.state!==stateNm) return false;
+    // Estado — comparar por nombre directamente
+    if(stateVal && stateVal!=='all' && r.state!==stateVal) return false;
     // Zona
     if(zoneNm  && zoneNm!=='Todas' && r.zone!==zoneNm) return false;
     // Confirmación
@@ -943,7 +956,7 @@ function renderTable(){
       <td>${r.state||'—'}<br><span style="font-size:.7rem;color:var(--muted)">${r.zone||''}</span></td>
       <td>${dTxt}</td>
       <td><span class="bdg ${bc}">${r.verified||'—'}</span></td>
-      <td><button onclick="openModal(safeR)" class="btn btn-sec btn-sm" style="font-size:.72rem">Ver <i class="fas fa-arrow-right" style="font-size:.6rem"></i></button></td>
+      <td><button onclick='openModalById(this)' data-record='${encodeURIComponent(JSON.stringify(r))}' class="btn btn-sec btn-sm" style="font-size:.72rem">Ver <i class="fas fa-arrow-right" style="font-size:.6rem"></i></button></td>
     </tr>`;
   }).join('');
 
@@ -1096,15 +1109,20 @@ function populateFiltroCatalogos(){
   const sSel=document.getElementById('fEstado');
   const curS=sSel.value;
   sSel.innerHTML='<option value="all">Todos</option>';
-  allEstados.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.nombre;if(String(e.id)===curS)o.selected=true;sSel.appendChild(o);});
+  allEstados.forEach(e=>{const o=document.createElement('option');o.value=e.nombre;o.textContent=e.nombre;if(e.nombre===curS)o.selected=true;sSel.appendChild(o);});
 }
 
 function updateZoneFilter(){
-  const sid=document.getElementById('fEstado').value;
+  const sid=document.getElementById('fEstado').value; // ahora es el nombre del estado
   const zSel=document.getElementById('fZona');
   zSel.innerHTML='<option value="all">Todas</option>';
   zSel.disabled=sid==='all';
-  if(sid!=='all') allZonas.filter(z=>String(z.estado_id)===String(sid)).forEach(z=>{const o=document.createElement('option');o.value=z.nombre;o.textContent=z.nombre;zSel.appendChild(o);});
+  if(sid!=='all'){
+    const estadoObj=allEstados.find(e=>e.nombre===sid);
+    allZonas.filter(z=>String(z.estado_id)===String(estadoObj?.id||'')).forEach(z=>{
+      const o=document.createElement('option');o.value=z.nombre;o.textContent=z.nombre;zSel.appendChild(o);
+    });
+  }
   applyLocalFilters();
 }
 
@@ -1187,6 +1205,14 @@ function exportCSV(){
 }
 
 // ── Modal ────────────────────────────────────────────────────────
+// Wrapper seguro para abrir modal desde data-attribute (evita rotura con comillas en nombres)
+window.openModalById = function(btn){
+  try {
+    const json = JSON.parse(decodeURIComponent(btn.dataset.record));
+    openModal(json);
+  } catch(e) { console.error('openModalById error:', e); }
+};
+
 window.openModal = function(json){
   const r=typeof json==='string'?JSON.parse(json):json;
   document.getElementById('mTitle').textContent=r.trade||'—';
@@ -1294,6 +1320,29 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('detModal').onclick = e=>{ if(e.target===e.currentTarget)closeModal(); };
 
   setInterval(poll, 90_000);
+
+  // Dropdown Análisis en navbar
+  window.toggleAnalDD = function(e){
+    e.stopPropagation();
+    const dd=document.getElementById('analDD');
+    const open=dd.style.opacity==='1';
+    dd.style.opacity=open?'0':'1';
+    dd.style.pointerEvents=open?'none':'auto';
+    dd.style.transform=open?'translateY(-6px)':'translateY(0)';
+  };
+  document.addEventListener('click',()=>{
+    const dd=document.getElementById('analDD');
+    if(dd){dd.style.opacity='0';dd.style.pointerEvents='none';dd.style.transform='translateY(-6px)';}
+  });
+  // Hover en dd-wrap también abre
+  document.getElementById('analDDWrap')?.addEventListener('mouseenter',()=>{
+    const dd=document.getElementById('analDD');
+    if(dd){dd.style.opacity='1';dd.style.pointerEvents='auto';dd.style.transform='translateY(0)';}
+  });
+  document.getElementById('analDDWrap')?.addEventListener('mouseleave',()=>{
+    const dd=document.getElementById('analDD');
+    if(dd){dd.style.opacity='0';dd.style.pointerEvents='none';dd.style.transform='translateY(-6px)';}
+  });
 });
 </script>
 </body>

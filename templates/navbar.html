@@ -1,4 +1,4 @@
-{# CAPTA — navbar.html universal v2  ({% include 'navbar.html' %}) #}
+{# CAPTA — navbar.html universal v3 #}
 <script>
 (function(){var t=localStorage.getItem('sp-theme'),s=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||((!t)&&s))document.documentElement.classList.add('dark');})();
 </script>
@@ -6,6 +6,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='sparking-theme.css') }}">
+<style>
+/* ── Dropdown Análisis ── */
+.sp-nav-dropdown-wrap{position:relative}
+.sp-nav-dropdown-wrap:hover .sp-nav-dropdown,
+.sp-nav-dropdown-wrap.open .sp-nav-dropdown{opacity:1;pointer-events:auto;transform:translateY(0)}
+.sp-nav-dropdown{position:absolute;top:calc(100% + 6px);left:0;min-width:210px;background:var(--card);border:1px solid var(--brd);border-radius:var(--r2);box-shadow:var(--sh3);padding:6px;opacity:0;pointer-events:none;transform:translateY(-6px);transition:all .16s;z-index:500}
+.sp-nav-dropdown a{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:var(--r1);font-size:.82rem;font-weight:600;color:var(--txt2);text-decoration:none;transition:background .12s,color .12s}
+.sp-nav-dropdown a:hover,.sp-nav-dropdown a.active{background:var(--accent-soft);color:var(--accent)}
+.sp-nav-dropdown a i{width:16px;text-align:center;color:var(--accent);opacity:.8}
+.sp-nav-dropdown-sep{height:1px;background:var(--brd);margin:4px 6px}
+.sp-nav-link.has-dropdown::after{content:'▾';font-size:.55rem;margin-left:3px;opacity:.6}
+</style>
 
 <nav class="sp-nav" id="mainNav">
   <div class="sp-nav-inner">
@@ -13,9 +25,30 @@
       <div class="sp-logo-icon"><i class="fas fa-bolt"></i></div>
       <div><div class="sp-logo-name">CAPTA</div><div class="sp-logo-co" id="navEmpresa">—</div></div>
     </a>
+
     <div class="sp-nav-links" id="navLinks">
-      <a href="/dashboard"   class="sp-nav-link" data-nav><i class="fas fa-home"></i> Dashboard</a>
-      <a href="/analisis"    class="sp-nav-link" data-nav><i class="fas fa-chart-pie"></i> Análisis</a>
+      <a href="/dashboard" class="sp-nav-link" data-nav><i class="fas fa-home"></i> Dashboard</a>
+
+      <!-- Dropdown ANÁLISIS -->
+      <div class="sp-nav-dropdown-wrap" id="analisisDropdownWrap">
+        <span class="sp-nav-link has-dropdown" id="analisisNavBtn"
+          onclick="toggleAnalisisDropdown(event)"
+          style="cursor:pointer;user-select:none">
+          <i class="fas fa-chart-pie"></i> Análisis
+        </span>
+        <div class="sp-nav-dropdown" id="analisisDropdown">
+          <a href="/analisis" data-nav>
+            <i class="fas fa-dollar-sign"></i> Precios (USD/kg)
+          </a>
+          <a href="/caras" data-nav>
+            <i class="fas fa-eye"></i> Caras de Anaquel
+          </a>
+          <a href="/metros_espacios" data-nav>
+            <i class="fas fa-ruler-combined"></i> Metros y Espacios
+          </a>
+        </div>
+      </div>
+
       <a href="/clientes"    class="sp-nav-link" data-nav><i class="fas fa-store"></i> Clientes</a>
       <a href="/promotores"  class="sp-nav-link" data-nav><i class="fas fa-user-tie"></i> Promotores</a>
       <span class="sp-nav-sep"></span>
@@ -25,14 +58,15 @@
       <a href="/stock"       class="sp-nav-link" data-nav><i class="fas fa-boxes"></i> Stock</a>
       <a href="/planograma"  class="sp-nav-link" data-nav><i class="fas fa-image"></i> Planograma</a>
       <a href="/gps"         class="sp-nav-link" data-nav><i class="fas fa-map-marked-alt"></i> GPS</a>
-      <a href="/caras"       class="sp-nav-link" data-nav><i class="fas fa-eye"></i> Caras</a>
     </div>
+
     <div class="sp-nav-more" id="navMore" style="display:none">
       <button class="sp-more-btn" id="navMoreBtn">
         Más <i class="fas fa-chevron-down" id="navMoreIco" style="font-size:.55rem;transition:transform .18s"></i>
       </button>
       <div class="sp-dropdown" id="navDropdown"></div>
     </div>
+
     <div class="sp-linea-wrap" id="lineaWrap">
       <span class="sp-linea-label"><i class="fas fa-layer-group" style="margin-right:3px"></i>Línea</span>
       <select class="sp-linea-sel" id="navLineaSel" onchange="onLineaChange(this.value)">
@@ -54,6 +88,7 @@
   </div>
 </nav>
 
+<!-- DRAWER MOBILE -->
 <div class="sp-drawer" id="drawer">
   <div class="sp-drawer-overlay" onclick="closeDrawer()"></div>
   <div class="sp-drawer-panel">
@@ -68,8 +103,15 @@
       </select>
     </div>
     <div class="sp-drawer-sep"></div>
-    <a href="/dashboard"   class="sp-drawer-link"><i class="fas fa-home"></i> Dashboard</a>
-    <a href="/analisis"    class="sp-drawer-link"><i class="fas fa-chart-pie"></i> Análisis</a>
+    <a href="/dashboard"        class="sp-drawer-link"><i class="fas fa-home"></i> Dashboard</a>
+
+    <!-- Análisis grupo -->
+    <div style="padding:8px 12px 4px;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Análisis</div>
+    <a href="/analisis"         class="sp-drawer-link" style="padding-left:22px"><i class="fas fa-dollar-sign"></i> Precios (USD/kg)</a>
+    <a href="/caras"            class="sp-drawer-link" style="padding-left:22px"><i class="fas fa-eye"></i> Caras de Anaquel</a>
+    <a href="/metros_espacios"  class="sp-drawer-link" style="padding-left:22px"><i class="fas fa-ruler-combined"></i> Metros y Espacios</a>
+
+    <div class="sp-drawer-sep"></div>
     <a href="/clientes"    class="sp-drawer-link"><i class="fas fa-store"></i> Clientes</a>
     <a href="/promotores"  class="sp-drawer-link"><i class="fas fa-user-tie"></i> Promotores</a>
     <div class="sp-drawer-sep"></div>
@@ -79,7 +121,6 @@
     <a href="/stock"       class="sp-drawer-link"><i class="fas fa-boxes"></i> Stock</a>
     <a href="/planograma"  class="sp-drawer-link"><i class="fas fa-image"></i> Planograma</a>
     <a href="/gps"         class="sp-drawer-link"><i class="fas fa-map-marked-alt"></i> GPS</a>
-    <a href="/caras"       class="sp-drawer-link"><i class="fas fa-eye"></i> Caras</a>
     <div class="sp-drawer-sep"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px">
       <span style="font-size:.8rem;color:var(--muted)">Tema</span>
@@ -96,11 +137,20 @@
 </div>
 
 <script>
-/* ── CAPTA NAV v2 ── */
+/* ── CAPTA NAV v3 ── */
 const SUPA_URL='https://djjylikkocemrlsjxscr.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
-let _captaLineas=[]; let _captaLinea=localStorage.getItem('sp-linea')||'';
+let _captaLineas=[];let _captaLinea=localStorage.getItem('sp-linea')||'';
 
+/* ── ANÁLISIS DROPDOWN ── */
+window.toggleAnalisisDropdown=function(e){
+  e.stopPropagation();
+  const wrap=document.getElementById('analisisDropdownWrap');
+  wrap.classList.toggle('open');
+};
+document.addEventListener('click',()=>document.getElementById('analisisDropdownWrap')?.classList.remove('open'));
+
+/* ── THEME ── */
 function syncTheme(){
   const d=document.documentElement.classList.contains('dark');
   const s=(id,show)=>{const e=document.getElementById(id);if(e)e.style.display=show?'inline':'none';};
@@ -108,79 +158,100 @@ function syncTheme(){
   const l=document.getElementById('drawerThemeLbl');if(l)l.textContent=d?'Oscuro':'Claro';
 }
 window.toggleTheme=function(){
-  const d=document.documentElement.classList.contains('dark');
   document.documentElement.classList.toggle('dark');
-  localStorage.setItem('sp-theme',d?'light':'dark');
+  localStorage.setItem('sp-theme',document.documentElement.classList.contains('dark')?'dark':'light');
   syncTheme();
 };
-window.openDrawer=()=>{document.getElementById('drawer').classList.add('open');document.body.style.overflow='hidden';};
-window.closeDrawer=()=>{document.getElementById('drawer').classList.remove('open');document.body.style.overflow='';};
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();}});
+syncTheme();
 
-function fitNav(){
-  const nav=document.getElementById('mainNav'),links=document.getElementById('navLinks'),more=document.getElementById('navMore'),drop=document.getElementById('navDropdown'),hamb=document.querySelector('.sp-hamburger');
-  if(!nav||!links)return;
-  const W=nav.offsetWidth;
-  if(W<701){links.style.display='none';if(more)more.style.display='none';if(hamb)hamb.style.display='flex';return;}
-  if(hamb)hamb.style.display='none';links.style.display='flex';
-  const logoW=nav.querySelector('.sp-logo')?.offsetWidth||160,actW=nav.querySelector('.sp-nav-actions')?.offsetWidth||80,lineaW=nav.querySelector('.sp-linea-wrap')?.offsetWidth||160,avail=W-logoW-actW-lineaW-70;
-  const items=links.querySelectorAll('[data-nav],.sp-nav-sep');
-  items.forEach(el=>el.style.display='');
-  if(more){more.style.display='none';drop.innerHTML='';}
-  let used=0;const overflow=[];
-  items.forEach(el=>{const w=el.offsetWidth||0;if(used+w<=avail){used+=w;}else{el.style.display='none';if(el.tagName==='A')overflow.push(el);}});
-  if(overflow.length&&more){more.style.display='flex';overflow.forEach(a=>{const c=document.createElement('a');c.href=a.getAttribute('href');c.innerHTML=a.innerHTML;if(a.classList.contains('active'))c.classList.add('active');drop.appendChild(c);});}
-}
-document.getElementById('navMoreBtn')?.addEventListener('click',e=>{
-  e.stopPropagation();const dd=document.getElementById('navDropdown'),ico=document.getElementById('navMoreIco');
-  dd?.classList.toggle('open');if(ico)ico.style.transform=dd?.classList.contains('open')?'rotate(180deg)':'';
-});
-document.addEventListener('click',()=>{document.getElementById('navDropdown')?.classList.remove('open');});
-if(window.ResizeObserver)new ResizeObserver(fitNav).observe(document.getElementById('mainNav')||document.body);
-else window.addEventListener('resize',fitNav);
+/* ── NOMBRE EMPRESA ── */
+(function(){
+  const n=localStorage.getItem('empresa_nombre')||'';
+  ['navEmpresa','drawerEmpresa'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=n||'Sistema';});
+})();
 
-function markActive(){
-  const p=window.location.pathname;
-  document.querySelectorAll('[data-nav]').forEach(a=>{if(a.tagName==='A')a.classList.toggle('active',a.getAttribute('href')===p);});
-  document.querySelectorAll('.sp-drawer-link').forEach(a=>a.classList.toggle('active',a.getAttribute('href')===p));
-}
-function loadEmpresaNombre(){
-  const n=localStorage.getItem('empresa_nombre')||'—';
-  const e1=document.getElementById('navEmpresa');if(e1)e1.textContent=n;
-  const e2=document.getElementById('drawerEmpresa');if(e2)e2.textContent=n;
-}
-async function captaCargarLineas(){
-  const eid=localStorage.getItem('empresa_id');if(!eid)return;
-  try{
-    const r=await fetch(`${SUPA_URL}/rest/v1/web_lineas?empresa_id=eq.${eid}&activa=eq.true&select=id,nombre&order=nombre`,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
-    _captaLineas=await r.json()||[];
-    const opts='<option value="">Todas las líneas</option>'+_captaLineas.map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('');
-    const s1=document.getElementById('navLineaSel');if(s1){s1.innerHTML=opts;s1.value=_captaLinea;}
-    const s2=document.getElementById('drawerLineaSel');if(s2){s2.innerHTML=opts;s2.value=_captaLinea;}
-    if(_captaLinea)captaShowBanner(_captaLinea);
-  }catch(e){console.warn('Lineas:',e);}
-}
+/* ── ACTIVO ── */
+(function(){
+  const path=window.location.pathname;
+  document.querySelectorAll('[data-nav]').forEach(a=>{
+    const href=a.getAttribute('href');
+    if(href&&path.startsWith(href)&&href!=='/')a.classList.add('active');
+  });
+  // Si estamos en una página de análisis, marcar el botón de análisis
+  const analisisPages=['/analisis','/caras','/metros_espacios'];
+  if(analisisPages.some(p=>path.startsWith(p))){
+    document.getElementById('analisisNavBtn')?.classList.add('active');
+  }
+})();
+
+/* ── LÍNEAS ── */
 window.onLineaChange=function(val){
   _captaLinea=val;localStorage.setItem('sp-linea',val);
-  const s1=document.getElementById('navLineaSel');if(s1)s1.value=val;
-  const s2=document.getElementById('drawerLineaSel');if(s2)s2.value=val;
-  captaShowBanner(val);
-  if(typeof onLineaChanged==='function')onLineaChanged(val);
+  ['navLineaSel','drawerLineaSel'].forEach(id=>{const e=document.getElementById(id);if(e&&e.value!==val)e.value=val;});
+  if(typeof window.onLineaChanged==='function')window.onLineaChanged(val);
 };
-function captaShowBanner(val){
-  const b=document.getElementById('lineaBanner');if(!b)return;
-  if(val){const l=_captaLineas.find(x=>x.id===val);const n=document.getElementById('lineaBannerNombre');if(n)n.textContent=l?.nombre||val;b.style.display='flex';}
-  else b.style.display='none';
-}
 window.captaToast=function(msg,type='info'){
-  const ic={success:'fa-check-circle',error:'fa-exclamation-circle',info:'fa-info-circle',warn:'fa-exclamation-triangle'};
-  const cl={success:'var(--green)',error:'var(--red)',info:'var(--accent)',warn:'var(--amber)'};
-  const el=document.createElement('div');el.className='sp-toast';
-  el.innerHTML=`<i class="fas ${ic[type]||ic.info}" style="color:${cl[type]||cl.info};flex-shrink:0"></i><span>${msg}</span>`;
-  document.body.appendChild(el);
-  setTimeout(()=>{el.classList.add('exit');el.addEventListener('animationend',()=>el.remove());},3000);
+  const t=document.createElement('div');
+  const c={success:'var(--green)',error:'var(--red)',warn:'var(--amber)',info:'var(--accent)'};
+  t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;background:${c[type]||c.info};color:#fff;padding:11px 18px;border-radius:10px;font-size:.83rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.22);animation:fadeIn .2s ease`;
+  t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3200);
 };
-window.captaLightbox=function(src){const lb=document.createElement('div');lb.className='sp-lightbox';lb.innerHTML=`<img src="${src}">`;lb.onclick=()=>lb.remove();document.body.appendChild(lb);};
+window.captaLightbox=function(src){
+  const lb=document.createElement('div');lb.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  lb.innerHTML=`<img src="${src}" style="max-width:94vw;max-height:94vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6)">`;
+  lb.onclick=()=>lb.remove();document.body.appendChild(lb);
+};
 
-document.addEventListener('DOMContentLoaded',()=>{syncTheme();loadEmpresaNombre();markActive();requestAnimationFrame(()=>requestAnimationFrame(fitNav));captaCargarLineas();});
+async function _loadLineas(){
+  const eid=localStorage.getItem('empresa_id');if(!eid)return;
+  try{
+    const r=await fetch(`${SUPA_URL}/rest/v1/web_lineas?activa=eq.true&empresa_id=eq.${eid}&select=id,nombre&order=nombre`,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    _captaLineas=await r.json();
+    ['navLineaSel','drawerLineaSel'].forEach(sid=>{
+      const sel=document.getElementById(sid);if(!sel)return;
+      sel.innerHTML='<option value="">Todas las líneas</option>';
+      _captaLineas.forEach(l=>sel.innerHTML+=`<option value="${l.id}">${l.nombre}</option>`);
+      sel.value=_captaLinea||'';
+    });
+  }catch(e){console.warn('Nav líneas:',e);}
+}
+
+/* ── OVERFLOW RESPONSIVO ── */
+function _checkNavOverflow(){
+  const nav=document.getElementById('navLinks');const more=document.getElementById('navMore');if(!nav||!more)return;
+  const dd=document.getElementById('navDropdown');dd.innerHTML='';
+  Array.from(nav.children).forEach(el=>el.style.display='');
+  let overflow=false;
+  Array.from(nav.children).forEach(el=>{
+    if(nav.scrollWidth>nav.offsetWidth+4||overflow){
+      overflow=true;
+      if(el.classList.contains('sp-nav-link')||el.tagName==='A'){
+        const cl=el.cloneNode(true);dd.appendChild(cl);el.style.display='none';
+      }
+    }
+  });
+  more.style.display=dd.children.length?'flex':'none';
+}
+const _moreBtn=document.getElementById('navMoreBtn');
+if(_moreBtn)_moreBtn.onclick=()=>{
+  const dd=document.getElementById('navDropdown');const ico=document.getElementById('navMoreIco');
+  dd.classList.toggle('open');ico.style.transform=dd.classList.contains('open')?'rotate(180deg)':'';
+};
+document.addEventListener('click',e=>{
+  const dd=document.getElementById('navDropdown');
+  if(dd&&!dd.closest('.sp-nav-more')?.contains(e.target))dd.classList.remove('open');
+});
+window.openDrawer=function(){document.getElementById('drawer').classList.add('open');};
+window.closeDrawer=function(){document.getElementById('drawer').classList.remove('open');};
+document.getElementById('drawer')?.addEventListener('click',e=>{if(e.target.id==='drawer')closeDrawer();});
+
+/* ── HAMBURGER VISIBLE ── */
+function _updateHamburger(){
+  const nav=document.getElementById('navLinks');const ham=document.querySelector('.sp-hamburger');
+  if(!nav||!ham)return;ham.style.display=nav.offsetWidth<200?'':'none';
+}
+
+window.addEventListener('load',()=>{_loadLineas();_checkNavOverflow();_updateHamburger();});
+window.addEventListener('resize',()=>{_checkNavOverflow();_updateHamburger();});
+new ResizeObserver(()=>{_checkNavOverflow();_updateHamburger();}).observe(document.body);
 </script>

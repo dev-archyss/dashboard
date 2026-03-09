@@ -336,6 +336,13 @@ def caras():
     return render_template('caras.html')
 
 
+@app.route('/metros_espacios')
+def metros_espacios():
+    if 'empresa_id' not in session:
+        return redirect(url_for('login'))
+    return render_template('metros_espacios.html')
+
+
 # ─── Login / Logout ───────────────────────────────────────────────────────────
 @app.route('/login', methods=['POST'])
 def do_login():
