@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Competencia — CAPTA</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 {% include 'navbar.html' %}
@@ -16,15 +15,27 @@
     </div>
   </div>
 
-  <!-- Formulario -->
   <div class="sp-card" style="margin-bottom:20px">
     <p class="sp-sec-title" id="formTitle">Nueva presentación de competidor</p>
     <form id="productForm">
       <input type="hidden" id="product_id">
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
-        <div style="flex:1;min-width:240px">
-          <label class="sp-label">Presentación *</label>
-          <input type="text" id="presentation" class="sp-input" placeholder="Nombre de la presentación del competidor" required>
+        <div style="flex:2;min-width:220px">
+          <label class="sp-label">Nombre del producto competidor *</label>
+          <input type="text" id="presentation" class="sp-input" placeholder="Ej: Rival Snack, Bebida X" required oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div style="flex:0 1 110px;min-width:90px">
+          <label class="sp-label">Gramaje</label>
+          <input type="number" id="gramaje" class="sp-input" placeholder="Ej: 100" min="0" step="0.01">
+        </div>
+        <div style="flex:0 1 100px;min-width:80px">
+          <label class="sp-label">Unidad</label>
+          <select id="unidad" class="sp-select">
+            <option value="">—</option>
+            <option value="g">g</option><option value="kg">kg</option>
+            <option value="ml">ml</option><option value="l">l</option>
+            <option value="oz">oz</option><option value="un">un</option>
+          </select>
         </div>
         <div style="display:flex;gap:8px">
           <button type="submit" id="submitButton" class="sp-btn sp-btn-primary"><i class="fas fa-plus"></i> Crear</button>
@@ -34,7 +45,6 @@
     </form>
   </div>
 
-  <!-- Buscar + tabla -->
   <div class="sp-card">
     <div style="margin-bottom:14px">
       <div class="sp-search">
@@ -45,100 +55,103 @@
     <div style="overflow-x:auto">
       <table class="sp-tbl" id="productsTable">
         <thead><tr>
-          <th style="width:65%">Presentación</th>
-          <th>Creado</th>
+          <th>Producto</th><th>Gramaje</th><th>Creado</th>
           <th style="text-align:center">Acciones</th>
         </tr></thead>
         <tbody id="productsTableBody"></tbody>
       </table>
-      <p id="loadingMessage" style="text-align:center;color:var(--muted);padding:32px 0"><i class="fas fa-spinner fa-spin" style="color:var(--accent);margin-right:6px"></i>Cargando...</p>
+      <p id="loadingMessage" style="text-align:center;color:var(--muted);padding:32px 0">
+        <i class="fas fa-spinner fa-spin" style="color:var(--accent);margin-right:6px"></i>Cargando...
+      </p>
       <p id="noResultsMessage" style="display:none;text-align:center;color:var(--muted);padding:24px 0">Sin resultados</p>
     </div>
   </div>
 </main>
 
 <script>
-const supabaseUrl='https://djjylikkocemrlsjxscr.supabase.co';
-const supabaseKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
-const db=supabase.createClient(supabaseUrl,supabaseKey);
-const empresaId=localStorage.getItem('empresa_id');
-const API_URL=`${supabaseUrl}/rest/v1/web_competidorproductos`;
-const defaultHeaders={'apikey':supabaseKey,'Authorization':'Bearer '+supabaseKey,'Content-Type':'application/json','Prefer':'return=representation'};
-if(!empresaId)window.location.href='/';
+const empresaId = localStorage.getItem('empresa_id');
+if (!empresaId) window.location.href = '/';
 
-let allProducts=[];
+const H = {'Content-Type':'application/json'};
+let allProducts = [];
 
-function formatDate(s){if(!s)return'—';return new Date(s).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'});}
+const fmt  = s => s ? new Date(s).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+const fmtG = p => p.gramaje ? (p.gramaje%1===0?parseInt(p.gramaje):p.gramaje)+(p.unidad||'') : '—';
 
-async function loadProducts(){
-  const tbody=document.getElementById('productsTableBody');
-  document.getElementById('loadingMessage').style.display='block';
-  tbody.innerHTML='';
-  const r=await fetch(`${API_URL}?empresa_id=eq.${empresaId}&order=presentation`,{headers:defaultHeaders});
-  allProducts=r.ok?await r.json():[];
-  document.getElementById('loadingMessage').style.display='none';
+async function loadProducts() {
+  document.getElementById('loadingMessage').style.display = 'block';
+  document.getElementById('productsTableBody').innerHTML = '';
+  const r = await fetch(`/api/competitorproducts?empresa_id=${empresaId}`);
+  const d = r.ok ? await r.json() : {};
+  allProducts = d.products || [];
+  document.getElementById('loadingMessage').style.display = 'none';
   renderProducts(allProducts);
 }
 
-function renderProducts(products){
-  const tbody=document.getElementById('productsTableBody');
-  const noMsg=document.getElementById('noResultsMessage');
-  tbody.innerHTML='';noMsg.style.display='none';
-  if(!products.length){noMsg.style.display='block';return;}
-  tbody.innerHTML=products.map(p=>`<tr>
+function renderProducts(products) {
+  const tbody = document.getElementById('productsTableBody');
+  const noMsg = document.getElementById('noResultsMessage');
+  tbody.innerHTML = ''; noMsg.style.display = 'none';
+  if (!products.length) { noMsg.style.display = 'block'; return; }
+  tbody.innerHTML = products.map(p => `<tr>
     <td class="sp-hi">${p.presentation}</td>
-    <td>${formatDate(p.created_at)}</td>
+    <td style="font-weight:600;color:var(--accent)">${fmtG(p)}</td>
+    <td>${fmt(p.created_at)}</td>
     <td style="text-align:center;white-space:nowrap">
-      <button onclick="editProduct('${p.id}','${p.presentation.replace(/'/g,"\\'")}')" class="sp-btn sp-btn-sec sp-btn-sm"><i class="fas fa-pen"></i></button>
+      <button onclick="editProduct('${p.id}')" class="sp-btn sp-btn-sec sp-btn-sm"><i class="fas fa-pen"></i></button>
       <button onclick="deleteProduct('${p.id}')" class="sp-btn sp-btn-danger sp-btn-sm" style="margin-left:4px"><i class="fas fa-trash"></i></button>
-    </td>
-  </tr>`).join('');
+    </td></tr>`).join('');
 }
 
-function filterProducts(){
-  const q=document.getElementById('searchInput').value.toLowerCase();
-  renderProducts(allProducts.filter(p=>p.presentation.toLowerCase().includes(q)));
+function filterProducts() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderProducts(allProducts.filter(p => p.presentation.toLowerCase().includes(q)));
 }
 
-document.getElementById('productForm').addEventListener('submit',async e=>{
+document.getElementById('productForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const id=document.getElementById('product_id').value;
-  const presentation=document.getElementById('presentation').value.trim();
-  if(!presentation)return;
-  let r;
-  if(id){
-    r=await fetch(`${API_URL}/${id}`,{method:'PATCH',headers:defaultHeaders,body:JSON.stringify({presentation,empresa_id:empresaId})});
-  }else{
-    r=await fetch(API_URL,{method:'POST',headers:defaultHeaders,body:JSON.stringify({presentation,empresa_id:empresaId})});
-  }
-  if(r.ok||r.status===201||r.status===204){captaToast(id?'Actualizado':'Creado','success');resetForm();loadProducts();}
-  else captaToast('Error al guardar','error');
+  const id           = document.getElementById('product_id').value;
+  const presentation = document.getElementById('presentation').value.trim().toUpperCase();
+  const gramaje      = parseFloat(document.getElementById('gramaje').value) || null;
+  const unidad       = document.getElementById('unidad').value || null;
+  if (!presentation) return;
+  const payload = {presentation, gramaje, unidad, empresa_id: empresaId};
+  const r = id
+    ? await fetch(`/api/competitorproducts/${id}`, {method:'PATCH', headers:H, body:JSON.stringify(payload)})
+    : await fetch('/api/competitorproducts',        {method:'POST',  headers:H, body:JSON.stringify(payload)});
+  if (r.ok || r.status===201) { captaToast(id?'Actualizado':'Creado','success'); resetForm(); loadProducts(); }
+  else { const err=await r.json().catch(()=>({})); captaToast(err.error||'Error al guardar','error'); }
 });
 
-function editProduct(id,presentation){
-  document.getElementById('product_id').value=id;
-  document.getElementById('presentation').value=presentation;
-  document.getElementById('formTitle').textContent='Editar presentación';
-  document.getElementById('submitButton').innerHTML='<i class="fas fa-save"></i> Guardar';
-  document.getElementById('cancelButton').style.display='';
+function editProduct(id) {
+  const p = allProducts.find(x => String(x.id)===String(id)); if (!p) return;
+  document.getElementById('product_id').value  = id;
+  document.getElementById('presentation').value= p.presentation;
+  document.getElementById('gramaje').value      = p.gramaje || '';
+  document.getElementById('unidad').value       = p.unidad  || '';
+  document.getElementById('formTitle').textContent = 'Editar presentación';
+  document.getElementById('submitButton').innerHTML = '<i class="fas fa-save"></i> Guardar';
+  document.getElementById('cancelButton').style.display = '';
+  window.scrollTo({top:0, behavior:'smooth'});
 }
 
-async function deleteProduct(id){
-  if(!confirm('¿Eliminar esta presentación de competidor?'))return;
-  const r=await fetch(`${API_URL}/${id}?empresa_id=${empresaId}`,{method:'DELETE',headers:defaultHeaders});
-  if(r.status===204||r.ok){captaToast('Eliminado','success');loadProducts();}
+async function deleteProduct(id) {
+  if (!confirm('¿Eliminar esta presentación de competidor?')) return;
+  const r = await fetch(`/api/competitorproducts/${id}?empresa_id=${empresaId}`, {method:'DELETE'});
+  if (r.ok||r.status===204) { captaToast('Eliminado','success'); loadProducts(); }
   else captaToast('Error al eliminar','error');
 }
 
-function resetForm(){
-  document.getElementById('product_id').value='';document.getElementById('presentation').value='';
-  document.getElementById('formTitle').textContent='Nueva presentación de competidor';
-  document.getElementById('submitButton').innerHTML='<i class="fas fa-plus"></i> Crear';
-  document.getElementById('cancelButton').style.display='none';
+function resetForm() {
+  ['product_id','presentation','gramaje'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('unidad').value='';
+  document.getElementById('formTitle').textContent = 'Nueva presentación de competidor';
+  document.getElementById('submitButton').innerHTML = '<i class="fas fa-plus"></i> Crear';
+  document.getElementById('cancelButton').style.display = 'none';
 }
 
-window.editProduct=editProduct;window.deleteProduct=deleteProduct;window.resetForm=resetForm;
-document.addEventListener('DOMContentLoaded',()=>loadProducts());
+window.editProduct=editProduct; window.deleteProduct=deleteProduct; window.resetForm=resetForm;
+document.addEventListener('DOMContentLoaded', () => loadProducts());
 </script>
 </body>
 </html>

@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Productos — CAPTA</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 {% include 'navbar.html' %}
@@ -17,15 +16,30 @@
     <span id="count_label" class="sp-bdg sp-bdg-accent" style="font-size:.8rem;padding:4px 14px">— productos</span>
   </div>
 
-  <!-- Formulario crear -->
   <div class="sp-card" style="margin-bottom:20px">
     <p class="sp-sec-title" id="formTitle">Nueva presentación</p>
     <form id="productForm">
       <input type="hidden" id="product_id">
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
         <div style="flex:2;min-width:200px">
-          <label class="sp-label">Presentación *</label>
-          <input type="text" id="presentation" class="sp-input" placeholder="Nombre de la presentación" required oninput="this.value=this.value.toUpperCase()">
+          <label class="sp-label">Nombre del producto *</label>
+          <input type="text" id="presentation" class="sp-input" placeholder="Ej: Snack Clásico, Bebida Naranja" required oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div style="flex:0 1 110px;min-width:90px">
+          <label class="sp-label">Gramaje</label>
+          <input type="number" id="gramaje" class="sp-input" placeholder="Ej: 100" min="0" step="0.01">
+        </div>
+        <div style="flex:0 1 100px;min-width:80px">
+          <label class="sp-label">Unidad</label>
+          <select id="unidad" class="sp-select">
+            <option value="">—</option>
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+            <option value="ml">ml</option>
+            <option value="l">l</option>
+            <option value="oz">oz</option>
+            <option value="un">un</option>
+          </select>
         </div>
         <div style="flex:1;min-width:160px">
           <label class="sp-label">Línea</label>
@@ -39,33 +53,30 @@
     </form>
   </div>
 
-  <!-- Filtros por línea -->
   <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px">
     <span style="font-size:.75rem;color:var(--muted);font-weight:600">Filtrar:</span>
-    <button id="filtro_todas" class="sp-btn sp-btn-sec sp-btn-sm" style="border-radius:99px" onclick="aplicarFiltro('')">Todas</button>
+    <button id="filtro_todas" class="sp-btn sp-btn-primary sp-btn-sm" style="border-radius:99px" onclick="aplicarFiltro('')">Todas</button>
     <button id="filtro_sin_linea" class="sp-btn sp-btn-sec sp-btn-sm" style="border-radius:99px" onclick="aplicarFiltro('__sin_linea__')">Sin línea</button>
     <div id="filtros_lineas" style="display:flex;flex-wrap:wrap;gap:6px"></div>
   </div>
 
-  <!-- Tabla -->
   <div class="sp-tbl-wrap">
     <div style="overflow-x:auto;max-height:65vh">
       <table class="sp-tbl">
         <thead><tr>
-          <th>Presentación</th>
-          <th>Línea</th>
-          <th>Creado</th>
+          <th>Producto</th><th>Gramaje</th><th>Línea</th><th>Creado</th>
           <th style="text-align:center">Acciones</th>
         </tr></thead>
         <tbody id="productsTableBody">
-          <tr><td colspan="4" style="text-align:center;padding:36px;color:var(--muted)"><i class="fas fa-spinner fa-spin" style="color:var(--accent);display:block;margin-bottom:8px;font-size:1.2rem"></i>Cargando...</td></tr>
+          <tr><td colspan="5" style="text-align:center;padding:36px;color:var(--muted)">
+            <i class="fas fa-spinner fa-spin" style="color:var(--accent);display:block;margin-bottom:8px;font-size:1.2rem"></i>Cargando...
+          </td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </main>
 
-<!-- Modal editar -->
 <div class="sp-overlay" id="editModal">
   <div class="sp-modal sp-modal-sm">
     <div class="sp-modal-hdr">
@@ -74,8 +85,23 @@
     </div>
     <div class="sp-modal-body">
       <div style="margin-bottom:12px">
-        <label class="sp-label">Presentación *</label>
+        <label class="sp-label">Nombre del producto *</label>
         <input type="text" id="modal_presentation" class="sp-input" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <div style="flex:1">
+          <label class="sp-label">Gramaje</label>
+          <input type="number" id="modal_gramaje" class="sp-input" placeholder="Ej: 100" min="0" step="0.01">
+        </div>
+        <div style="flex:1">
+          <label class="sp-label">Unidad</label>
+          <select id="modal_unidad" class="sp-select">
+            <option value="">—</option>
+            <option value="g">g</option><option value="kg">kg</option>
+            <option value="ml">ml</option><option value="l">l</option>
+            <option value="oz">oz</option><option value="un">un</option>
+          </select>
+        </div>
       </div>
       <div>
         <label class="sp-label">Línea</label>
@@ -90,117 +116,125 @@
 </div>
 
 <script>
-const supabaseUrl='https://djjylikkocemrlsjxscr.supabase.co';
-const supabaseKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
-const db=supabase.createClient(supabaseUrl,supabaseKey);
-const empresaId=localStorage.getItem('empresa_id');
-if(!empresaId)window.location.href='/';
+const empresaId = localStorage.getItem('empresa_id');
+if (!empresaId) window.location.href = '/';
 
-let allProducts=[],allLineas=[],filtroActivo='',editingId=null;
+let allProducts = [], allLineas = [], filtroActivo = '', editingId = null;
+const H = {'Content-Type':'application/json'};
+const fmt = s => s ? new Date(s).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+const fmtG = p => p.gramaje ? (p.gramaje%1===0?parseInt(p.gramaje):p.gramaje)+(p.unidad||'') : '—';
 
-async function loadLineas(){
-  const{data}=await db.from('web_lineas').select('id,nombre').eq('empresa_id',empresaId).eq('activa',true).order('nombre');
-  allLineas=data||[];
-  ['linea_id','modal_linea_id'].forEach(id=>{
-    const s=document.getElementById(id);s.innerHTML='<option value="">Sin línea</option>';
-    allLineas.forEach(l=>s.innerHTML+=`<option value="${l.id}">${l.nombre}</option>`);
+async function loadLineas() {
+  const r = await fetch(`/api/lineas?empresa_id=${empresaId}`);
+  const d = await r.json();
+  allLineas = d.lineas || [];
+  ['linea_id','modal_linea_id'].forEach(sid => {
+    const s = document.getElementById(sid);
+    s.innerHTML = '<option value="">Sin línea</option>';
+    allLineas.forEach(l => s.innerHTML += `<option value="${l.id}">${l.nombre}</option>`);
   });
-  // Botones de filtro
-  const c=document.getElementById('filtros_lineas');c.innerHTML='';
-  allLineas.forEach(l=>{
-    const b=document.createElement('button');b.id=`filtro_${l.id}`;
-    b.className='sp-btn sp-btn-sec sp-btn-sm';b.style.borderRadius='99px';b.textContent=l.nombre;
-    b.onclick=()=>aplicarFiltro(l.id);c.appendChild(b);
+  const c = document.getElementById('filtros_lineas'); c.innerHTML = '';
+  allLineas.forEach(l => {
+    const b = document.createElement('button');
+    b.id = `filtro_${l.id}`; b.className = 'sp-btn sp-btn-sec sp-btn-sm'; b.style.borderRadius = '99px';
+    b.textContent = l.nombre; b.onclick = () => aplicarFiltro(l.id); c.appendChild(b);
   });
 }
 
-async function loadProducts(){
-  const tbody=document.getElementById('productsTableBody');
-  tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:36px;color:var(--muted)"><i class="fas fa-spinner fa-spin" style="color:var(--accent);display:block;margin-bottom:8px;font-size:1.2rem"></i>Cargando...</td></tr>';
-  const{data,error}=await db.from('web_myproductos').select('id,presentation,linea_id,created_at,web_lineas(id,nombre)').eq('empresa_id',empresaId).order('presentation');
-  if(error){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--red);padding:24px">Error al cargar</td></tr>';return;}
-  allProducts=data||[];renderTable();
+async function loadProducts() {
+  const tbody = document.getElementById('productsTableBody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:36px;color:var(--muted)"><i class="fas fa-spinner fa-spin" style="color:var(--accent);display:block;margin-bottom:8px"></i>Cargando...</td></tr>';
+  const r = await fetch(`/api/myproducts?empresa_id=${empresaId}`);
+  if (!r.ok) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--red);padding:24px">Error al cargar</td></tr>'; return; }
+  const d = await r.json();
+  allProducts = d.products || [];
+  renderTable();
 }
 
-function renderTable(){
-  const tbody=document.getElementById('productsTableBody');
-  let items=allProducts;
-  if(filtroActivo==='__sin_linea__')items=allProducts.filter(p=>!p.linea_id);
-  else if(filtroActivo)items=allProducts.filter(p=>p.linea_id===filtroActivo);
-  document.getElementById('count_label').textContent=`${items.length} / ${allProducts.length} productos`;
-  document.querySelectorAll('.filtro-activo').forEach(b=>b.classList.remove('filtro-activo','sp-btn-primary'));
-  const actBtn=filtroActivo===''?'filtro_todas':filtroActivo==='__sin_linea__'?'filtro_sin_linea':`filtro_${filtroActivo}`;
-  const ab=document.getElementById(actBtn);if(ab){ab.classList.add('sp-btn-primary');ab.classList.remove('sp-btn-sec');}
-  if(!items.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:36px">Sin productos para este filtro</td></tr>';return;}
-  const fmt=s=>{if(!s)return'—';const d=new Date(s);return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'});};
-  tbody.innerHTML=items.map(p=>{
-    const lBdg=p.web_lineas?.nombre?`<span class="sp-bdg sp-bdg-teal">${p.web_lineas.nombre}</span>`:'<span class="sp-bdg sp-bdg-def">Sin línea</span>';
-    return`<tr>
+function renderTable() {
+  const tbody = document.getElementById('productsTableBody');
+  let items = allProducts;
+  if (filtroActivo === '__sin_linea__') items = allProducts.filter(p => !p.linea_id);
+  else if (filtroActivo) items = allProducts.filter(p => String(p.linea_id) === String(filtroActivo));
+  document.getElementById('count_label').textContent = `${items.length} / ${allProducts.length} productos`;
+  document.querySelectorAll('[id^="filtro_"]').forEach(b => { b.classList.remove('sp-btn-primary'); b.classList.add('sp-btn-sec'); });
+  const ak = filtroActivo===''?'filtro_todas':filtroActivo==='__sin_linea__'?'filtro_sin_linea':`filtro_${filtroActivo}`;
+  const ab = document.getElementById(ak); if(ab){ab.classList.add('sp-btn-primary');ab.classList.remove('sp-btn-sec');}
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:36px">Sin productos para este filtro</td></tr>'; return; }
+  const lnNombre = id => allLineas.find(l => String(l.id)===String(id))?.nombre;
+  tbody.innerHTML = items.map(p => {
+    const ln = lnNombre(p.linea_id);
+    const lBdg = ln ? `<span class="sp-bdg sp-bdg-teal">${ln}</span>` : '<span class="sp-bdg sp-bdg-def">Sin línea</span>';
+    return `<tr>
       <td class="sp-hi">${p.presentation}</td>
-      <td>${lBdg}</td>
-      <td>${fmt(p.created_at)}</td>
+      <td style="font-weight:600;color:var(--accent)">${fmtG(p)}</td>
+      <td>${lBdg}</td><td>${fmt(p.created_at)}</td>
       <td style="text-align:center;white-space:nowrap">
         <button onclick="openEdit('${p.id}')" class="sp-btn sp-btn-sec sp-btn-sm"><i class="fas fa-pen"></i></button>
         <button onclick="deleteProduct('${p.id}')" class="sp-btn sp-btn-danger sp-btn-sm" style="margin-left:4px"><i class="fas fa-trash"></i></button>
-      </td>
-    </tr>`;
+      </td></tr>`;
   }).join('');
 }
 
-window.aplicarFiltro=function(v){filtroActivo=v;renderTable();};
+window.aplicarFiltro = v => { filtroActivo = v; renderTable(); };
 
-document.getElementById('productForm').addEventListener('submit',async e=>{
+document.getElementById('productForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const id=document.getElementById('product_id').value;
-  const presentation=document.getElementById('presentation').value.trim().toUpperCase();
-  const lineaId=document.getElementById('linea_id').value||null;
-  if(!presentation)return;
-  if(id){
-    const{error}=await db.from('web_myproductos').update({presentation,linea_id:lineaId}).eq('id',id).eq('empresa_id',empresaId);
-    if(error){captaToast(error.message.includes('unique')?'Presentación ya existe':error.message,'error');return;}
-    captaToast('Actualizado','success');resetForm();loadProducts();
-  }else{
-    const{error}=await db.from('web_myproductos').insert([{presentation,linea_id:lineaId,empresa_id:empresaId}]);
-    if(error){captaToast(error.message.includes('unique')?'Ya existe esa presentación':error.message,'error');return;}
-    captaToast('Presentación creada','success');resetForm();loadProducts();
-  }
+  const id           = document.getElementById('product_id').value;
+  const presentation = document.getElementById('presentation').value.trim().toUpperCase();
+  const gramaje      = parseFloat(document.getElementById('gramaje').value) || null;
+  const unidad       = document.getElementById('unidad').value || null;
+  const linea_id     = document.getElementById('linea_id').value || null;
+  if (!presentation) return;
+  const payload = {presentation, gramaje, unidad, linea_id, empresa_id: empresaId};
+  const r = id
+    ? await fetch(`/api/myproducts/${id}`, {method:'PATCH', headers:H, body:JSON.stringify(payload)})
+    : await fetch('/api/myproducts',        {method:'POST',  headers:H, body:JSON.stringify(payload)});
+  if (r.ok || r.status===201) { captaToast(id?'Actualizado':'Producto creado','success'); resetForm(); loadProducts(); }
+  else { const err=await r.json().catch(()=>({})); captaToast(err.error||'Error al guardar','error'); }
 });
 
-function openEdit(id){
-  const p=allProducts.find(x=>x.id===id);if(!p)return;
-  editingId=id;
-  document.getElementById('modal_presentation').value=p.presentation;
-  document.getElementById('modal_linea_id').value=p.linea_id||'';
+function openEdit(id) {
+  const p = allProducts.find(x => String(x.id)===String(id)); if (!p) return;
+  editingId = id;
+  document.getElementById('modal_presentation').value = p.presentation;
+  document.getElementById('modal_gramaje').value      = p.gramaje || '';
+  document.getElementById('modal_unidad').value       = p.unidad  || '';
+  document.getElementById('modal_linea_id').value     = p.linea_id|| '';
   document.getElementById('editModal').classList.add('open');
 }
 
-async function guardarEdicion(){
-  if(!editingId)return;
-  const presentation=document.getElementById('modal_presentation').value.trim().toUpperCase();
-  const lineaId=document.getElementById('modal_linea_id').value||null;
-  if(!presentation){captaToast('Nombre requerido','error');return;}
-  const{error}=await db.from('web_myproductos').update({presentation,linea_id:lineaId}).eq('id',editingId).eq('empresa_id',empresaId);
-  if(error){captaToast(error.message.includes('unique')?'Ya existe esa presentación':error.message,'error');return;}
-  captaToast('Actualizado','success');closeEdit();editingId=null;loadProducts();
+async function guardarEdicion() {
+  if (!editingId) return;
+  const presentation = document.getElementById('modal_presentation').value.trim().toUpperCase();
+  const gramaje      = parseFloat(document.getElementById('modal_gramaje').value) || null;
+  const unidad       = document.getElementById('modal_unidad').value || null;
+  const linea_id     = document.getElementById('modal_linea_id').value || null;
+  if (!presentation) { captaToast('Nombre requerido','error'); return; }
+  const r = await fetch(`/api/myproducts/${editingId}`, {
+    method:'PATCH', headers:H,
+    body: JSON.stringify({presentation, gramaje, unidad, linea_id, empresa_id: empresaId})
+  });
+  if (r.ok) { captaToast('Actualizado','success'); closeEdit(); editingId=null; loadProducts(); }
+  else { const err=await r.json().catch(()=>({})); captaToast(err.error||'Error al guardar','error'); }
 }
 
-async function deleteProduct(id){
-  if(!confirm('¿Eliminar esta presentación?'))return;
-  const{error}=await db.from('web_myproductos').delete().eq('id',id).eq('empresa_id',empresaId);
-  if(error){captaToast('Error al eliminar','error');return;}
-  captaToast('Eliminado','success');loadProducts();
+async function deleteProduct(id) {
+  if (!confirm('¿Eliminar esta presentación?')) return;
+  const r = await fetch(`/api/myproducts/${id}?empresa_id=${empresaId}`, {method:'DELETE'});
+  if (r.ok||r.status===204) { captaToast('Eliminado','success'); loadProducts(); }
+  else captaToast('Error al eliminar','error');
 }
 
-function resetForm(){
-  document.getElementById('product_id').value='';document.getElementById('presentation').value='';
-  document.getElementById('linea_id').value='';document.getElementById('formTitle').textContent='Nueva presentación';
+function resetForm() {
+  ['product_id','presentation','gramaje'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('unidad').value=''; document.getElementById('linea_id').value='';
+  document.getElementById('formTitle').textContent='Nueva presentación';
   document.getElementById('cancelButton').style.display='none';
 }
-
-function closeEdit(){document.getElementById('editModal').classList.remove('open');}
+function closeEdit() { document.getElementById('editModal').classList.remove('open'); }
 document.getElementById('editModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeEdit();});
-
-document.addEventListener('DOMContentLoaded',async()=>{await loadLineas();await loadProducts();});
+document.addEventListener('DOMContentLoaded', async()=>{ await loadLineas(); await loadProducts(); });
 </script>
 </body>
 </html>

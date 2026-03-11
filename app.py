@@ -571,56 +571,190 @@ def handle_competitor_products():
     return jsonify({"success": res.ok}), 201
 
 
-@app.route('/api/competitorproducts/<int:product_id>', methods=['PATCH', 'DELETE'])
+@app.route('/api/competitorproducts', methods=['GET', 'POST'])
+def handle_competitor_products():
+
+    # GET — listar productos competencia de la empresa
+    if request.method == 'GET':
+        empresa_id = request.args.get('empresa_id')
+        if not empresa_id:
+            return jsonify({"error": "empresa_id es requerido"}), 400
+        products = fetch_table(
+            "web_competidor",
+            params=[("order", "presentation.asc")],
+            empresa_id=empresa_id
+        )
+        return jsonify({"products": products})
+
+    # POST — crear producto competencia
+    if not request.is_json:
+        return jsonify({"error": "Se esperaba JSON"}), 400
+
+    data         = request.json
+    empresa_id   = data.get("empresa_id")
+    presentation = data.get("presentation", "").strip()
+
+    if not presentation:
+        return jsonify({"error": "presentation es requerido"}), 400
+    if not empresa_id:
+        return jsonify({"error": "empresa_id es requerido"}), 400
+
+    payload = {
+        "presentation": presentation.upper(),
+        "empresa_id":   empresa_id,
+    }
+    if data.get("gramaje") is not None:
+        payload["gramaje"] = data["gramaje"]
+    if data.get("unidad"):
+        payload["unidad"] = data["unidad"]
+
+    res = requests.post(
+        f"{SUPABASE_URL}/rest/v1/web_competidor",
+        headers=headers,
+        json=payload
+    )
+    if res.status_code in (200, 201):
+        return jsonify({"success": True}), 201
+    try:
+        error_detail = res.json()
+    except Exception:
+        error_detail = {"message": res.text or "Error desconocido"}
+    return jsonify({"error": error_detail.get("message", "No se pudo crear")}), res.status_code
+
+
+@app.route('/api/competitorproducts/<product_id>', methods=['PATCH', 'DELETE'])
 def update_delete_competitor(product_id):
-    url = f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}"
+
     if request.method == 'PATCH':
-        res = requests.patch(url, headers=headers, json=request.json, timeout=10)
+        if not request.is_json:
+            return jsonify({"error": "Se esperaba JSON"}), 400
+        empresa_id = request.json.get('empresa_id')
     else:
-        res = requests.delete(url, headers=headers, timeout=10)
-    return jsonify({"success": res.ok})
+        empresa_id = request.args.get('empresa_id')
+
+    if not empresa_id:
+        return jsonify({"error": "empresa_id es requerido"}), 400
+
+    # Verificar que el registro pertenece a la empresa
+    check = requests.get(
+        f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}&empresa_id=eq.{empresa_id}&select=id",
+        headers=headers
+    )
+    if not check.ok or not check.json():
+        return jsonify({"error": "Registro no encontrado o sin permiso"}), 404
+
+    operation_url = f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}&empresa_id=eq.{empresa_id}"
+
+    try:
+        if request.method == 'PATCH':
+            payload = {k: v for k, v in request.json.items() if k != 'empresa_id'}
+            res = requests.patch(operation_url, headers=headers, json=payload, timeout=10)
+        else:
+            res = requests.delete(operation_url, headers=headers, timeout=10)
+
+        if res.status_code in (200, 204):
+            return jsonify({"success": True}), 200 if request.method == 'PATCH' else 204
+
+        return jsonify({"error": "Error en Supabase", "detail": res.text}), res.status_code
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ─── API: My products ────────────────────────────────────────────────────────
 @app.route('/api/myproducts', methods=['GET', 'POST'])
 def handle_my_products():
+
+    # GET — listar productos de la empresa
     if request.method == 'GET':
         empresa_id = request.args.get('empresa_id')
         if not empresa_id:
             return jsonify({"error": "empresa_id es requerido"}), 400
-        products = fetch_table("web_myproductos",
-                               params=[("order", "presentation.asc")],
-                               empresa_id=empresa_id)
+        products = fetch_table(
+            "web_myproductos",
+            params=[("order", "presentation.asc")],
+            empresa_id=empresa_id
+        )
         return jsonify({"products": products})
 
+    # POST — crear producto
     if not request.is_json:
         return jsonify({"error": "Se esperaba JSON"}), 400
-    data = request.json
-    presentation = (data.get("presentation") or "").strip()
+
+    data       = request.json
     empresa_id = data.get("empresa_id")
-    if not presentation or not empresa_id:
-        return jsonify({"error": "presentation y empresa_id son requeridos"}), 400
+    presentation = data.get("presentation", "").strip()
+
+    if not presentation:
+        return jsonify({"error": "presentation es requerido"}), 400
+    if not empresa_id:
+        return jsonify({"error": "empresa_id es requerido"}), 400
+
+    payload = {
+        "presentation": presentation.upper(),
+        "empresa_id":   empresa_id,
+    }
+    # Campos opcionales — solo incluir si vienen en el request
+    if data.get("gramaje") is not None:
+        payload["gramaje"] = data["gramaje"]
+    if data.get("unidad"):
+        payload["unidad"] = data["unidad"]
+    if data.get("linea_id"):
+        payload["linea_id"] = data["linea_id"]
 
     res = requests.post(
         f"{SUPABASE_URL}/rest/v1/web_myproductos",
         headers=headers,
-        json={"presentation": presentation.upper(), "empresa_id": empresa_id},
-        timeout=10
+        json=payload
     )
     if res.status_code in (200, 201):
         return jsonify({"success": True}), 201
-    return jsonify({"error": res.text}), res.status_code
+    try:
+        error_info = res.json()
+    except Exception:
+        error_info = {"message": res.text}
+    return jsonify({"error": error_info.get("message", "Error al crear")}), res.status_code
 
 
-@app.route('/api/myproducts/<int:product_id>', methods=['PATCH', 'DELETE'])
-def update_delete_my_product(product_id):
-    url = f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{product_id}"
+
+@app.route('/api/myproducts/<product_id>', methods=['PATCH', 'DELETE'])
+def update_delete_myproduct(product_id):
+
     if request.method == 'PATCH':
-        res = requests.patch(url, headers=headers, json=request.json, timeout=10)
+        if not request.is_json:
+            return jsonify({"error": "Se esperaba JSON"}), 400
+        empresa_id = request.json.get('empresa_id')
     else:
-        res = requests.delete(url, headers=headers, timeout=10)
-    return jsonify({"success": res.ok})
+        empresa_id = request.args.get('empresa_id')
 
+    if not empresa_id:
+        return jsonify({"error": "empresa_id es requerido"}), 400
+
+    # Verificar que el registro pertenece a la empresa
+    check = requests.get(
+        f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{product_id}&empresa_id=eq.{empresa_id}&select=id",
+        headers=headers
+    )
+    if not check.ok or not check.json():
+        return jsonify({"error": "Registro no encontrado o sin permiso"}), 404
+
+    operation_url = f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{product_id}&empresa_id=eq.{empresa_id}"
+
+    try:
+        if request.method == 'PATCH':
+            # Pasar todos los campos excepto empresa_id (ya está en la URL)
+            payload = {k: v for k, v in request.json.items() if k != 'empresa_id'}
+            res = requests.patch(operation_url, headers=headers, json=payload, timeout=10)
+        else:
+            res = requests.delete(operation_url, headers=headers, timeout=10)
+
+        if res.status_code in (200, 204):
+            return jsonify({"success": True}), 200 if request.method == 'PATCH' else 204
+
+        return jsonify({"error": "Error en Supabase", "detail": res.text}), res.status_code
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ─── API: Planograma upload ───────────────────────────────────────────────────
 @app.route('/api/upload_planogram', methods=['POST'])
