@@ -413,70 +413,155 @@ def get_records():
     date_to     = request.args.get('date_to')
     promoter_id = request.args.get('promoter_id')
     week        = request.args.get('week')
-    year        = request.args.get('year', str(datetime.now().year))
-    page        = max(1, int(request.args.get('page', 1)))
-    page_size   = min(200, max(10, int(request.args.get('page_size', 50))))
+    year_str    = request.args.get('year', str(datetime.now().year))
 
-    # ── Caché key ─────────────────────────────────────────────────────────────
-    cache_key = f"records:{empresa_id}:{date_from}:{date_to}:{promoter_id}:{week}:{year}:{page}:{page_size}"
-    cached = cache_get(cache_key)
-    if cached:
-        return jsonify({**cached, "from_cache": True})
+    # ── Nuevos filtros ────────────────────────────────────────────────
+    linea_id_filter = request.args.get('linea_id', '').strip()
+    trade_filter    = request.args.get('trade', '').strip()
 
-    # ── Query params ──────────────────────────────────────────────────────────
+    params = [
+        ("select", "*,web_promotores!inner(promoter_name, promoter_id)"),
+        ("order",      "created_at.desc"),
+        ("empresa_id", f"eq.{empresa_id}")
+    ]
+
     try:
-        params = build_records_params(empresa_id, date_from, date_to, promoter_id, week, year)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        year = int(year_str)
+    except Exception:
+        year = datetime.now().year
 
-    # ── Fetch paginado + catálogos en paralelo (via requests secuencial — simple y robusto) ──
-    records_raw, total_count = fetch_table_page("web_precios", params, page, page_size)
+    # ── Rango de fechas ───────────────────────────────────────────────
+    if week:
+        try:
+            week_num = int(week)
+            date_from, date_to = get_week_date_range(year, week_num)
+            params.append(("created_at", f"gte.{date_from}T00:00:00+00:00"))
+            params.append(("created_at", f"lte.{date_to}T23:59:59+00:00"))
+        except Exception as e:
+            print(f"Error calculando semana {week}/{year}: {e}")
+            return jsonify({"error": "Rango de semana inválido"}), 400
+    elif date_from:
+        params.append(("created_at", f"gte.{date_from}T00:00:00+00:00"))
 
-    # Catálogos — cacheados por empresa separadamente para mayor reuso
-    cat_key = f"catalogs:{empresa_id}"
-    catalogs = cache_get(cat_key)
-    if not catalogs:
-        clientes   = fetch_table("web_clientes",   empresa_id=empresa_id)
-        promotores = fetch_table("web_promotores", empresa_id=empresa_id)
-        estados    = fetch_table("web_estados",    empresa_id=empresa_id)
-        zonas      = fetch_table("web_zonas",      empresa_id=empresa_id)
-        catalogs = {
-            "clientes": clientes,
-            "promotores": promotores,
-            "estados": estados,
-            "zonas": zonas,
-        }
-        cache_set(cat_key, catalogs)
+    if date_to and not week:
+        params.append(("created_at", f"lte.{date_to}T23:59:59+00:00"))
 
-    # ── Índice de clientes por trade_name (upper) ─────────────────────────────
-    clientes_by_trade: dict = {}
-    for c in catalogs["clientes"]:
-        trade = (c.get("trade_name") or "").strip().upper()
-        if trade:
-            clientes_by_trade[trade] = c
+    # ── Filtros individuales ──────────────────────────────────────────
+    if promoter_id and promoter_id != 'all':
+        params.append(("promoter_id", f"eq.{promoter_id}"))
 
-    # ── Procesar registros ────────────────────────────────────────────────────
-    formatted = []
+    if linea_id_filter and linea_id_filter != 'all':
+        params.append(("linea_id", f"eq.{linea_id_filter}"))
+
+    if trade_filter and trade_filter != 'all':
+        params.append(("trade", f"eq.{trade_filter}"))
+
+    # ── Consultas paralelas ───────────────────────────────────────────
+    records_raw    = fetch_table("web_precios",    params=params)
+    clientes_todos = fetch_table("web_clientes",   empresa_id=empresa_id,
+                                 params=[("order", "trade_name.asc")])
+    promotores     = fetch_table("web_promotores", empresa_id=empresa_id)
+    estados        = fetch_table("web_estados")
+    zonas          = fetch_table("web_zonas")
+    lineas         = fetch_table("web_lineas",     empresa_id=empresa_id,
+                                 params=[("activa", "eq.true"), ("order", "nombre.asc")])
+
+    # Mapa id → cliente para cálculo de distancia y verificación
+    clientes_by_id = {}
+    for c in clientes_todos:
+        cid = c.get("id")
+        if cid is not None:
+            try:
+                clientes_by_id[int(cid)] = c
+            except Exception:
+                continue
+
+    # ── Formatear registros ───────────────────────────────────────────
+    formatted_records = []
+
     for record in records_raw:
         try:
-            formatted.append(process_record(record, clientes_by_trade))
+            promoter_info = record.get('web_promotores') or {}
+
+            visit_lat = safe_float(record.get("latitude"))
+            visit_lon = safe_float(record.get("longitude"))
+
+            cliente_id_raw = record.get("cliente_id")
+            cliente_id = None
+            if cliente_id_raw is not None:
+                try:
+                    cliente_id = int(cliente_id_raw)
+                except Exception:
+                    pass
+
+            cliente_data      = clientes_by_id.get(cliente_id)
+            distance          = 0.0
+            verified_status   = "Cliente Desconocido"
+            cliente_coords_str = "N/A"
+
+            if cliente_data:
+                c_lat = safe_float(cliente_data.get("latitude"), 0.0)
+                c_lon = safe_float(cliente_data.get("longitude"), 0.0)
+
+                if c_lat != 0.0:
+                    cliente_coords_str = f"{c_lat:.5f}, {c_lon:.5f}"
+
+                if visit_lat is not None and visit_lon is not None and c_lat != 0.0:
+                    try:
+                        distance = calculate_distance(visit_lat, visit_lon, c_lat, c_lon)
+                        verified_status = "Confirmado" if distance <= 150 else "No Confirmado"
+                    except Exception as dist_err:
+                        print(f"Error distancia registro {record.get('id')}: {dist_err}")
+                        verified_status = "Error cálculo distancia"
+                elif visit_lat is None or visit_lon is None:
+                    verified_status = "Sin GPS Visita"
+
+            formatted_records.append({
+                "id":              record.get("id"),
+                "created_at":      record.get("created_at"),
+                "promoter_name":   promoter_info.get('promoter_name', "Sin Nombre"),
+                "promoter_id":     record.get("promoter_id"),
+                "state":           record.get("state", "N/A"),
+                "zone":            record.get("zone", "N/A"),
+                "trade":           record.get("trade", "N/A"),
+                # ── campos sincronizados con PWA ──────────────────────
+                "linea_id":        record.get("linea_id"),
+                "linea_nombre":    record.get("linea_nombre"),
+                "shelf_meters":    record.get("shelf_meters"),
+                "p_mayorista":     record.get("p_mayorista"),
+                "cliente_cerrado": record.get("cliente_cerrado"),
+                # ── caras ─────────────────────────────────────────────
+                "our_faces_after":          record.get("our_faces_after"),
+                "our_faces_before_counted": record.get("our_faces_before_counted"),
+                "our_faces_before_manual":  record.get("our_faces_before_manual"),
+                "total_faces":              record.get("total_faces"),
+                "total_faces_before":       record.get("total_faces_before"),
+                # ── geo ───────────────────────────────────────────────
+                "distance":      round(distance, 2) if distance else 0,
+                "verified":      verified_status,
+                "latitude":      visit_lat,
+                "longitude":     visit_lon,
+                "client_coords": cliente_coords_str,
+                # ── items ─────────────────────────────────────────────
+                "myitems":          safe_json_parse(record.get("myitems")),
+                "competitoritems":  safe_json_parse(record.get("competitoritems")),
+                "before_photos":    safe_json_parse(record.get("before_photos")),
+                "after_photos":     safe_json_parse(record.get("after_photos")),
+                "comments":         record.get("comments"),
+            })
+
         except Exception as e:
-            print(f"[get_records] Error en registro {record.get('id')}: {e}")
+            print(f"Error procesando registro {record.get('id', 'sin-id')}: {e}")
             continue
 
-    result = {
-        "records": formatted,
-        "total_count": total_count,
-        "page": page,
-        "page_size": page_size,
-        "total_pages": max(1, -(-total_count // page_size)),  # ceil division
-        "promoters": catalogs["promotores"],
-        "estados": catalogs["estados"],
-        "zonas": catalogs["zonas"],
-        "total_promoters_in_db": len(catalogs["promotores"]),
-    }
-    cache_set(cache_key, result)
-    return jsonify(result)
+    return jsonify({
+        "records":   formatted_records,
+        "promoters": promotores,
+        "estados":   estados,
+        "zonas":     zonas,
+        "lineas":    lineas,           # ← para poblar filtro de línea en Dashboard
+        "clientes":  clientes_todos,   # ← para poblar filtro de comercio en Dashboard
+    })
 
 
 # ─── API: Stats rápidos (KPIs del top del dashboard) ─────────────────────────

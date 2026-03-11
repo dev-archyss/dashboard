@@ -148,6 +148,19 @@
                         <option value="cliente_sin_coordenadas">Cliente Sin Coordenadas</option>
                     </select>
                 </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label for="linea_filter" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Línea:</label>
+                    <select id="linea_filter" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="all">Todas las líneas</option>
+                    </select>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label for="cliente_filter" class="block text-gray-700 dark:text-gray-300 font-medium mb-1 text-sm">Comercio:</label>
+                    <select id="cliente_filter" class="w-full h-10 border dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="all">Todos los comercios</option>
+                    </select>
+                </div>
+
             </div>
             <div class="flex flex-wrap gap-3 justify-end border-t pt-4">
                 <button id="exportCSV" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all">
