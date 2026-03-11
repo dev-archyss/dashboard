@@ -3,57 +3,101 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GPS — CAPTA</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
-#map{height:580px;border-radius:var(--r2);overflow:hidden;border:1px solid var(--brd)}
+  #map { height: 560px; border-radius: 1rem; overflow: hidden; border: 1px solid #E5E7EB; }
+  .dark #map { border-color: #475569; }
 </style>
 </head>
-<body>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
+<script>tailwind.config = { darkMode: 'class' }</script>
+
 {% include 'navbar.html' %}
 
-<main class="sp-page">
-  <div class="sp-page-hdr">
-    <div>
-      <h1 class="sp-page-title">Seguimiento GPS</h1>
-      <p class="sp-page-sub">Mapa de visitas con geolocalización de promotores.</p>
-    </div>
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+  <!-- Título -->
+  <div class="mb-6">
+    <h1 class="text-3xl font-extrabold text-gray-800 dark:text-white">
+      <i class="fas fa-map-marker-alt mr-2 text-indigo-500"></i>Seguimiento GPS
+    </h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Mapa de visitas con geolocalización de promotores.</p>
   </div>
 
-  <!-- KPIs -->
-  <div class="sp-grid sp-g4 sp-gap4" style="margin-bottom:20px">
-    <div class="sp-card sp-kpi indigo">
-      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-map-marker-alt"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="totalVisits">—</div><div class="sp-kpi-lbl">Total visitas</div></div></div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:70%;background:var(--accent)"></div></div>
+  <!-- ── KPIs ─────────────────────────────────────────────────────── -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+
+    <div class="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-xl text-center border border-indigo-100 dark:border-indigo-800">
+      <p class="text-2xl font-extrabold text-indigo-600" id="totalVisits">—</p>
+      <p class="text-xs text-indigo-500 dark:text-indigo-300 font-medium mt-1">Total visitas</p>
+      <div class="w-full bg-indigo-200 dark:bg-indigo-900 rounded-full h-1.5 mt-2">
+        <div class="bg-indigo-600 h-1.5 rounded-full" style="width:70%"></div>
+      </div>
     </div>
-    <div class="sp-card sp-kpi green">
-      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-check-circle"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="confirmedVisits">—</div><div class="sp-kpi-lbl">Confirmadas</div></div></div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="confFill" style="width:0%;background:var(--green)"></div></div>
+
+    <div class="bg-green-50 dark:bg-green-900/30 p-4 rounded-xl text-center border border-green-100 dark:border-green-800">
+      <p class="text-2xl font-extrabold text-green-600" id="confirmedVisits">—</p>
+      <p class="text-xs text-green-500 dark:text-green-300 font-medium mt-1">Confirmadas</p>
+      <div class="w-full bg-green-200 dark:bg-green-900 rounded-full h-1.5 mt-2">
+        <div id="confFill" class="bg-green-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
+      </div>
     </div>
-    <div class="sp-card sp-kpi rose">
-      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-times-circle"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="unconfirmedVisits">—</div><div class="sp-kpi-lbl">No confirmadas</div></div></div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:0%;background:var(--red)"></div></div>
+
+    <div class="bg-red-50 dark:bg-red-900/30 p-4 rounded-xl text-center border border-red-100 dark:border-red-800">
+      <p class="text-2xl font-extrabold text-red-600" id="unconfirmedVisits">—</p>
+      <p class="text-xs text-red-500 dark:text-red-300 font-medium mt-1">No confirmadas</p>
+      <div class="w-full bg-red-200 dark:bg-red-900 rounded-full h-1.5 mt-2">
+        <div id="unconfFill" class="bg-red-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
+      </div>
     </div>
-    <div class="sp-card sp-kpi amber">
-      <div class="sp-kpi-top"><div class="sp-kpi-icon"><i class="fas fa-percentage"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="confirmationRate">—</div><div class="sp-kpi-lbl">Tasa confirmación</div></div></div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="rateFill" style="width:0%;background:var(--amber)"></div></div>
+
+    <div class="bg-amber-50 dark:bg-amber-900/30 p-4 rounded-xl text-center border border-amber-100 dark:border-amber-800">
+      <p class="text-2xl font-extrabold text-amber-600" id="confirmationRate">—</p>
+      <p class="text-xs text-amber-500 dark:text-amber-300 font-medium mt-1">Tasa confirmación</p>
+      <div class="w-full bg-amber-200 dark:bg-amber-900 rounded-full h-1.5 mt-2">
+        <div id="rateFill" class="bg-amber-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
+      </div>
     </div>
+
   </div>
 
-  <!-- Filtros -->
-  <div class="sp-card" style="margin-bottom:20px">
-    <p class="sp-sec-title">Filtros</p>
-    <div class="sp-grid sp-g5 sp-gap4" style="margin-bottom:12px">
-      <div><label class="sp-label">Desde</label><input type="date" id="dateFrom" class="sp-input"></div>
-      <div><label class="sp-label">Hasta</label><input type="date" id="dateTo" class="sp-input"></div>
-      <div><label class="sp-label">Promotor</label><select id="promoter" class="sp-select"><option value="all">Todos</option></select></div>
-      <div><label class="sp-label">Estado</label><select id="state" class="sp-select"><option value="all">Todos</option></select></div>
-      <div><label class="sp-label">Confirmación</label>
-        <select id="confirmation" class="sp-select">
+  <!-- ── Filtros ──────────────────────────────────────────────────── -->
+  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 mb-8 border border-gray-100 dark:border-slate-700">
+    <h2 class="text-lg font-bold text-gray-700 dark:text-white mb-4">Filtros</h2>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Desde</label>
+        <input type="date" id="dateFrom"
+          class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Hasta</label>
+        <input type="date" id="dateTo"
+          class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Promotor</label>
+        <select id="promoter"
+          class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="all">Todos</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estado</label>
+        <select id="state"
+          class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="all">Todos</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Confirmación</label>
+        <select id="confirmation"
+          class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <option value="all">Todos</option>
           <option value="verificado">Confirmados</option>
           <option value="no_verificado">No Confirmados</option>
@@ -62,103 +106,186 @@
         </select>
       </div>
     </div>
-    <button onclick="filterRecords()" class="sp-btn sp-btn-primary"><i class="fas fa-filter"></i> Filtrar</button>
+    <div class="border-t dark:border-slate-700 pt-4">
+      <button onclick="filterRecords()"
+        class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition-all flex items-center gap-2">
+        <i class="fas fa-filter"></i> Filtrar
+      </button>
+    </div>
   </div>
 
-  <!-- Mapa -->
-  <div class="sp-card">
-    <p class="sp-sec-title">Mapa interactivo</p>
+  <!-- ── Mapa ─────────────────────────────────────────────────────── -->
+  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-gray-700 dark:text-white">Mapa interactivo</h2>
+      <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+        <span class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span> Confirmada
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span> No confirmada
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span> Sin coord. cliente
+        </span>
+      </div>
+    </div>
     <div id="map"></div>
   </div>
-</main>
+
+</div>
 
 <script>
-const empresaId=localStorage.getItem('empresa_id');
-if(!empresaId)window.location.href='/';
-let allRecords=[],filteredRecords=[],promoters=[],estados=[],zonas=[],map=null;
+tailwind.config = { darkMode: 'class' };
 
-function getTodayMinus4Hours(){const d=new Date(Date.now()-4*3600000);return d.toISOString().split('T')[0];}
+const empresaId = localStorage.getItem('empresa_id');
+if (!empresaId) window.location.href = '/';
 
-async function fetchRecordsFromAPI(filters){
-  const p=new URLSearchParams();
-  if(filters.dateFrom)p.append('date_from',filters.dateFrom);
-  if(filters.dateTo)p.append('date_to',filters.dateTo);
-  if(filters.promoterId&&filters.promoterId!=='all')p.append('promoter_id',filters.promoterId);
-  p.append('empresa_id',empresaId);
-  try{
-    const r=await fetch(`/api/records?${p.toString()}`);const d=await r.json();
-    promoters=d.promoters||[];estados=d.estados||[];zonas=d.zonas||[];
-    return d.records||[];
-  }catch(e){console.error(e);return[];}
+let allRecords = [], filteredRecords = [], promoters = [], estados = [], map = null;
+
+function getTodayMinus4Hours() {
+  return new Date(Date.now() - 4 * 3600000).toISOString().split('T')[0];
 }
 
-function isConfirmed(r){return r.verified==='Confirmado';}
-
-function updateStats(){
-  const total=filteredRecords.length;const conf=filteredRecords.filter(isConfirmed).length;
-  const rate=total?(conf/total*100):0;
-  document.getElementById('totalVisits').textContent=total;
-  document.getElementById('confirmedVisits').textContent=conf;
-  document.getElementById('unconfirmedVisits').textContent=total-conf;
-  document.getElementById('confirmationRate').textContent=rate.toFixed(1)+'%';
-  document.getElementById('confFill').style.width=Math.min(100,rate)+'%';
-  document.getElementById('rateFill').style.width=Math.min(100,rate)+'%';
+// ── Fetch API ──────────────────────────────────────────────────────
+async function fetchRecordsFromAPI(filters) {
+  const p = new URLSearchParams();
+  if (filters.dateFrom) p.append('date_from', filters.dateFrom);
+  if (filters.dateTo)   p.append('date_to',   filters.dateTo);
+  if (filters.promoterId && filters.promoterId !== 'all') p.append('promoter_id', filters.promoterId);
+  p.append('empresa_id', empresaId);
+  try {
+    const r = await fetch(`/api/records?${p.toString()}`);
+    const d = await r.json();
+    promoters = d.promoters || [];
+    estados   = d.estados   || [];
+    return d.records || [];
+  } catch(e) { console.error(e); return []; }
 }
 
-function updateMap(){
-  if(!map){
-    map=L.map('map').setView([10.5,-66.9],6);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);
-  }else{
-    map.eachLayer(l=>{if(l instanceof L.Marker||l instanceof L.CircleMarker)map.removeLayer(l);});
+function isConfirmed(r) {
+  return r.latitude && r.longitude &&
+         r.client_coords && r.client_coords !== 'N/A' &&
+         r.distance < 150;
+}
+
+// ── Stats ──────────────────────────────────────────────────────────
+function updateStats() {
+  const total = filteredRecords.length;
+  const conf  = filteredRecords.filter(isConfirmed).length;
+  const rate  = total ? (conf / total * 100) : 0;
+
+  document.getElementById('totalVisits').textContent        = total;
+  document.getElementById('confirmedVisits').textContent    = conf;
+  document.getElementById('unconfirmedVisits').textContent  = total - conf;
+  document.getElementById('confirmationRate').textContent   = rate.toFixed(1) + '%';
+  document.getElementById('confFill').style.width  = Math.min(100, rate) + '%';
+  document.getElementById('unconfFill').style.width = Math.min(100, 100 - rate) + '%';
+  document.getElementById('rateFill').style.width  = Math.min(100, rate) + '%';
+}
+
+// ── Mapa ───────────────────────────────────────────────────────────
+function updateMap() {
+  if (!map) {
+    map = L.map('map').setView([10.5, -66.9], 6);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+  } else {
+    map.eachLayer(l => { if (l instanceof L.Marker) map.removeLayer(l); });
   }
-  let bounds=L.latLngBounds([]);
-  filteredRecords.forEach(r=>{
-    if(r.latitude&&r.longitude){
-      const lat=parseFloat(r.latitude),lng=parseFloat(r.longitude);
-      if(!isNaN(lat)&&!isNaN(lng)){
-        const color=isConfirmed(r)?'#10b981':'#f43f5e';
-        const icon=L.divIcon({className:'',html:`<div style="background:${color};width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,.4)"></div>`,iconSize:[12,12],iconAnchor:[6,6]});
-        L.marker([lat,lng],{icon}).addTo(map).bindPopup(`<b>${r.promoter_name||'—'}</b><br>${r.trade||'—'}<br><small>${new Date(r.created_at).toLocaleString('es-MX')}</small><br><span style="color:${color}">${r.verified||'—'}</span>`);
-        bounds.extend([lat,lng]);
-      }
-    }
+
+  const bounds = L.latLngBounds([]);
+
+  filteredRecords.forEach(r => {
+    if (!r.latitude || !r.longitude) return;
+    const lat = parseFloat(r.latitude), lng = parseFloat(r.longitude);
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    const confirmed = isConfirmed(r);
+    const noClientCoord = !r.client_coords || r.client_coords === 'N/A';
+    const color = confirmed ? '#10b981' : noClientCoord ? '#f59e0b' : '#f43f5e';
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="background:${color};width:13px;height:13px;border-radius:50%;border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>`,
+      iconSize: [13, 13], iconAnchor: [6, 6]
+    });
+
+    const date = new Date(r.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    L.marker([lat, lng], { icon }).addTo(map).bindPopup(`
+      <div style="font-family:sans-serif;min-width:160px">
+        <p style="font-weight:700;margin-bottom:4px">${r.promoter_name || '—'}</p>
+        <p style="color:#6b7280;font-size:.8rem;margin-bottom:2px">${r.trade || '—'}</p>
+        <p style="color:#6b7280;font-size:.75rem;margin-bottom:6px">${date}</p>
+        <p style="font-weight:600;color:${color};font-size:.78rem">${confirmed ? '✓ Confirmada' : noClientCoord ? '⚠ Sin coord. cliente' : '✗ No confirmada'}</p>
+        ${r.distance > 0 ? `<p style="font-size:.75rem;color:#9ca3af">Distancia: ${r.distance} m</p>` : ''}
+      </div>`);
+
+    bounds.extend([lat, lng]);
   });
-  if(bounds.isValid())map.fitBounds(bounds,{padding:[50,50]});else map.setView([10.5,-66.9],6);
+
+  if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50] });
+  else map.setView([10.5, -66.9], 6);
 }
 
-function populateSelects(){
-  const pSel=document.getElementById('promoter');pSel.innerHTML='<option value="all">Todos</option>';
-  [...new Set(promoters.map(p=>p.promoter_name))].sort().forEach(n=>pSel.innerHTML+=`<option value="${n}">${n}</option>`);
-  const sSel=document.getElementById('state');sSel.innerHTML='<option value="all">Todos</option>';
-  [...new Map(estados.map(e=>[e.id,e])).values()].sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(e=>sSel.innerHTML+=`<option value="${e.nombre}">${e.nombre}</option>`);
+// ── Poblar selects ─────────────────────────────────────────────────
+function populateSelects() {
+  const pSel = document.getElementById('promoter');
+  pSel.innerHTML = '<option value="all">Todos</option>';
+  [...new Set(promoters.map(p => p.promoter_name))].sort().forEach(n => {
+    const o = document.createElement('option'); o.value = n; o.textContent = n;
+    pSel.appendChild(o);
+  });
+
+  const sSel = document.getElementById('state');
+  sSel.innerHTML = '<option value="all">Todos</option>';
+  [...new Map(estados.map(e => [e.id, e])).values()]
+    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+    .forEach(e => {
+      const o = document.createElement('option'); o.value = e.nombre; o.textContent = e.nombre;
+      sSel.appendChild(o);
+    });
 }
 
-async function filterRecords(){
-  const df=document.getElementById('dateFrom').value,dt=document.getElementById('dateTo').value;
-  const prom=document.getElementById('promoter').value,conf=document.getElementById('confirmation').value;
-  const stateNm=document.getElementById('state').options[document.getElementById('state').selectedIndex].text;
-  allRecords=await fetchRecordsFromAPI({dateFrom:df,dateTo:dt,promoterId:prom});
+// ── Filtrar ────────────────────────────────────────────────────────
+async function filterRecords() {
+  const df   = document.getElementById('dateFrom').value;
+  const dt   = document.getElementById('dateTo').value;
+  const prom = document.getElementById('promoter').value;
+  const conf = document.getElementById('confirmation').value;
+  const stateNm = document.getElementById('state').options[document.getElementById('state').selectedIndex].text;
+
+  allRecords = await fetchRecordsFromAPI({ dateFrom: df, dateTo: dt, promoterId: prom });
   populateSelects();
-  filteredRecords=allRecords.filter(r=>{
-    if(stateNm!=='Todos'&&r.state!==stateNm)return false;
-    if(conf==='verificado'&&!isConfirmed(r))return false;
-    if(conf==='no_verificado'&&(isConfirmed(r)||r.client_coords==='N/A'))return false;
-    if(conf==='desconocido'&&r.client_coords!=='N/A')return false;
-    if(conf==='sin_coordenadas'&&r.latitude)return false;
+
+  filteredRecords = allRecords.filter(r => {
+    if (stateNm !== 'Todos' && r.state !== stateNm) return false;
+    const hv = r.latitude && r.longitude;
+    const hc = r.client_coords && r.client_coords !== 'N/A';
+    const confirmed = hv && hc && r.distance < 150;
+    if (conf === 'verificado'      && !confirmed)        return false;
+    if (conf === 'no_verificado'   && (confirmed || !hc)) return false;
+    if (conf === 'desconocido'     && hc)                 return false;
+    if (conf === 'sin_coordenadas' && hv)                 return false;
     return true;
   });
-  updateStats();updateMap();
+
+  updateStats();
+  updateMap();
 }
 
-async function init(){
-  const today=getTodayMinus4Hours();
-  document.getElementById('dateFrom').value=today;document.getElementById('dateTo').value=today;
+// ── Init ───────────────────────────────────────────────────────────
+async function init() {
+  const today = getTodayMinus4Hours();
+  document.getElementById('dateFrom').value = today;
+  document.getElementById('dateTo').value   = today;
   await filterRecords();
-  document.querySelectorAll('#dateFrom,#dateTo,#promoter,#state,#confirmation').forEach(el=>el.addEventListener('change',filterRecords));
+  ['dateFrom','dateTo','promoter','state','confirmation'].forEach(id =>
+    document.getElementById(id).addEventListener('change', filterRecords));
 }
 
-document.addEventListener('DOMContentLoaded',init);
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>

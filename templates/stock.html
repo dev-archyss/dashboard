@@ -3,199 +3,320 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Control de Stock — CAPTA</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+  .table-header-sticky th { position:sticky; top:0; z-index:10; background:#F9FAFB; }
+  .dark .table-header-sticky th { background:#334155; color:#e2e8f0; }
+  .badge { display:inline-flex; align-items:center; padding:.25rem .65rem; font-size:.7rem; font-weight:700; border-radius:9999px; white-space:nowrap; }
+  .badge-ok   { background:#D1FAE5; color:#065F46; }
+  .badge-warn { background:#FEF3C7; color:#92400E; }
+  .badge-err  { background:#FEE2E2; color:#991B1B; }
+  .badge-def  { background:#F3F4F6; color:#6B7280; }
+  /* Modal */
+  .modal { display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.7); justify-content:center; align-items:center; padding:1rem; }
+  .modal.open { display:flex; }
+  .modal-content { background:white; border-radius:16px; max-width:95%; max-height:90vh; width:860px; overflow-y:auto; position:relative; box-shadow:0 24px 48px rgba(0,0,0,.3); }
+  .dark .modal-content { background:#1E293B; }
+</style>
 </head>
-<body>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
+<script>tailwind.config = { darkMode: 'class' }</script>
+
 {% include 'navbar.html' %}
 
-<main class="sp-page">
-  <div class="sp-page-hdr">
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+  <!-- Título -->
+  <div class="flex items-center justify-between mb-6">
     <div>
-      <h1 class="sp-page-title">Control de Stock</h1>
-      <p class="sp-page-sub">Monitoreo de inventario en anaquel y bodega por visita.</p>
+      <h1 class="text-3xl font-extrabold text-gray-800 dark:text-white">
+        <i class="fas fa-boxes mr-2 text-amber-500"></i>Control de Stock
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Monitoreo de inventario en anaquel y bodega por visita.</p>
     </div>
-    <div style="display:flex;align-items:center;gap:7px">
-      <div class="sp-live"></div>
-      <span style="font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">En vivo</span>
-    </div>
-  </div>
-
-  <!-- KPIs -->
-  <div class="sp-grid sp-g4 sp-gap4" style="margin-bottom:20px">
-    <div class="sp-card sp-kpi amber">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="lowStockVisits">—</div><div class="sp-kpi-lbl">Stock bajo (≤5)</div></div>
-      </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="b1" style="width:0%;background:var(--amber)"></div></div>
-    </div>
-    <div class="sp-card sp-kpi rose">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-times-circle"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="criticalLow">—</div><div class="sp-kpi-lbl">Stock crítico (≤2)</div></div>
-      </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="b2" style="width:0%;background:var(--red)"></div></div>
-    </div>
-    <div class="sp-card sp-kpi purple">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-chart-bar"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="avgShelfStock">—</div><div class="sp-kpi-lbl">Promedio anaquel</div></div>
-      </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="b3" style="width:0%;background:var(--purple)"></div></div>
-    </div>
-    <div class="sp-card sp-kpi indigo">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-boxes"></i></div>
-        <div style="text-align:right"><div class="sp-kpi-val" id="totalProductsTracked">—</div><div class="sp-kpi-lbl">Productos rastreados</div></div>
-      </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="b4" style="width:0%;background:var(--accent)"></div></div>
+    <div class="flex items-center gap-2">
+      <span class="relative flex h-2.5 w-2.5">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+      </span>
+      <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">En vivo</span>
     </div>
   </div>
 
-  <!-- Filtros -->
-  <div class="sp-card" style="margin-bottom:20px">
-    <p class="sp-sec-title">Filtros</p>
-    <div class="sp-grid sp-g3 sp-gap4" style="margin-bottom:12px">
+  <!-- ── KPIs ─────────────────────────────────────────────────────── -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+
+    <div class="bg-amber-50 dark:bg-amber-900/30 p-4 rounded-xl text-center border border-amber-100 dark:border-amber-800">
+      <p class="text-2xl font-extrabold text-amber-600" id="lowStockVisits">—</p>
+      <p class="text-xs text-amber-500 dark:text-amber-300 font-medium mt-1">Stock bajo (≤5)</p>
+      <div class="w-full bg-amber-200 dark:bg-amber-900 rounded-full h-1.5 mt-2">
+        <div id="b1" class="bg-amber-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="bg-red-50 dark:bg-red-900/30 p-4 rounded-xl text-center border border-red-100 dark:border-red-800">
+      <p class="text-2xl font-extrabold text-red-600" id="criticalLow">—</p>
+      <p class="text-xs text-red-500 dark:text-red-300 font-medium mt-1">Stock crítico (≤2)</p>
+      <div class="w-full bg-red-200 dark:bg-red-900 rounded-full h-1.5 mt-2">
+        <div id="b2" class="bg-red-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-xl text-center border border-purple-100 dark:border-purple-800">
+      <p class="text-2xl font-extrabold text-purple-600" id="avgShelfStock">—</p>
+      <p class="text-xs text-purple-500 dark:text-purple-300 font-medium mt-1">Promedio anaquel</p>
+      <div class="w-full bg-purple-200 dark:bg-purple-900 rounded-full h-1.5 mt-2">
+        <div id="b3" class="bg-purple-600 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-xl text-center border border-indigo-100 dark:border-indigo-800">
+      <p class="text-2xl font-extrabold text-indigo-600" id="totalProductsTracked">—</p>
+      <p class="text-xs text-indigo-500 dark:text-indigo-300 font-medium mt-1">Productos rastreados</p>
+      <div class="w-full bg-indigo-200 dark:bg-indigo-900 rounded-full h-1.5 mt-2">
+        <div id="b4" class="bg-indigo-600 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Filtros ──────────────────────────────────────────────────── -->
+  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 mb-8 border border-gray-100 dark:border-slate-700">
+    <h2 class="text-lg font-bold text-gray-700 dark:text-white mb-4">Filtros</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
       <div>
-        <label class="sp-label">Producto</label>
-        <select id="product" class="sp-select"><option value="all">Todos</option></select>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Producto</label>
+        <select id="product"
+          class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="all">Todos</option>
+        </select>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;padding-top:20px">
-        <input type="checkbox" id="onlyLowStock" checked>
-        <label for="onlyLowStock" style="font-size:.83rem;cursor:pointer;font-weight:500">Solo stock bajo (≤5)</label>
+      <div class="flex items-center gap-3 pt-5">
+        <input type="checkbox" id="onlyLowStock" checked
+          class="w-4 h-4 text-amber-500 rounded border-gray-300 focus:ring-amber-400">
+        <label for="onlyLowStock" class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+          Solo stock bajo (≤5)
+        </label>
       </div>
     </div>
-    <div style="display:flex;gap:8px">
-      <button onclick="renderStockTable()" class="sp-btn sp-btn-primary"><i class="fas fa-filter"></i> Aplicar</button>
-      <button onclick="clearFilters()" class="sp-btn sp-btn-sec"><i class="fas fa-undo"></i> Limpiar</button>
+    <div class="flex gap-3 border-t dark:border-slate-700 pt-4">
+      <button onclick="renderStockTable()"
+        class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition-all flex items-center gap-2">
+        <i class="fas fa-filter"></i> Aplicar
+      </button>
+      <button onclick="clearFilters()"
+        class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2">
+        <i class="fas fa-undo"></i> Limpiar
+      </button>
     </div>
   </div>
 
-  <!-- Tabla -->
-  <div class="sp-tbl-wrap">
-    <div style="overflow-x:auto;max-height:65vh">
-      <table class="sp-tbl">
-        <thead><tr>
-          <th>Fecha</th><th>Promotor</th><th>Comercio</th><th>Producto</th>
-          <th style="text-align:center">Anaquel</th><th style="text-align:center">Bodega</th><th style="text-align:center">Ver</th>
-        </tr></thead>
-        <tbody id="stockTableBody">
-          <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)"><i class="fas fa-spinner fa-spin" style="font-size:1.3rem;color:var(--accent);display:block;margin-bottom:8px"></i>Cargando...</td></tr>
+  <!-- ── Tabla ────────────────────────────────────────────────────── -->
+  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden">
+    <div class="overflow-x-auto max-h-[65vh]">
+      <table class="min-w-full divide-y divide-gray-100 dark:divide-slate-700">
+        <thead class="table-header-sticky">
+          <tr>
+            <th class="py-3 px-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
+            <th class="py-3 px-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Promotor</th>
+            <th class="py-3 px-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comercio</th>
+            <th class="py-3 px-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Producto</th>
+            <th class="py-3 px-5 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Anaquel</th>
+            <th class="py-3 px-5 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bodega</th>
+            <th class="py-3 px-5 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ver</th>
+          </tr>
+        </thead>
+        <tbody id="stockTableBody" class="bg-white dark:bg-slate-800 divide-y divide-gray-50 dark:divide-slate-700">
+          <tr><td colspan="7" class="text-center py-10 text-gray-400 dark:text-gray-500">
+            <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando...
+          </td></tr>
         </tbody>
       </table>
     </div>
   </div>
-</main>
 
-<!-- Modal detalle visita -->
-<div class="sp-overlay" id="stockModal">
-  <div class="sp-modal sp-modal-lg">
-    <div class="sp-modal-hdr">
-      <div class="sp-modal-title">Detalle de Stock</div>
-      <button class="sp-modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="sp-modal-body" id="stockModalContent"></div>
+</div>
+
+<!-- ── Modal detalle ─────────────────────────────────────────────── -->
+<div class="modal" id="stockModal">
+  <div class="modal-content p-6 sm:p-8 dark:text-gray-200">
+    <button onclick="closeModal()"
+      class="absolute top-4 right-5 text-gray-400 hover:text-red-500 transition-colors text-2xl font-bold leading-none">×</button>
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Detalle de Stock</h2>
+    <div id="stockModalContent"></div>
   </div>
 </div>
 
 <script>
-const supabaseUrl='https://djjylikkocemrlsjxscr.supabase.co';
-const supabaseKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
-const supabaseClient=supabase.createClient(supabaseUrl,supabaseKey);
-const empresaId=localStorage.getItem('empresa_id');
-if(!empresaId)window.location.href='/';
+tailwind.config = { darkMode: 'class' };
 
-let allStockData=[];
+const supabaseClient = supabase.createClient(
+  'https://djjylikkocemrlsjxscr.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M'
+);
+const empresaId = localStorage.getItem('empresa_id');
+if (!empresaId) window.location.href = '/';
 
-function stockColor(s){const n=parseInt(s);if(isNaN(n))return'var(--muted)';if(n<=2)return'var(--red)';if(n<=5)return'var(--amber)';return'var(--green)';}
-function stockBdg(s){const n=parseInt(s);if(isNaN(n))return'sp-bdg-def';if(n<=2)return'sp-bdg-err';if(n<=5)return'sp-bdg-warn';return'sp-bdg-ok';}
+let allStockData = [];
 
-async function loadStockData(){
-  const{data,error}=await supabaseClient.from('web_precios').select('id,created_at,promoter_id,trade,state,zone,myitems,web_promotores!inner(promoter_name)').eq('empresa_id',empresaId).not('myitems','is',null).order('created_at',{ascending:false}).limit(300);
-  if(error){console.error(error);return;}
-  allStockData=(data||[]).map(v=>({...v,myitems:v.myitems||[]}));
-  poblarProductSelect();renderStockTable();updateStockStats();
+// ── Helpers ────────────────────────────────────────────────────────
+function stockBadge(s) {
+  const n = parseInt(s);
+  if (isNaN(n) || n === 999) return '<span class="badge badge-def">—</span>';
+  if (n <= 2)  return `<span class="badge badge-err">${n}</span>`;
+  if (n <= 5)  return `<span class="badge badge-warn">${n}</span>`;
+  return `<span class="badge badge-ok">${n}</span>`;
 }
 
-function poblarProductSelect(){
-  const prods=new Set();allStockData.forEach(v=>v.myitems.forEach(i=>{if(i.presentation)prods.add(i.presentation);}));
-  const sel=document.getElementById('product');sel.innerHTML='<option value="all">Todos</option>';
-  [...prods].sort().forEach(p=>sel.innerHTML+=`<option value="${p}">${p}</option>`);
+// ── Cargar datos ───────────────────────────────────────────────────
+async function loadStockData() {
+  const { data, error } = await supabaseClient
+    .from('web_precios')
+    .select('id,created_at,promoter_id,trade,state,zone,myitems,web_promotores!inner(promoter_name)')
+    .eq('empresa_id', empresaId)
+    .not('myitems', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(300);
+
+  if (error) { console.error(error); return; }
+  allStockData = (data || []).map(v => ({ ...v, myitems: v.myitems || [] }));
+  poblarProductSelect();
+  renderStockTable();
+  updateStockStats();
 }
 
-function renderStockTable(){
-  const tbody=document.getElementById('stockTableBody');
-  const onlyLow=document.getElementById('onlyLowStock').checked;
-  const selProd=document.getElementById('product').value;
-  let filtered=allStockData;
-  if(onlyLow)filtered=filtered.filter(v=>v.myitems.some(i=>parseInt(i.stock_shelf||999)<=5));
-  if(selProd!=='all')filtered=filtered.filter(v=>v.myitems.some(i=>i.presentation===selProd));
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">Sin datos con los filtros actuales</td></tr>';return;}
-  const rows=[];
-  filtered.forEach(v=>{
-    v.myitems.forEach(item=>{
-      const sa=parseInt(item.stock_shelf??999);const isLow=sa<=5;
-      const dt=new Date(v.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
-      rows.push(`<tr style="${isLow?'background:rgba(245,158,11,.06)':''}">
-        <td class="sp-hi">${dt}</td>
-        <td style="color:var(--accent);font-weight:500">${v.web_promotores?.promoter_name||'—'}</td>
-        <td>${v.trade||'—'}</td>
-        <td class="sp-hi">${item.presentation||'—'}</td>
-        <td style="text-align:center"><span class="sp-bdg ${stockBdg(sa)}">${sa===999?'—':sa}</span></td>
-        <td style="text-align:center;color:var(--txt2)">${item.stock_warehouse??'—'}</td>
-        <td style="text-align:center"><button onclick="showVisitDetail('${v.id}')" class="sp-btn sp-btn-sec sp-btn-sm"><i class="fas fa-eye"></i></button></td>
+function poblarProductSelect() {
+  const prods = new Set();
+  allStockData.forEach(v => v.myitems.forEach(i => { if (i.presentation) prods.add(i.presentation); }));
+  const sel = document.getElementById('product');
+  sel.innerHTML = '<option value="all">Todos</option>';
+  [...prods].sort().forEach(p => {
+    const o = document.createElement('option'); o.value = p; o.textContent = p;
+    sel.appendChild(o);
+  });
+}
+
+// ── Render tabla ───────────────────────────────────────────────────
+function renderStockTable() {
+  const tbody    = document.getElementById('stockTableBody');
+  const onlyLow  = document.getElementById('onlyLowStock').checked;
+  const selProd  = document.getElementById('product').value;
+
+  let filtered = allStockData;
+  if (onlyLow)        filtered = filtered.filter(v => v.myitems.some(i => parseInt(i.stock_shelf ?? 999) <= 5));
+  if (selProd !== 'all') filtered = filtered.filter(v => v.myitems.some(i => i.presentation === selProd));
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-400">Sin datos con los filtros actuales</td></tr>';
+    return;
+  }
+
+  const rows = [];
+  filtered.forEach(v => {
+    v.myitems.forEach(item => {
+      const sa     = parseInt(item.stock_shelf ?? 999);
+      const isLow  = sa <= 5 && sa !== 999;
+      const dt     = new Date(v.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+      const rowBg  = isLow ? 'bg-amber-50/60 dark:bg-amber-900/10' : '';
+      rows.push(`<tr class="hover:bg-indigo-50/40 dark:hover:bg-slate-700 transition-colors ${rowBg}">
+        <td class="py-3 px-5 text-sm font-semibold text-gray-700 dark:text-gray-300">${dt}</td>
+        <td class="py-3 px-5 text-sm text-indigo-600 dark:text-indigo-400 font-medium">${v.web_promotores?.promoter_name || '—'}</td>
+        <td class="py-3 px-5 text-sm text-gray-700 dark:text-gray-300">${v.trade || '—'}</td>
+        <td class="py-3 px-5 text-sm font-semibold text-gray-800 dark:text-gray-200">${item.presentation || '—'}</td>
+        <td class="py-3 px-5 text-center">${stockBadge(sa)}</td>
+        <td class="py-3 px-5 text-center text-sm text-gray-500 dark:text-gray-400">${item.stock_warehouse ?? '—'}</td>
+        <td class="py-3 px-5 text-center">
+          <button onclick="showVisitDetail('${v.id}')"
+            class="text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 transition-colors" title="Ver detalle">
+            <i class="fas fa-eye text-lg"></i>
+          </button>
+        </td>
       </tr>`);
     });
   });
-  tbody.innerHTML=rows.join('');
+  tbody.innerHTML = rows.join('');
 }
 
-function updateStockStats(){
-  let low=0,crit=0,total=0,sumShelf=0;
-  allStockData.forEach(v=>v.myitems.forEach(i=>{
-    const s=parseInt(i.stock_shelf??999);
-    if(s!==999){total++;sumShelf+=s;}
-    if(s<=5)low++;if(s<=2)crit++;
+// ── Stats KPIs ─────────────────────────────────────────────────────
+function updateStockStats() {
+  let low = 0, crit = 0, total = 0, sumShelf = 0;
+  allStockData.forEach(v => v.myitems.forEach(i => {
+    const s = parseInt(i.stock_shelf ?? 999);
+    if (s !== 999) { total++; sumShelf += s; }
+    if (s <= 5)  low++;
+    if (s <= 2)  crit++;
   }));
-  document.getElementById('lowStockVisits').textContent=low;
-  document.getElementById('criticalLow').textContent=crit;
-  document.getElementById('avgShelfStock').textContent=total?(sumShelf/total).toFixed(1):'0';
-  document.getElementById('totalProductsTracked').textContent=total;
+  const avg = total ? (sumShelf / total) : 0;
+  const maxPct = Math.min(100, (low / Math.max(total, 1)) * 100);
+
+  document.getElementById('lowStockVisits').textContent     = low;
+  document.getElementById('criticalLow').textContent        = crit;
+  document.getElementById('avgShelfStock').textContent      = total ? avg.toFixed(1) : '0';
+  document.getElementById('totalProductsTracked').textContent = total;
+  document.getElementById('b1').style.width = maxPct + '%';
+  document.getElementById('b2').style.width = Math.min(100, (crit / Math.max(total, 1)) * 100) + '%';
+  document.getElementById('b3').style.width = Math.min(100, (avg / 20) * 100) + '%';
+  document.getElementById('b4').style.width = '70%';
 }
 
-async function showVisitDetail(visitId){
-  const{data}=await supabaseClient.from('web_precios').select('*,web_promotores(promoter_name)').eq('id',visitId).single();
-  if(!data)return;
-  const content=document.getElementById('stockModalContent');
-  const hdr=`<div class="sp-grid sp-g3 sp-gap3" style="margin-bottom:20px">
-    ${[['Fecha',new Date(data.created_at).toLocaleString('es-MX')],['Promotor',data.web_promotores?.promoter_name||'—'],['Comercio',data.trade||'—']].map(([l,v])=>`<div class="sp-card sp-card-sm"><p style="font-size:.65rem;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em">${l}</p><p style="font-weight:500">${v}</p></div>`).join('')}
-  </div><p class="sp-sec-title">Detalle de Stock</p>
-  <div class="sp-grid sp-g3 sp-gap3">`;
-  const items=(data.myitems||[]).map(item=>{
-    const sa=item.stock_shelf??'—',sb=item.stock_warehouse??'—';
-    const sc=stockColor(sa);
-    return`<div class="sp-card sp-card-sm">
-      <p style="font-weight:600;font-size:.83rem;margin-bottom:10px">${item.presentation||'—'}</p>
-      <div style="display:flex;gap:10px">
-        <div style="flex:1;text-align:center;background:var(--inp);border-radius:var(--r1);padding:10px">
-          <p style="font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Anaquel</p>
-          <p style="font-size:1.5rem;font-weight:800;color:${sc};font-family:'Syne',sans-serif">${sa}</p>
+// ── Modal detalle ──────────────────────────────────────────────────
+async function showVisitDetail(visitId) {
+  const { data } = await supabaseClient
+    .from('web_precios').select('*,web_promotores(promoter_name)')
+    .eq('id', visitId).single();
+  if (!data) return;
+
+  const info = [
+    ['Fecha',    new Date(data.created_at).toLocaleString('es-MX')],
+    ['Promotor', data.web_promotores?.promoter_name || '—'],
+    ['Comercio', data.trade || '—'],
+  ];
+
+  const cards = (data.myitems || []).map(item => {
+    const sa   = item.stock_shelf   ?? '—';
+    const sb   = item.stock_warehouse ?? '—';
+    const saN  = parseInt(sa);
+    const color = isNaN(saN) ? 'text-gray-400' : saN <= 2 ? 'text-red-600' : saN <= 5 ? 'text-amber-500' : 'text-green-600';
+    return `<div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 border border-gray-100 dark:border-slate-600">
+      <p class="font-bold text-sm text-gray-800 dark:text-white mb-3">${item.presentation || '—'}</p>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-white dark:bg-slate-800 rounded-lg p-3 text-center">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Anaquel</p>
+          <p class="text-2xl font-extrabold ${color}">${sa}</p>
         </div>
-        <div style="flex:1;text-align:center;background:var(--inp);border-radius:var(--r1);padding:10px">
-          <p style="font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Bodega</p>
-          <p style="font-size:1.5rem;font-weight:800;color:var(--blue);font-family:'Syne',sans-serif">${sb}</p>
+        <div class="bg-white dark:bg-slate-800 rounded-lg p-3 text-center">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Bodega</p>
+          <p class="text-2xl font-extrabold text-blue-600">${sb}</p>
         </div>
       </div>
     </div>`;
   }).join('');
-  content.innerHTML=hdr+items+'</div>';
+
+  document.getElementById('stockModalContent').innerHTML = `
+    <div class="grid grid-cols-3 gap-3 mb-6">
+      ${info.map(([l, v]) => `
+        <div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-gray-100 dark:border-slate-600">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">${l}</p>
+          <p class="text-sm font-semibold text-gray-800 dark:text-white">${v}</p>
+        </div>`).join('')}
+    </div>
+    <h3 class="text-base font-bold text-gray-700 dark:text-white mb-3">Detalle de Stock</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">${cards}</div>`;
+
   document.getElementById('stockModal').classList.add('open');
 }
 
-function clearFilters(){document.getElementById('onlyLowStock').checked=true;document.getElementById('product').value='all';renderStockTable();}
-function closeModal(){document.getElementById('stockModal').classList.remove('open');}
-document.getElementById('stockModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
-document.addEventListener('DOMContentLoaded',()=>loadStockData());
+function clearFilters() {
+  document.getElementById('onlyLowStock').checked = true;
+  document.getElementById('product').value = 'all';
+  renderStockTable();
+}
+
+function closeModal() { document.getElementById('stockModal').classList.remove('open'); }
+document.getElementById('stockModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+document.addEventListener('DOMContentLoaded', () => loadStockData());
 </script>
 </body>
 </html>
