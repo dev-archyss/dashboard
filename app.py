@@ -552,27 +552,6 @@ def delete_records():
 # ─── API: Competitor products ─────────────────────────────────────────────────
 @app.route('/api/competitorproducts', methods=['GET', 'POST'])
 def handle_competitor_products():
-    if request.method == 'GET':
-        empresa_id = request.args.get('empresa_id')
-        products = fetch_table("web_competidor",
-                               params=[("order", "presentation.asc")],
-                               empresa_id=empresa_id)
-        return jsonify({"products": products})
-
-    if not request.is_json:
-        return jsonify({"error": "Se esperaba JSON"}), 400
-    data = request.json
-    res = requests.post(
-        f"{SUPABASE_URL}/rest/v1/web_competidor",
-        headers=headers,
-        json={"presentation": data.get("presentation"), "empresa_id": data.get("empresa_id")},
-        timeout=10
-    )
-    return jsonify({"success": res.ok}), 201
-
-
-@app.route('/api/competitorproducts', methods=['GET', 'POST'])
-def handle_competitor_products():
 
     # GET — listar productos competencia de la empresa
     if request.method == 'GET':
