@@ -362,6 +362,18 @@ def do_login():
         return jsonify({"success": True, "empresa_id": empresa['id'], "empresa_nombre": empresa['nombre']})
     return jsonify({"success": False, "error": "Credenciales incorrectas"}), 401
 
+@app.route('/api/lineas', methods=['GET'])
+def get_lineas():
+    empresa_id = request.args.get('empresa_id') or session.get('empresa_id')
+    if not empresa_id:
+        return jsonify({"error": "empresa_id requerido"}), 400
+    lineas = fetch_table(
+        "web_lineas",
+        params=[("activa", "eq.true"), ("order", "nombre.asc")],
+        empresa_id=empresa_id
+    )
+    return jsonify({"lineas": lineas})
+
 
 # ─── API: Configuración pública del dashboard (sin exponer SUPABASE_KEY) ──────
 @app.route('/api/dashboard/config')
