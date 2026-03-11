@@ -386,8 +386,21 @@ def dashboard_config():
     return jsonify({
         "empresa_id": session['empresa_id'],
         "empresa_nombre": session.get('empresa_nombre', ''),
+    
     })
 
+
+@app.route('/api/pwa-config')
+def pwa_config():
+    """
+    Endpoint seguro que sirve la configuración de Supabase a la PWA.
+    La key nunca viaja en el HTML estático — la PWA la fetchea en runtime.
+    Solo devuelve la anon key (nunca la service_role key).
+    """
+    return jsonify({
+        "supabase_url": SUPABASE_URL,
+        "supabase_key": SUPABASE_KEY
+    })
 
 # ─── API: Records con paginación server-side ──────────────────────────────────
 @app.route('/api/records', methods=['GET'])
