@@ -17,10 +17,12 @@
   .row-anaq{background:rgba(245,158,11,.06)}
   .row-bod{background:rgba(99,102,241,.06)}
   .row-ambos{background:rgba(239,68,68,.07)}
+  /* Modales */
   .modal{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.7);justify-content:center;align-items:center;padding:1rem}
   .modal.open{display:flex}
-  .modal-content{background:white;border-radius:16px;max-width:95%;max-height:90vh;width:860px;overflow-y:auto;position:relative;box-shadow:0 24px 48px rgba(0,0,0,.3)}
-  .dark .modal-content{background:#1E293B}
+  .modal-box{background:white;border-radius:16px;max-width:95%;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 24px 48px rgba(0,0,0,.3)}
+  .dark .modal-box{background:#1E293B}
+  /* Dropdown comercio */
   .com-dd{position:absolute;top:100%;left:0;z-index:200;width:100%;background:white;border:1px solid #e5e7eb;border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)}
   .dark .com-dd{background:#1e293b;border-color:#475569}
   .com-dd-item{padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid #f3f4f6}
@@ -41,27 +43,25 @@
       <h1 class="text-3xl font-extrabold text-gray-800 dark:text-white">
         <i class="fas fa-boxes-stacked mr-2 text-amber-500"></i>Control de Stock
       </h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Inventario en anaquel y bodega por visita. Alerta: anaquel ≤ 3 · bodega ≤ 5 bultos</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Inventario en anaquel y bodega. Los umbrales de alerta son configurables por producto.</p>
     </div>
-    <div class="flex gap-2 flex-wrap">
-      <span class="badge badge-crit"><i class="fas fa-triangle-exclamation mr-1"></i>≤3 Anaquel crítico</span>
-      <span class="badge badge-warn"><i class="fas fa-warehouse mr-1"></i>≤5 Bodega baja</span>
-      <span class="badge badge-ok"><i class="fas fa-check mr-1"></i>Normal</span>
-    </div>
+    <button onclick="abrirConfigUmbrales()" class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-all text-sm">
+      <i class="fas fa-sliders text-indigo-500"></i> Configurar umbrales por producto
+    </button>
   </div>
 
   <!-- KPIs -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
     <div class="bg-amber-50 dark:bg-amber-900/30 p-4 rounded-xl text-center border border-amber-100 dark:border-amber-800">
       <p class="text-2xl font-extrabold text-amber-600" id="kpiAnaq">—</p>
-      <p class="text-xs text-amber-500 dark:text-amber-300 font-medium mt-1">Anaquel crítico (≤3)</p>
+      <p class="text-xs text-amber-500 dark:text-amber-300 font-medium mt-1">Anaquel crítico</p>
       <div class="w-full bg-amber-200 dark:bg-amber-900 rounded-full h-1.5 mt-2">
         <div id="bAnaq" class="bg-amber-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
       </div>
     </div>
     <div class="bg-red-50 dark:bg-red-900/30 p-4 rounded-xl text-center border border-red-100 dark:border-red-800">
       <p class="text-2xl font-extrabold text-red-600" id="kpiBodega">—</p>
-      <p class="text-xs text-red-500 dark:text-red-300 font-medium mt-1">Bodega baja (≤5)</p>
+      <p class="text-xs text-red-500 dark:text-red-300 font-medium mt-1">Bodega baja</p>
       <div class="w-full bg-red-200 dark:bg-red-900 rounded-full h-1.5 mt-2">
         <div id="bBodega" class="bg-red-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
       </div>
@@ -112,8 +112,8 @@
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Mostrar</label>
         <select id="fAlerta" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
           <option value="todos">Todos</option>
-          <option value="anaquel" selected>Anaquel crítico (≤3)</option>
-          <option value="bodega">Bodega baja (≤5)</option>
+          <option value="anaquel" selected>Anaquel crítico</option>
+          <option value="bodega">Bodega baja</option>
           <option value="ambos">Ambas alertas</option>
           <option value="cualquiera">Cualquier alerta</option>
         </select>
@@ -154,8 +154,8 @@
             <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Promotor</th>
             <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comercio</th>
             <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Producto</th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Anaquel<div class="font-normal normal-case text-gray-400">alerta ≤ 3</div></th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bodega<div class="font-normal normal-case text-gray-400">alerta ≤ 5</div></th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Anaquel<div id="thAnaqUmbral" class="font-normal normal-case text-gray-400">alerta ≤ 3</div></th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bodega<div id="thBodUmbral" class="font-normal normal-case text-gray-400">alerta ≤ 5</div></th>
             <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
             <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ver</th>
           </tr>
@@ -170,170 +170,288 @@
   </div>
 </div>
 
-<!-- Modal -->
+<!-- ═══════ Modal detalle visita ═══════ -->
 <div class="modal" id="stockModal">
-  <div class="modal-content p-6 sm:p-8 dark:text-gray-200">
-    <button onclick="cerrarModal()" class="absolute top-4 right-5 text-gray-400 hover:text-red-500 text-2xl font-bold leading-none">×</button>
+  <div class="modal-box p-6 sm:p-8 dark:text-gray-200" style="width:860px">
+    <button onclick="cerrarModal('stockModal')" class="absolute top-4 right-5 text-gray-400 hover:text-red-500 text-2xl font-bold leading-none">×</button>
     <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6"><i class="fas fa-box-open mr-2 text-indigo-500"></i>Detalle de stock</h2>
     <div id="modalHeader" class="mb-5"></div>
     <div id="modalProductos"></div>
   </div>
 </div>
 
+<!-- ═══════ Modal configurar umbrales ═══════ -->
+<div class="modal" id="umbralModal">
+  <div class="modal-box p-6" style="width:720px">
+    <button onclick="cerrarModal('umbralModal')" class="absolute top-4 right-5 text-gray-400 hover:text-red-500 text-2xl font-bold leading-none">×</button>
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1">
+      <i class="fas fa-sliders mr-2 text-indigo-500"></i>Umbrales de alerta por producto
+    </h2>
+    <p class="text-sm text-gray-400 mb-5">Define cuándo se activa la alerta de stock bajo para cada producto. Si no configuras un producto, usa el valor por defecto (anaquel ≤ 3, bodega ≤ 5).</p>
+
+    <!-- Buscador de producto -->
+    <div class="flex gap-3 mb-5">
+      <select id="umbralProductoSel" class="flex-1 h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <option value="">— Selecciona un producto —</option>
+      </select>
+      <button onclick="agregarUmbral()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg text-sm flex items-center gap-2">
+        <i class="fas fa-plus"></i> Agregar
+      </button>
+    </div>
+
+    <!-- Tabla de umbrales configurados -->
+    <div class="overflow-x-auto rounded-xl border border-gray-100 dark:border-slate-700">
+      <table class="min-w-full">
+        <thead>
+          <tr class="bg-gray-50 dark:bg-slate-700">
+            <th class="py-2 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Producto</th>
+            <th class="py-2 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Alerta anaquel (≤)</th>
+            <th class="py-2 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Alerta bodega (≤)</th>
+            <th class="py-2 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Acción</th>
+          </tr>
+        </thead>
+        <tbody id="umbralTableBody" class="divide-y divide-gray-100 dark:divide-slate-700 bg-white dark:bg-slate-800">
+          <tr><td colspan="4" class="text-center py-8 text-gray-400 text-sm">Sin umbrales configurados — se usan los valores por defecto</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-5 pt-4 border-t border-gray-100 dark:border-slate-700 flex items-center justify-between">
+      <p class="text-xs text-gray-400"><i class="fas fa-info-circle mr-1"></i>Los cambios se guardan automáticamente al editar cada campo.</p>
+      <button onclick="cerrarModal('umbralModal')" class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-5 rounded-lg text-sm">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
-const UMBRAL_ANAQUEL = 3, UMBRAL_BODEGA = 5;
+const DEFAULT_ANAQUEL = 3, DEFAULT_BODEGA = 5;
 const empresaId = localStorage.getItem('empresa_id');
 if (!empresaId) window.location.href = '/';
-let allData = [], filas = [], comercioTimer = null;
+
+let allData = [], filas = [], umbrales = {}, comercioTimer = null;
+// umbrales = { 'PRODUCTO A': { anaquel: 5, bodega: 10 }, ... }
 
 function waitDb(fn) {
   if (window.db) { fn(); return; }
   const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
 }
+
 const fmt = s => new Date(s).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'});
-function badgeAnaq(n){
-  if(n==null)return'<span class="badge badge-none">—</span>';
-  if(n<=UMBRAL_ANAQUEL)return`<span class="badge badge-crit">${n}</span>`;
-  if(n<=8)return`<span class="badge badge-warn">${n}</span>`;
-  return`<span class="badge badge-ok">${n}</span>`;
-}
-function badgeBodega(n){
-  if(n==null)return'<span class="badge badge-none">—</span>';
-  if(n<=UMBRAL_BODEGA)return`<span class="badge badge-crit">${n}</span>`;
-  if(n<=12)return`<span class="badge badge-warn">${n}</span>`;
-  return`<span class="badge badge-ok">${n}</span>`;
-}
-function estadoBadge(a,b){
-  if(a&&b)return'<span class="badge" style="background:#fee2e2;color:#991b1b">⚠ Ambas alertas</span>';
-  if(a)return'<span class="badge badge-warn">Anaquel bajo</span>';
-  if(b)return'<span class="badge" style="background:#ede9fe;color:#6d28d9">Bodega baja</span>';
-  return'<span class="badge badge-none">Normal</span>';
-}
-function rowCls(a,b){if(a&&b)return'row-ambos';if(a)return'row-anaq';if(b)return'row-bod';return'';}
 
-async function loadData(){
-  const lineaId=localStorage.getItem('sp-linea')||'';
-  let q=window.db.from('web_precios')
+// ── Umbral para un producto específico ────────────────────────────
+function getUmbral(producto) {
+  return umbrales[producto] || { anaquel: DEFAULT_ANAQUEL, bodega: DEFAULT_BODEGA };
+}
+
+function badgeAnaq(n, ua) {
+  if (n == null) return '<span class="badge badge-none">—</span>';
+  if (n <= ua)   return `<span class="badge badge-crit">${n}</span>`;
+  if (n <= ua*2) return `<span class="badge badge-warn">${n}</span>`;
+  return `<span class="badge badge-ok">${n}</span>`;
+}
+function badgeBodega(n, ub) {
+  if (n == null) return '<span class="badge badge-none">—</span>';
+  if (n <= ub)   return `<span class="badge badge-crit">${n}</span>`;
+  if (n <= ub*2) return `<span class="badge badge-warn">${n}</span>`;
+  return `<span class="badge badge-ok">${n}</span>`;
+}
+function estadoBadge(a, b) {
+  if (a && b)  return '<span class="badge" style="background:#fee2e2;color:#991b1b">⚠ Ambas alertas</span>';
+  if (a)       return '<span class="badge badge-warn">Anaquel bajo</span>';
+  if (b)       return '<span class="badge" style="background:#ede9fe;color:#6d28d9">Bodega baja</span>';
+  return '<span class="badge badge-none">Normal</span>';
+}
+function rowCls(a, b) { if(a&&b)return'row-ambos';if(a)return'row-anaq';if(b)return'row-bod';return''; }
+
+// ── Cargar umbrales desde Supabase ────────────────────────────────
+async function loadUmbrales() {
+  try {
+    const { data } = await window.db.from('web_stock_umbrales')
+      .select('producto,umbral_anaquel,umbral_bodega')
+      .eq('empresa_id', empresaId);
+    umbrales = {};
+    (data || []).forEach(u => {
+      umbrales[u.producto] = { anaquel: u.umbral_anaquel, bodega: u.umbral_bodega };
+    });
+  } catch(e) {
+    // Tabla no existe aún — usar defaults silenciosamente
+    umbrales = {};
+  }
+}
+
+// ── Cargar visitas ────────────────────────────────────────────────
+async function loadData() {
+  await loadUmbrales();
+  const lineaId = localStorage.getItem('sp-linea') || '';
+  let q = window.db.from('web_precios')
     .select('id,created_at,trade,myitems,web_promotores!inner(promoter_name)')
-    .eq('empresa_id',empresaId).not('myitems','is',null)
+    .eq('empresa_id', empresaId).not('myitems','is',null)
     .order('created_at',{ascending:false}).limit(400);
-  if(lineaId)q=q.eq('linea_id',lineaId);
-  const{data,error}=await q;
-  if(error){console.error(error);return;}
-  allData=(data||[]).map(v=>({...v,myitems:v.myitems||[]}));
-  filas=[];
-  allData.forEach(v=>v.myitems.forEach(item=>{
-    const sa=item.stock_shelf!=null?parseInt(item.stock_shelf):null;
-    const sb=item.stock_warehouse!=null?parseInt(item.stock_warehouse):null;
-    filas.push({visitaId:v.id,fecha:v.created_at,
-      promotor:v.web_promotores?.promoter_name||'—',
-      comercio:v.trade||'—',producto:item.presentation||'—',
-      anaquel:isNaN(sa)?null:sa,bodega:isNaN(sb)?null:sb,
-      alertaA:sa!=null&&!isNaN(sa)&&sa<=UMBRAL_ANAQUEL,
-      alertaB:sb!=null&&!isNaN(sb)&&sb<=UMBRAL_BODEGA});
+  if (lineaId) q = q.eq('linea_id', lineaId);
+  const { data, error } = await q;
+  if (error) { console.error(error); return; }
+
+  allData = (data||[]).map(v=>({...v, myitems: v.myitems||[]}));
+  filas = [];
+  allData.forEach(v => v.myitems.forEach(item => {
+    const sa = item.stock_shelf     != null ? parseInt(item.stock_shelf)     : null;
+    const sb = item.stock_warehouse != null ? parseInt(item.stock_warehouse) : null;
+    const prod = item.presentation || '—';
+    const u = getUmbral(prod);
+    filas.push({
+      visitaId: v.id, fecha: v.created_at,
+      promotor: v.web_promotores?.promoter_name || '—',
+      comercio: v.trade || '—', producto: prod,
+      anaquel: isNaN(sa) ? null : sa,
+      bodega:  isNaN(sb) ? null : sb,
+      ua: u.anaquel, ub: u.bodega,
+      alertaA: sa != null && !isNaN(sa) && sa <= u.anaquel,
+      alertaB: sb != null && !isNaN(sb) && sb <= u.bodega,
+    });
   }));
-  poblarSelectores();actualizarKPIs();aplicarFiltros();
+
+  poblarSelectores(); actualizarKPIs(); aplicarFiltros();
 }
 
-function poblarSelectores(){
-  const proms=[...new Set(filas.map(r=>r.promotor))].sort();
-  const prods=[...new Set(filas.map(r=>r.producto))].sort();
-  document.getElementById('fPromotor').innerHTML='<option value="">Todos</option>'+proms.map(p=>`<option>${p}</option>`).join('');
-  document.getElementById('fProducto').innerHTML='<option value="">Todos</option>'+prods.map(p=>`<option>${p}</option>`).join('');
+function poblarSelectores() {
+  const proms = [...new Set(filas.map(r=>r.promotor))].sort();
+  const prods = [...new Set(filas.map(r=>r.producto))].sort();
+  document.getElementById('fPromotor').innerHTML = '<option value="">Todos</option>' + proms.map(p=>`<option>${p}</option>`).join('');
+  document.getElementById('fProducto').innerHTML = '<option value="">Todos</option>' + prods.map(p=>`<option>${p}</option>`).join('');
 }
 
-function buscarComercio(term){
+// ── Dropdown comercio ─────────────────────────────────────────────
+function buscarComercio(term) {
   clearTimeout(comercioTimer);
-  const dd=document.getElementById('comercioDD');
-  if(!term.trim()){dd.style.display='none';document.getElementById('fComercioVal').value='';return;}
-  comercioTimer=setTimeout(()=>{
-    const m=[...new Set(filas.map(r=>r.comercio))].filter(c=>c.toLowerCase().includes(term.toLowerCase())).sort().slice(0,15);
-    if(!m.length){dd.style.display='none';return;}
-    dd.innerHTML=m.map(c=>`<div class="com-dd-item" onmousedown="selecComercio('${c.replace(/'/g,"\\'")}')"><i class="fas fa-store mr-2 text-indigo-400 text-xs"></i>${c}</div>`).join('');
-    dd.style.display='block';
-  },200);
+  const dd = document.getElementById('comercioDD');
+  if (!term.trim()) { dd.style.display='none'; document.getElementById('fComercioVal').value=''; return; }
+  comercioTimer = setTimeout(() => {
+    const m = [...new Set(filas.map(r=>r.comercio))].filter(c=>c.toLowerCase().includes(term.toLowerCase())).sort().slice(0,15);
+    if (!m.length) { dd.style.display='none'; return; }
+    dd.innerHTML = m.map(c=>`<div class="com-dd-item" onmousedown="selecComercio('${c.replace(/'/g,"\\'")}')"><i class="fas fa-store mr-2 text-indigo-400 text-xs"></i>${c}</div>`).join('');
+    dd.style.display = 'block';
+  }, 200);
 }
-function selecComercio(val){document.getElementById('fComercio').value=val;document.getElementById('fComercioVal').value=val;document.getElementById('comercioDD').style.display='none';}
-document.addEventListener('click',e=>{const w=document.getElementById('comercioWrap');if(w&&!w.contains(e.target))document.getElementById('comercioDD').style.display='none';});
+function selecComercio(val) {
+  document.getElementById('fComercio').value = val;
+  document.getElementById('fComercioVal').value = val;
+  document.getElementById('comercioDD').style.display = 'none';
+}
+document.addEventListener('click', e => {
+  const w = document.getElementById('comercioWrap');
+  if (w && !w.contains(e.target)) document.getElementById('comercioDD').style.display = 'none';
+});
 
-function aplicarFiltros(){
-  const promotor=document.getElementById('fPromotor').value;
-  const comercio=document.getElementById('fComercioVal').value;
-  const producto=document.getElementById('fProducto').value;
-  const alerta=document.getElementById('fAlerta').value;
-  const desde=document.getElementById('fDesde').value;
-  const hasta=document.getElementById('fHasta').value;
-  let f=filas;
-  if(promotor)f=f.filter(r=>r.promotor===promotor);
-  if(comercio)f=f.filter(r=>r.comercio===comercio);
-  if(producto)f=f.filter(r=>r.producto===producto);
-  if(desde)f=f.filter(r=>new Date(r.fecha)>=new Date(desde+'T00:00:00'));
-  if(hasta)f=f.filter(r=>new Date(r.fecha)<=new Date(hasta+'T23:59:59'));
-  if(alerta==='anaquel')f=f.filter(r=>r.alertaA);
-  if(alerta==='bodega')f=f.filter(r=>r.alertaB);
-  if(alerta==='ambos')f=f.filter(r=>r.alertaA&&r.alertaB);
-  if(alerta==='cualquiera')f=f.filter(r=>r.alertaA||r.alertaB);
+// ── Filtros ───────────────────────────────────────────────────────
+function aplicarFiltros() {
+  const promotor = document.getElementById('fPromotor').value;
+  const comercio = document.getElementById('fComercioVal').value;
+  const producto = document.getElementById('fProducto').value;
+  const alerta   = document.getElementById('fAlerta').value;
+  const desde    = document.getElementById('fDesde').value;
+  const hasta    = document.getElementById('fHasta').value;
+  let f = filas;
+  if (promotor) f = f.filter(r=>r.promotor===promotor);
+  if (comercio) f = f.filter(r=>r.comercio===comercio);
+  if (producto) f = f.filter(r=>r.producto===producto);
+  if (desde)    f = f.filter(r=>new Date(r.fecha)>=new Date(desde+'T00:00:00'));
+  if (hasta)    f = f.filter(r=>new Date(r.fecha)<=new Date(hasta+'T23:59:59'));
+  if (alerta==='anaquel')    f = f.filter(r=>r.alertaA);
+  if (alerta==='bodega')     f = f.filter(r=>r.alertaB);
+  if (alerta==='ambos')      f = f.filter(r=>r.alertaA&&r.alertaB);
+  if (alerta==='cualquiera') f = f.filter(r=>r.alertaA||r.alertaB);
+
+  // Actualizar hint de umbral en encabezado si hay producto seleccionado
+  if (producto) {
+    const u = getUmbral(producto);
+    document.getElementById('thAnaqUmbral').textContent = `alerta ≤ ${u.anaquel}`;
+    document.getElementById('thBodUmbral').textContent  = `alerta ≤ ${u.bodega}`;
+  } else {
+    document.getElementById('thAnaqUmbral').textContent = 'alerta por producto';
+    document.getElementById('thBodUmbral').textContent  = 'alerta por producto';
+  }
+
   renderTabla(f);
 }
 
-function renderTabla(f){
-  document.getElementById('infoRegistros').textContent=`${f.length} registros`;
-  const tbody=document.getElementById('stockBody');
-  if(!f.length){tbody.innerHTML='<tr><td colspan="8" class="text-center py-10 text-gray-400">Sin datos con los filtros actuales</td></tr>';return;}
-  tbody.innerHTML=f.map(r=>`
+function renderTabla(f) {
+  document.getElementById('infoRegistros').textContent = `${f.length} registros`;
+  const tbody = document.getElementById('stockBody');
+  if (!f.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10 text-gray-400">Sin datos con los filtros actuales</td></tr>';
+    return;
+  }
+  tbody.innerHTML = f.map(r => `
     <tr class="hover:bg-indigo-50/40 dark:hover:bg-slate-700 transition-colors ${rowCls(r.alertaA,r.alertaB)}">
       <td class="py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">${fmt(r.fecha)}</td>
       <td class="py-3 px-4 text-sm text-indigo-600 dark:text-indigo-400 font-medium">${r.promotor}</td>
       <td class="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">${r.comercio}</td>
-      <td class="py-3 px-4 text-sm font-semibold text-gray-800 dark:text-gray-200">${r.producto}</td>
-      <td class="py-3 px-4 text-center">${badgeAnaq(r.anaquel)}</td>
-      <td class="py-3 px-4 text-center">${badgeBodega(r.bodega)}</td>
+      <td class="py-3 px-4 text-sm font-semibold text-gray-800 dark:text-gray-200">
+        ${r.producto}
+        <div class="text-xs text-gray-400 font-normal">umbral: anaquel≤${r.ua} · bodega≤${r.ub}</div>
+      </td>
+      <td class="py-3 px-4 text-center">${badgeAnaq(r.anaquel, r.ua)}</td>
+      <td class="py-3 px-4 text-center">${badgeBodega(r.bodega, r.ub)}</td>
       <td class="py-3 px-4 text-center">${estadoBadge(r.alertaA,r.alertaB)}</td>
-      <td class="py-3 px-4 text-center"><button onclick="abrirDetalle('${r.visitaId}')" class="text-indigo-500 hover:text-indigo-700 transition-colors"><i class="fas fa-eye text-lg"></i></button></td>
+      <td class="py-3 px-4 text-center">
+        <button onclick="abrirDetalle('${r.visitaId}')" class="text-indigo-500 hover:text-indigo-700 transition-colors">
+          <i class="fas fa-eye text-lg"></i>
+        </button>
+      </td>
     </tr>`).join('');
 }
 
-function actualizarKPIs(){
-  let cA=0,cB=0,total=0,sumA=0,cntA=0;
-  filas.forEach(r=>{total++;if(r.alertaA)cA++;if(r.alertaB)cB++;if(r.anaquel!=null){sumA+=r.anaquel;cntA++;}});
-  const prom=cntA?(sumA/cntA).toFixed(1):'—';
-  document.getElementById('kpiAnaq').textContent=cA;
-  document.getElementById('kpiBodega').textContent=cB;
-  document.getElementById('kpiProm').textContent=prom;
-  document.getElementById('kpiTotal').textContent=total;
-  const mx=Math.max(total,1);
-  document.getElementById('bAnaq').style.width=Math.min(100,(cA/mx)*100)+'%';
-  document.getElementById('bBodega').style.width=Math.min(100,(cB/mx)*100)+'%';
-  document.getElementById('bProm').style.width=prom!=='—'?Math.min(100,(parseFloat(prom)/20)*100)+'%':'0%';
+function actualizarKPIs() {
+  let cA=0, cB=0, total=0, sumA=0, cntA=0;
+  filas.forEach(r => {
+    total++;
+    if (r.alertaA) cA++;
+    if (r.alertaB) cB++;
+    if (r.anaquel != null) { sumA += r.anaquel; cntA++; }
+  });
+  const prom = cntA ? (sumA/cntA).toFixed(1) : '—';
+  const mx = Math.max(total,1);
+  document.getElementById('kpiAnaq').textContent   = cA;
+  document.getElementById('kpiBodega').textContent = cB;
+  document.getElementById('kpiProm').textContent   = prom;
+  document.getElementById('kpiTotal').textContent  = total;
+  document.getElementById('bAnaq').style.width   = Math.min(100,(cA/mx)*100)+'%';
+  document.getElementById('bBodega').style.width = Math.min(100,(cB/mx)*100)+'%';
+  document.getElementById('bProm').style.width   = prom!=='—' ? Math.min(100,(parseFloat(prom)/20)*100)+'%' : '0%';
 }
 
-function abrirDetalle(vid){
-  const v=allData.find(d=>d.id===vid);if(!v)return;
-  document.getElementById('modalHeader').innerHTML=`
+// ── Modal detalle visita ──────────────────────────────────────────
+function abrirDetalle(vid) {
+  const v = allData.find(d=>d.id===vid); if (!v) return;
+  document.getElementById('modalHeader').innerHTML = `
     <div class="grid grid-cols-3 gap-3">
       ${[['Fecha',fmt(v.created_at)],['Promotor',v.web_promotores?.promoter_name||'—'],['Comercio',v.trade||'—']]
         .map(([l,val])=>`<div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-gray-100 dark:border-slate-600">
           <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">${l}</p>
           <p class="text-sm font-semibold text-gray-800 dark:text-white">${val}</p></div>`).join('')}
     </div>`;
-  document.getElementById('modalProductos').innerHTML=`
+  document.getElementById('modalProductos').innerHTML = `
     <h3 class="text-base font-bold text-gray-700 dark:text-white mb-3">Stock por producto</h3>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      ${(v.myitems||[]).map(item=>{
-        const sa=item.stock_shelf!=null?parseInt(item.stock_shelf):null;
-        const sb=item.stock_warehouse!=null?parseInt(item.stock_warehouse):null;
-        const cA=sa!=null&&sa<=UMBRAL_ANAQUEL,cB=sb!=null&&sb<=UMBRAL_BODEGA;
-        return`<div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 border ${cA||cB?'border-red-300 dark:border-red-800':'border-gray-100 dark:border-slate-600'}">
-          <p class="font-bold text-sm text-gray-800 dark:text-white mb-3">${item.presentation||'—'}</p>
+      ${(v.myitems||[]).map(item => {
+        const sa = item.stock_shelf     != null ? parseInt(item.stock_shelf)     : null;
+        const sb = item.stock_warehouse != null ? parseInt(item.stock_warehouse) : null;
+        const prod = item.presentation || '—';
+        const u = getUmbral(prod);
+        const cA = sa != null && sa <= u.anaquel;
+        const cB = sb != null && sb <= u.bodega;
+        return `<div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 border ${cA||cB?'border-red-300 dark:border-red-800':'border-gray-100 dark:border-slate-600'}">
+          <p class="font-bold text-sm text-gray-800 dark:text-white mb-1">${prod}</p>
+          <p class="text-xs text-gray-400 mb-3">umbral: anaquel≤${u.anaquel} · bodega≤${u.bodega}</p>
           <div class="grid grid-cols-2 gap-3">
             <div class="bg-white dark:bg-slate-800 rounded-lg p-3 text-center">
               <p class="text-xs text-gray-400 uppercase mb-1">Anaquel</p>
-              <p class="text-2xl font-extrabold ${sa==null?'text-gray-400':cA?'text-red-600':sa<=8?'text-amber-500':'text-green-600'}">${sa??'—'}</p>
+              <p class="text-2xl font-extrabold ${sa==null?'text-gray-400':cA?'text-red-600':sa<=u.anaquel*2?'text-amber-500':'text-green-600'}">${sa??'—'}</p>
               ${cA?'<p class="text-xs text-red-500 mt-1">⚠ Crítico</p>':''}
             </div>
             <div class="bg-white dark:bg-slate-800 rounded-lg p-3 text-center">
               <p class="text-xs text-gray-400 uppercase mb-1">Bodega</p>
-              <p class="text-2xl font-extrabold ${sb==null?'text-gray-400':cB?'text-red-600':sb<=12?'text-amber-500':'text-indigo-600'}">${sb??'—'}</p>
+              <p class="text-2xl font-extrabold ${sb==null?'text-gray-400':cB?'text-red-600':sb<=u.bodega*2?'text-amber-500':'text-indigo-600'}">${sb??'—'}</p>
               ${cB?'<p class="text-xs text-red-500 mt-1">⚠ Bajo</p>':''}
             </div>
           </div></div>`;
@@ -341,19 +459,119 @@ function abrirDetalle(vid){
     </div>`;
   document.getElementById('stockModal').classList.add('open');
 }
-function cerrarModal(){document.getElementById('stockModal').classList.remove('open');}
-document.getElementById('stockModal').addEventListener('click',e=>{if(e.target.id==='stockModal')cerrarModal();});
-function limpiarFiltros(){
-  document.getElementById('fPromotor').value='';
-  document.getElementById('fProducto').value='';
-  document.getElementById('fAlerta').value='anaquel';
-  document.getElementById('fComercio').value='';
-  document.getElementById('fComercioVal').value='';
-  document.getElementById('fDesde').value='';
-  document.getElementById('fHasta').value='';
+
+// ── Modal configurar umbrales ─────────────────────────────────────
+function abrirConfigUmbrales() {
+  // Poblar selector con productos disponibles
+  const prods = [...new Set(filas.map(r=>r.producto))].sort();
+  const sel = document.getElementById('umbralProductoSel');
+  sel.innerHTML = '<option value="">— Selecciona un producto —</option>' +
+    prods.map(p => `<option value="${p}" ${umbrales[p]?'style="color:#6366f1;font-weight:700"':''}>${p}${umbrales[p]?' ✓':''}</option>`).join('');
+  renderUmbralTable();
+  document.getElementById('umbralModal').classList.add('open');
+}
+
+function renderUmbralTable() {
+  const tbody = document.getElementById('umbralTableBody');
+  const entries = Object.entries(umbrales);
+  if (!entries.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-sm">Sin umbrales configurados — se usan los valores por defecto (anaquel≤3, bodega≤5)</td></tr>';
+    return;
+  }
+  tbody.innerHTML = entries.sort((a,b)=>a[0].localeCompare(b[0])).map(([prod, u]) => `
+    <tr class="hover:bg-gray-50 dark:hover:bg-slate-700">
+      <td class="py-3 px-4 text-sm font-semibold text-gray-800 dark:text-white">${prod}</td>
+      <td class="py-3 px-4 text-center">
+        <input type="number" min="1" max="99" value="${u.anaquel}"
+          class="w-16 h-8 border border-amber-300 dark:border-amber-700 dark:bg-slate-700 dark:text-white rounded-lg px-2 text-center text-sm font-bold text-amber-700 dark:text-amber-400"
+          onchange="guardarUmbral('${prod}', this.value, null)">
+      </td>
+      <td class="py-3 px-4 text-center">
+        <input type="number" min="1" max="999" value="${u.bodega}"
+          class="w-16 h-8 border border-red-300 dark:border-red-700 dark:bg-slate-700 dark:text-white rounded-lg px-2 text-center text-sm font-bold text-red-700 dark:text-red-400"
+          onchange="guardarUmbral('${prod}', null, this.value)">
+      </td>
+      <td class="py-3 px-4 text-center">
+        <button onclick="eliminarUmbral('${prod}')" class="text-red-400 hover:text-red-600 transition-colors text-sm" title="Eliminar — usará el valor por defecto">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+async function agregarUmbral() {
+  const prod = document.getElementById('umbralProductoSel').value;
+  if (!prod) { captaToast('Selecciona un producto primero','warn'); return; }
+  if (umbrales[prod]) { captaToast('Ya tiene umbral configurado','warn'); return; }
+  umbrales[prod] = { anaquel: DEFAULT_ANAQUEL, bodega: DEFAULT_BODEGA };
+  await upsertUmbral(prod, DEFAULT_ANAQUEL, DEFAULT_BODEGA);
+  renderUmbralTable();
+  captaToast(`Umbral creado para ${prod}`,'success');
+}
+
+async function guardarUmbral(prod, newAnaq, newBod) {
+  const u = umbrales[prod] || { anaquel: DEFAULT_ANAQUEL, bodega: DEFAULT_BODEGA };
+  if (newAnaq !== null) u.anaquel = parseInt(newAnaq);
+  if (newBod  !== null) u.bodega  = parseInt(newBod);
+  umbrales[prod] = u;
+  await upsertUmbral(prod, u.anaquel, u.bodega);
+  // Recalcular alertas en filas
+  filas.forEach(f => {
+    if (f.producto !== prod) return;
+    f.ua = u.anaquel; f.ub = u.bodega;
+    f.alertaA = f.anaquel != null && f.anaquel <= u.anaquel;
+    f.alertaB = f.bodega  != null && f.bodega  <= u.bodega;
+  });
+  actualizarKPIs();
+  captaToast('Umbral actualizado','success');
+}
+
+async function eliminarUmbral(prod) {
+  delete umbrales[prod];
+  try {
+    await window.db.from('web_stock_umbrales')
+      .delete().eq('empresa_id', empresaId).eq('producto', prod);
+  } catch(e) {}
+  // Reset a defaults
+  filas.forEach(f => {
+    if (f.producto !== prod) return;
+    f.ua = DEFAULT_ANAQUEL; f.ub = DEFAULT_BODEGA;
+    f.alertaA = f.anaquel != null && f.anaquel <= DEFAULT_ANAQUEL;
+    f.alertaB = f.bodega  != null && f.bodega  <= DEFAULT_BODEGA;
+  });
+  renderUmbralTable();
+  actualizarKPIs();
+  captaToast(`Umbral eliminado — usando valores por defecto`,'info');
+}
+
+async function upsertUmbral(prod, ua, ub) {
+  try {
+    await window.db.from('web_stock_umbrales').upsert({
+      empresa_id: empresaId, producto: prod,
+      umbral_anaquel: ua, umbral_bodega: ub,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'empresa_id,producto' });
+  } catch(e) { console.warn('upsert umbral:', e); }
+}
+
+// ── Helpers modales ───────────────────────────────────────────────
+function cerrarModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+function limpiarFiltros() {
+  document.getElementById('fPromotor').value = '';
+  document.getElementById('fProducto').value = '';
+  document.getElementById('fAlerta').value = 'anaquel';
+  document.getElementById('fComercio').value = '';
+  document.getElementById('fComercioVal').value = '';
+  document.getElementById('fDesde').value = '';
+  document.getElementById('fHasta').value = '';
   aplicarFiltros();
 }
-window.onLineaChanged=()=>waitDb(loadData);
+
+window.onLineaChanged = () => waitDb(loadData);
 waitDb(loadData);
 </script>
 </body>

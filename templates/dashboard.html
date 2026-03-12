@@ -398,7 +398,7 @@ async function fetchRecordsFromAPI(filters) {
     const cacheKey = JSON.stringify({ ...filters, _eid: empresaId });
     if (apiCache.has(cacheKey)) {
         const c = apiCache.get(cacheKey);
-        promoters     = c.promoters  || [];
+        promoters     = [...new Map((c.promoters||[]).map(p=>[p.promoter_id,p])).values()];
         estados       = c.estados    || [];
         zonas         = c.zonas      || [];
         lineas        = c.lineas     || [];
@@ -423,7 +423,7 @@ async function fetchRecordsFromAPI(filters) {
     try {
         const res  = await fetch(`/api/records?${p.toString()}`);
         const data = await res.json();
-        promoters     = data.promoters || [];
+        promoters     = [...new Map((data.promoters||[]).map(p=>[p.promoter_id,p])).values()];
         estados       = data.estados   || [];
         zonas         = data.zonas     || [];
         lineas        = data.lineas    || [];
