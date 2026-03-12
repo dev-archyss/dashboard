@@ -144,18 +144,27 @@ let _captaLineas = [];
 let _captaLinea  = localStorage.getItem('sp-linea') || '';
 
 /* ── Cargar config desde Flask y crear cliente Supabase ── */
+// Flag: indica si db ya fue inicializado
+window._captaDbReady = false;
+
+// Los templates llaman captaReady(fn) en vez de escuchar el evento.
+// Si db ya está listo ejecuta fn() inmediatamente, si no, espera el evento.
+window.captaReady = function(fn) {
+  if (window._captaDbReady) { fn(); }
+  else { window.addEventListener('capta:db-ready', fn, { once: true }); }
+};
+
 async function _initSupabase() {
   try {
     const res = await fetch('/api/config');
     if (!res.ok) { window.location.href = '/'; return; }
     const cfg = await res.json();
-    // Guardar temporalmente en memoria (no en localStorage ni DOM)
     window._SUPA_URL = cfg.supabase_url;
     window._SUPA_KEY = cfg.supabase_key;
     window.db = supabase.createClient(cfg.supabase_url, cfg.supabase_key);
-    // Cargar líneas una vez db esté listo
     await _loadLineas();
-    // Avisar a la página que db ya está listo
+    // Marcar como listo y disparar evento
+    window._captaDbReady = true;
     window.dispatchEvent(new Event('capta:db-ready'));
   } catch(e) {
     console.error('CAPTA: error inicializando Supabase', e);

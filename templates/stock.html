@@ -500,7 +500,7 @@ function limpiarFiltros() {
 }
 
 window.onLineaChanged = () => loadData();
-window.addEventListener('capta:db-ready', () => loadData());
+window.captaReady(() => loadData());
 </script>
 </body>
 </html>

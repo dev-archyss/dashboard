@@ -563,7 +563,7 @@ function setDefaultDates() {
 }
 
 window.onLineaChanged = () => fetchDataAnalisis();
-window.addEventListener('capta:db-ready', () => { setDefaultDates(); loadCatalogs(); });
+window.captaReady(() => { setDefaultDates(); loadCatalogs(); });
 </script>
 </body>
 </html>

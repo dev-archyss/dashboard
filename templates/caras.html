@@ -501,7 +501,7 @@ function setDates() {
 // Reaccionar al cambio de línea desde el navbar
 window.onLineaChanged = () => loadData();
 
-window.addEventListener('capta:db-ready', async () => {
+window.captaReady(async () => {
   setDates();
   await loadCatalogs();
   await loadData();
