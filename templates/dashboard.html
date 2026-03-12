@@ -314,7 +314,7 @@ if (!empresaId) {
 // ── Estado global ──────────────────────────────────────────────────
 let allRecords      = [];
 let filteredRecords = [];
-let promoters       = [];
+let promoters       = [];   // lista maestra deduplicada — solo crece, nunca se sobreescribe
 let estados         = [];
 let zonas           = [];
 let lineas          = [];
@@ -322,6 +322,14 @@ let clientes_list   = [];
 let selectedRecords = new Set();
 let currentPage     = 1;
 const apiCache      = new Map();
+
+// Fusiona nuevos promotores en la lista maestra sin duplicar
+function mergePromoters(incoming) {
+    const map = new Map(promoters.map(p => [p.promoter_id, p]));
+    (incoming || []).forEach(p => { if (!map.has(p.promoter_id)) map.set(p.promoter_id, p); });
+    promoters = [...map.values()];
+    document.getElementById('totalPromoters').textContent = promoters.length;
+}
 
 const loadingEl     = document.getElementById('loadingMessage');
 const detailsModal  = document.getElementById('detailsModal');
@@ -332,6 +340,15 @@ function getTodayMinus4Hours() {
     return new Date(Date.now() - 4 * 3600 * 1000).toISOString().split('T')[0];
 }
 function getCurrentYear() { return new Date().getFullYear(); }
+
+// Número de semana ISO-8601 (lunes = día 1)
+function getISOWeek(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+function getCurrentISOWeek() { return getISOWeek(new Date(Date.now() - 4 * 3600 * 1000)); }
 
 function populateYears() {
     const sel = document.getElementById('yearSelect');
@@ -352,12 +369,31 @@ async function populateWeeks(year) {
     try {
         const res  = await fetch(`/api/weeks_with_visits?empresa_id=${empresaId}&year=${year}`);
         const data = await res.json();
-        (data.weeks || []).forEach(w => {
+        const currentWeek = getCurrentISOWeek();
+        const currentYear = getCurrentYear();
+        const weeks = data.weeks || [];
+
+        // Si estamos viendo el año actual y la semana corriente no está en el listado,
+        // la agregamos al inicio para poder seleccionarla aunque no haya visitas aún
+        if (parseInt(year) === currentYear && !weeks.includes(currentWeek)) {
+            weeks.unshift(currentWeek);
+        }
+
+        weeks.forEach(w => {
             const o = document.createElement('option');
-            o.value = w; o.textContent = `Semana ${w}`;
+            o.value = w;
+            o.textContent = `Semana ${w}${(parseInt(year) === currentYear && w === currentWeek) ? ' (actual)' : ''}`;
             sel.appendChild(o);
         });
+
         sel.disabled = false;
+
+        // Auto-seleccionar semana actual si es el año en curso
+        if (parseInt(year) === currentYear) {
+            sel.value = currentWeek;
+        } else if (weeks.length > 0) {
+            sel.value = weeks[weeks.length - 1]; // última semana del año seleccionado
+        }
     } catch(e) { console.error('populateWeeks:', e); }
 }
 
@@ -398,12 +434,11 @@ async function fetchRecordsFromAPI(filters) {
     const cacheKey = JSON.stringify({ ...filters, _eid: empresaId });
     if (apiCache.has(cacheKey)) {
         const c = apiCache.get(cacheKey);
-        promoters     = [...new Map((c.promoters||[]).map(p=>[p.promoter_id,p])).values()];
+        mergePromoters(c.promoters);
         estados       = c.estados    || [];
         zonas         = c.zonas      || [];
         lineas        = c.lineas     || [];
         clientes_list = c.clientes   || [];
-        document.getElementById('totalPromoters').textContent = promoters.length;
         return c.records || [];
     }
 
@@ -423,12 +458,11 @@ async function fetchRecordsFromAPI(filters) {
     try {
         const res  = await fetch(`/api/records?${p.toString()}`);
         const data = await res.json();
-        promoters     = [...new Map((data.promoters||[]).map(p=>[p.promoter_id,p])).values()];
+        mergePromoters(data.promoters);
         estados       = data.estados   || [];
         zonas         = data.zonas     || [];
         lineas        = data.lineas    || [];
         clientes_list = data.clientes  || [];
-        document.getElementById('totalPromoters').textContent = promoters.length;
         apiCache.set(cacheKey, data);
         loadingEl.classList.add('hidden');
         return data.records || [];
@@ -858,11 +892,14 @@ async function init() {
     populateYears();
     const year = getCurrentYear();
     document.getElementById('yearSelect').value = year;
-    await populateWeeks(year);
+    await populateWeeks(year);  // ya auto-selecciona la semana actual
 
     allRecords = await fetchRecordsFromAPI({ dateFrom: today, dateTo: today, promoterId: 'all' });
     populateSelects();
     filterRecords();
+
+    // Cargar progreso semanal con la semana ya seleccionada
+    await updateWeeklyProgress('all');
 
     // ── Listeners ─────────────────────────────────────────────────
     ['dateFrom','dateTo'].forEach(id =>

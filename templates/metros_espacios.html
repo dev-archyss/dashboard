@@ -23,6 +23,11 @@
   #leyendaModal{display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:1rem}
   #leyendaModal.open{display:flex}
   select:focus,input:focus{outline:none;box-shadow:0 0 0 3px rgba(79,70,229,.18);border-color:#4F46E5!important}
+  /* Tabs */
+  .tab-btn{border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab-btn.active{border-bottom-color:currentColor}
+  .tab-panel{animation:fadeIn .18s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
@@ -121,53 +126,100 @@
     </div>
   </div>
 
-  <!-- Gráficos -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 border border-gray-100 dark:border-slate-700">
-      <h3 class="text-base font-bold text-gray-700 dark:text-white mb-4">Metros nuestros <span class="text-xs font-normal text-gray-400">— por producto</span></h3>
-      <div style="position:relative;height:280px"><canvas id="chartProductos"></canvas></div>
-    </div>
-    <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 border border-red-50 dark:border-red-900/30 border">
-      <h3 class="text-base font-bold text-red-500 dark:text-red-400 mb-4">Metros competencia <span class="text-xs font-normal text-gray-400">— por producto</span></h3>
-      <div style="position:relative;height:280px"><canvas id="chartCompetencia"></canvas></div>
-    </div>
-    <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 border border-gray-100 dark:border-slate-700">
-      <h3 class="text-base font-bold text-gray-700 dark:text-white mb-4">Metros por establecimiento — Top 10</h3>
-      <div style="position:relative;height:280px"><canvas id="chartEstablecimientos"></canvas></div>
-    </div>
-  </div>
+  <!-- ═══ TABS ═══════════════════════════════════════════════════ -->
+  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden mb-6">
 
-  <!-- Tabla -->
-  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
-      <h3 class="text-base font-bold text-gray-700 dark:text-white">Detalle por visita</h3>
-      <span id="registrosInfo" class="text-xs font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-300 px-3 py-1 rounded-full">—</span>
+    <!-- Nav tabs -->
+    <div class="flex overflow-x-auto border-b border-gray-100 dark:border-slate-700 px-2 pt-2 gap-1" id="tabNav">
+      <button onclick="switchTab('nuestros')" id="tab-nuestros"
+        class="tab-btn active flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all
+               text-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 border-b-2 border-indigo-500">
+        <i class="fas fa-chart-bar text-indigo-500"></i> Metros nuestros
+      </button>
+      <button onclick="switchTab('competencia')" id="tab-competencia"
+        class="tab-btn flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all
+               text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+        <i class="fas fa-store-slash text-red-400"></i> Metros competencia
+      </button>
+      <button onclick="switchTab('establecimientos')" id="tab-establecimientos"
+        class="tab-btn flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all
+               text-gray-500 dark:text-gray-400 hover:text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20">
+        <i class="fas fa-store text-teal-400"></i> Top Establecimientos
+      </button>
+      <button onclick="switchTab('ranking')" id="tab-ranking"
+        class="tab-btn flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all
+               text-gray-500 dark:text-gray-400 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20">
+        <i class="fas fa-trophy text-purple-400"></i> Ranking Total
+      </button>
+      <button onclick="switchTab('visitas')" id="tab-visitas"
+        class="tab-btn flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all
+               text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-slate-700">
+        <i class="fas fa-list text-gray-400"></i> Detalle por visita
+        <span id="registrosInfo" class="text-xs font-semibold text-indigo-600 bg-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 rounded-full">—</span>
+      </button>
     </div>
-    <div class="overflow-x-auto max-h-[55vh]">
-      <table class="min-w-full divide-y divide-gray-100 dark:divide-slate-700">
-        <thead class="table-header-sticky">
-          <tr>
-            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
-            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Promotor</th>
-            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Establecimiento</th>
-            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado / Zona</th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Metros nuestros</th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total anaquel</th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cobertura</th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fuente</th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Caras antes</th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Caras después</th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Productos</th>
-          </tr>
-        </thead>
-        <tbody id="metrosTableBody" class="bg-white dark:bg-slate-800 divide-y divide-gray-50 dark:divide-slate-700">
-          <tr><td colspan="11" class="text-center py-10 text-gray-400 dark:text-gray-500">
-            <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando…
-          </td></tr>
-        </tbody>
-      </table>
+
+    <!-- TAB: Metros nuestros -->
+    <div id="panel-nuestros" class="tab-panel p-6">
+      <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">
+        Metros lineales de productos <strong class="text-indigo-600">propios</strong> por presentación. Dato real (campo metros) o estimado (caras × 0.4 m).
+      </p>
+      <div style="position:relative;height:480px"><canvas id="chartProductos"></canvas></div>
     </div>
-  </div>
+
+    <!-- TAB: Metros competencia -->
+    <div id="panel-competencia" class="tab-panel hidden p-6">
+      <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">
+        Metros lineales ocupados por productos de la <strong class="text-red-500">competencia</strong> por presentación.
+      </p>
+      <div style="position:relative;height:480px"><canvas id="chartCompetencia"></canvas></div>
+    </div>
+
+    <!-- TAB: Top establecimientos (nuestros) -->
+    <div id="panel-establecimientos" class="tab-panel hidden p-6">
+      <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">
+        Top 15 establecimientos por metros lineales de productos propios capturados.
+      </p>
+      <div style="position:relative;height:480px"><canvas id="chartEstablecimientos"></canvas></div>
+    </div>
+
+    <!-- TAB: Ranking Total (nuestros + competencia) -->
+    <div id="panel-ranking" class="tab-panel hidden p-6">
+      <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">
+        Comparación directa nuestros metros vs. competencia por establecimiento — Top 10.
+      </p>
+      <div style="position:relative;height:480px"><canvas id="chartRanking"></canvas></div>
+    </div>
+
+    <!-- TAB: Detalle por visita -->
+    <div id="panel-visitas" class="tab-panel hidden">
+      <div class="overflow-x-auto max-h-[65vh]">
+        <table class="min-w-full divide-y divide-gray-100 dark:divide-slate-700">
+          <thead class="table-header-sticky">
+            <tr>
+              <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
+              <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Promotor</th>
+              <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Establecimiento</th>
+              <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado / Zona</th>
+              <th class="py-3 px-4 text-center text-xs font-bold text-indigo-500 uppercase tracking-wider">M. nuestros</th>
+              <th class="py-3 px-4 text-center text-xs font-bold text-red-400 uppercase tracking-wider">M. competencia</th>
+              <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total anaquel</th>
+              <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cobertura</th>
+              <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fuente</th>
+              <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Caras ✓</th>
+              <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Productos</th>
+            </tr>
+          </thead>
+          <tbody id="metrosTableBody" class="bg-white dark:bg-slate-800 divide-y divide-gray-50 dark:divide-slate-700">
+            <tr><td colspan="11" class="text-center py-10 text-gray-400 dark:text-gray-500">
+              <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando…
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /tabs -->
 </div>
 
 <!-- Modal leyenda -->
@@ -272,7 +324,7 @@ async function loadData() {
 
 function procesarDatos(registros) {
   let sumN = 0, sumC = 0, sumT = 0, cntReal = 0, cntEst = 0;
-  const porProd = {}, porProdComp = {}, porEst = {};
+  const porProd = {}, porProdComp = {}, porEst = {}, porEstComp = {};
 
   registros.forEach(r => {
     const { valor: mN, esReal } = metrosNuestros(r);
@@ -292,8 +344,11 @@ function procesarDatos(registros) {
       if (!item.presentation || item.presentation === 'SIN STOCK') return;
       const m = item.shelf_meters != null ? parseFloat(item.shelf_meters)||0 : (item.faces_after||0)*0.4;
       porProdComp[item.presentation] = (porProdComp[item.presentation] || 0) + m;
+      porEstComp[comercio] = (porEstComp[comercio] || 0) + m;  // comp por establecimiento
     });
   });
+
+  window._lastEstComp = porEstComp; // disponible para chartRanking
 
   const numEst  = Object.keys(porEst).length;
   const pct     = sumT > 0 ? Math.min(100, (sumN / sumT) * 100) : 0;
@@ -325,49 +380,147 @@ function procesarDatos(registros) {
   renderizarTabla(registros);
 }
 
+// ── Tabs ────────────────────────────────────────────────────────────
+const TAB_IDS = ['nuestros','competencia','establecimientos','ranking','visitas'];
+function switchTab(name) {
+  TAB_IDS.forEach(id => {
+    const btn   = document.getElementById('tab-'+id);
+    const panel = document.getElementById('panel-'+id);
+    if (!btn||!panel) return;
+    const active = id===name;
+    panel.classList.toggle('hidden', !active);
+    const colors = {
+      nuestros:'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 border-indigo-500',
+      competencia:'text-red-500 bg-red-50 dark:bg-red-900/30 border-red-400',
+      establecimientos:'text-teal-600 bg-teal-50 dark:bg-teal-900/30 border-teal-500',
+      ranking:'text-purple-600 bg-purple-50 dark:bg-purple-900/30 border-purple-500',
+      visitas:'text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-slate-700 border-gray-400',
+    };
+    if (active) {
+      btn.className = `tab-btn active flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all border-b-2 ${colors[id]}`;
+    } else {
+      btn.className = 'tab-btn flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 border-b-2 border-transparent';
+    }
+  });
+  if (['nuestros','competencia','establecimientos','ranking'].includes(name)){
+    setTimeout(()=>{if(window._lastChartData) renderizarGraficos(...window._lastChartData);},60);
+  }
+}
+
 function renderizarGraficos(porProd, porProdComp, porEst) {
+  window._lastChartData = [porProd, porProdComp, porEst];
   const dark = document.documentElement.classList.contains('dark');
   const tc   = dark ? '#94a3b8' : '#4b5563';
   const gc   = dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
-  const pal  = ['#4f46e5','#10b981','#f59e0b','#f43f5e','#8b5cf6','#14b8a6','#3b82f6','#ec4899','#6366f1','#84cc16','#22d3ee','#fb923c'];
-  const opts = { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-    scales:{ x:{ticks:{color:tc,font:{size:10},callback:v=>`${Number(v).toFixed(1)}m`},grid:{color:gc}},
-             y:{ticks:{color:tc,font:{size:10}},grid:{color:gc}} } };
-  if (chartProd) chartProd.destroy();
-  if (chartEst)  chartEst.destroy();
-  if (window._chartComp) window._chartComp.destroy();
-  const sP   = Object.entries(porProd).sort((a,b)=>b[1]-a[1]).slice(0,12);
-  const sPC  = Object.entries(porProdComp).sort((a,b)=>b[1]-a[1]).slice(0,12);
-  const sE   = Object.entries(porEst).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  chartProd = new Chart(document.getElementById('chartProductos').getContext('2d'),{type:'bar',indexAxis:'y',data:{labels:sP.map(([k])=>k.length>20?k.slice(0,18)+'…':k),datasets:[{data:sP.map(([,v])=>+v.toFixed(2)),backgroundColor:sP.map((_,i)=>pal[i%pal.length]+'cc'),borderRadius:4}]},options:{...opts,indexAxis:'y'}});
-  window._chartComp = new Chart(document.getElementById('chartCompetencia').getContext('2d'),{type:'bar',indexAxis:'y',data:{labels:sPC.map(([k])=>k.length>20?k.slice(0,18)+'…':k),datasets:[{data:sPC.map(([,v])=>+v.toFixed(2)),backgroundColor:sPC.map(()=>'#f43f5ecc'),borderRadius:4}]},options:{...opts,indexAxis:'y'}});
-  chartEst  = new Chart(document.getElementById('chartEstablecimientos').getContext('2d'),{type:'bar',indexAxis:'y',data:{labels:sE.map(([k])=>k.length>16?k.slice(0,14)+'…':k),datasets:[{data:sE.map(([,v])=>+v.toFixed(2)),backgroundColor:pal.map(c=>c+'cc').slice(0,10),borderRadius:4}]},options:{...opts,indexAxis:'y'}});
+  const pal  = ['#4f46e5','#10b981','#f59e0b','#f43f5e','#8b5cf6','#14b8a6','#3b82f6','#ec4899','#6366f1','#84cc16','#22d3ee','#fb923c','#0ea5e9','#a78bfa','#34d399'];
+
+  const sP  = Object.entries(porProd).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const sPC = Object.entries(porProdComp).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const sE  = Object.entries(porEst).sort((a,b)=>b[1]-a[1]).slice(0,15);
+
+  const makeOpts = () => ({
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x.toFixed(2)} m`}} },
+    scales:{
+      x:{ticks:{color:tc,font:{size:10},callback:v=>`${Number(v).toFixed(1)}m`},grid:{color:gc}},
+      y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}
+    }
+  });
+
+  const dynH = n => Math.max(320, n*38) + 'px';
+  const remake = (id, labels, datasets, opts) => {
+    const el = document.getElementById(id);
+    if(!el) return null;
+    const ex = Chart.getChart(el); if(ex) ex.destroy();
+    el.parentElement.style.height = dynH(labels.length);
+    return new Chart(el.getContext('2d'),{type:'bar',indexAxis:'y',data:{labels,datasets},options:opts});
+  };
+
+  chartProd = remake('chartProductos',
+    sP.map(([k])=>k),
+    [{data:sP.map(([,v])=>+v.toFixed(2)),backgroundColor:sP.map((_,i)=>pal[i%pal.length]+'cc'),borderRadius:5}],
+    makeOpts());
+
+  window._chartComp = remake('chartCompetencia',
+    sPC.map(([k])=>k),
+    [{data:sPC.map(([,v])=>+v.toFixed(2)),backgroundColor:sPC.map(()=>'#f43f5ecc'),borderRadius:5}],
+    makeOpts());
+
+  chartEst = remake('chartEstablecimientos',
+    sE.map(([k])=>k),
+    [{data:sE.map(([,v])=>+v.toFixed(2)),backgroundColor:pal.map(c=>c+'cc'),borderRadius:5}],
+    makeOpts());
+
+  // Ranking Total: nuestros vs competencia por establecimiento
+  const sER = window._lastEstComp || {};
+  const allEst = [...new Set([...Object.keys(porEst),...Object.keys(sER)])];
+  const topEst = allEst.map(e=>({e,n:porEst[e]||0,c:sER[e]||0,tot:(porEst[e]||0)+(sER[e]||0)}))
+                        .sort((a,b)=>b.tot-a.tot).slice(0,10);
+  const elR = document.getElementById('chartRanking');
+  if(elR){
+    const exR = Chart.getChart(elR); if(exR) exR.destroy();
+    elR.parentElement.style.height = dynH(topEst.length);
+    new Chart(elR.getContext('2d'),{
+      type:'bar',indexAxis:'y',
+      data:{
+        labels:topEst.map(r=>r.e),
+        datasets:[
+          {label:'Nuestros',  data:topEst.map(r=>+r.n.toFixed(2)),backgroundColor:'#4f46e5cc',borderRadius:5},
+          {label:'Competencia',data:topEst.map(r=>+r.c.toFixed(2)),backgroundColor:'#f43f5ecc',borderRadius:5},
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:true,position:'top',labels:{color:tc,font:{size:11},usePointStyle:true,padding:16}},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)} m`}}
+        },
+        scales:{
+          x:{stacked:false,ticks:{color:tc,font:{size:10},callback:v=>`${Number(v).toFixed(1)}m`},grid:{color:gc}},
+          y:{stacked:false,ticks:{color:tc,font:{size:11}},grid:{color:gc}}
+        }
+      }
+    });
+  }
 }
 
 function renderizarTabla(registros) {
   const tbody = document.getElementById('metrosTableBody');
-  if (!registros.length) { tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:36px">Sin datos para los filtros aplicados</td></tr>'; return; }
+  if (!registros.length) {
+    tbody.innerHTML='<tr><td colspan="11" class="text-center py-10 text-gray-400 dark:text-gray-500"><i class="fas fa-inbox text-2xl block mb-2 opacity-40"></i>Sin datos para los filtros aplicados</td></tr>';
+    return;
+  }
   tbody.innerHTML = registros.map(r => {
     const { valor:mN, esReal } = metrosNuestros(r);
+    const mC  = metrosComp(r);
     const mT  = metrosTotal(r);
     const pct = mT > 0 ? Math.min(100,(mN/mT)*100) : 0;
-    const col = pct >= 40 ? 'var(--green)' : pct >= 20 ? 'var(--amber)' : 'var(--red)';
-    const bM  = mN > 0 ? `<span class="metro-badge"><i class="fas fa-ruler-horizontal"></i> ${mN.toFixed(1)} m</span>` : '<span style="color:var(--muted)">—</span>';
-    const bT  = mT > 0 ? `<span style="font-weight:600;color:var(--muted)">${mT.toFixed(1)} m</span>` : '<span style="color:var(--muted)">—</span>';
-    const bC  = mT > 0 ? `<span style="font-weight:700;color:${col}">${pct.toFixed(0)}%</span>` : '<span style="color:var(--muted)">—</span>';
-    const bF  = esReal ? '<span class="tag-real"><i class="fas fa-check"></i> Real</span>' : '<span class="tag-est"><i class="fas fa-calculator"></i> Estimado</span>';
-    return `<tr>
-      <td class="sp-hi">${fmt(r.created_at)}</td>
-      <td style="color:var(--accent);font-weight:500">${r.promoter_name||'—'}</td>
-      <td>${r.trade||'—'}</td>
-      <td style="font-size:.78rem;color:var(--muted)">${r.state||'—'}${r.zone?' / '+r.zone:''}</td>
-      <td style="text-align:center">${bM}</td>
-      <td style="text-align:center">${bT}</td>
-      <td style="text-align:center">${bC}</td>
-      <td style="text-align:center">${bF}</td>
-      <td style="text-align:center;color:var(--muted)">${r.our_faces_before_counted||0}</td>
-      <td style="text-align:center;font-weight:600;color:var(--accent)">${r.our_faces_after||0}</td>
-      <td style="text-align:center">${(r.myitems||[]).length}</td>
+    const col = pct >= 40 ? '#10b981' : pct >= 20 ? '#f59e0b' : '#ef4444';
+    const bM  = mN > 0
+      ? `<span class="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs font-bold px-2 py-1 rounded-lg">
+           <i class="fas fa-ruler-horizontal text-xs"></i> ${mN.toFixed(2)} m</span>`
+      : '<span class="text-gray-300 dark:text-gray-600">—</span>';
+    const bMC = mC > 0
+      ? `<span class="inline-flex items-center gap-1 bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold px-2 py-1 rounded-lg">
+           <i class="fas fa-store-slash text-xs"></i> ${mC.toFixed(2)} m</span>`
+      : '<span class="text-gray-300 dark:text-gray-600">—</span>';
+    const bT  = mT > 0 ? `<span class="text-xs font-semibold text-gray-500 dark:text-gray-400">${mT.toFixed(2)} m</span>` : '<span class="text-gray-300">—</span>';
+    const bC  = mT > 0 ? `<span class="text-xs font-bold" style="color:${col}">${pct.toFixed(0)}%</span>` : '<span class="text-gray-300">—</span>';
+    const bF  = esReal
+      ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✓ Real</span>'
+      : '<span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">≈ Est.</span>';
+    return `<tr class="hover:bg-indigo-50/30 dark:hover:bg-slate-700/50 transition-colors">
+      <td class="py-3 px-4 text-xs font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">${fmt(r.created_at)}</td>
+      <td class="py-3 px-4 text-xs text-indigo-600 dark:text-indigo-400 font-medium">${r.promoter_name||'—'}</td>
+      <td class="py-3 px-4 text-sm font-semibold text-gray-800 dark:text-white">${r.trade||'—'}</td>
+      <td class="py-3 px-4 text-xs text-gray-500 dark:text-gray-400">${r.state||'—'}${r.zone?' / '+r.zone:''}</td>
+      <td class="py-3 px-4 text-center">${bM}</td>
+      <td class="py-3 px-4 text-center">${bMC}</td>
+      <td class="py-3 px-4 text-center">${bT}</td>
+      <td class="py-3 px-4 text-center">${bC}</td>
+      <td class="py-3 px-4 text-center">${bF}</td>
+      <td class="py-3 px-4 text-center text-xs font-bold text-indigo-600 dark:text-indigo-400">${r.our_faces_after||0}</td>
+      <td class="py-3 px-4 text-center text-xs text-gray-500">${(r.myitems||[]).length}</td>
     </tr>`;
   }).join('');
 }
