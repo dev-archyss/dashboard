@@ -45,10 +45,14 @@
   </div>
 
   <!-- KPIs fila -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-4">
     <div class="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-xl text-center border border-indigo-100 dark:border-indigo-800">
       <p class="text-2xl font-extrabold text-indigo-600" id="kpiNuestros">—</p>
       <p class="text-xs text-indigo-500 dark:text-indigo-300 font-medium mt-1">Metros nuestros</p>
+    </div>
+    <div class="bg-red-50 dark:bg-red-900/30 p-4 rounded-xl text-center border border-red-100 dark:border-red-800">
+      <p class="text-2xl font-extrabold text-red-500" id="kpiComp">—</p>
+      <p class="text-xs text-red-400 dark:text-red-300 font-medium mt-1">Metros competencia</p>
     </div>
     <div class="bg-teal-50 dark:bg-teal-900/30 p-4 rounded-xl text-center border border-teal-100 dark:border-teal-800">
       <p class="text-2xl font-extrabold text-teal-600" id="kpiTotal">—</p>
@@ -118,10 +122,14 @@
   </div>
 
   <!-- Gráficos -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
     <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 border border-gray-100 dark:border-slate-700">
-      <h3 class="text-base font-bold text-gray-700 dark:text-white mb-4">Metros por producto <span class="text-xs font-normal text-gray-400">— estimado por caras</span></h3>
+      <h3 class="text-base font-bold text-gray-700 dark:text-white mb-4">Metros nuestros <span class="text-xs font-normal text-gray-400">— por producto</span></h3>
       <div style="position:relative;height:280px"><canvas id="chartProductos"></canvas></div>
+    </div>
+    <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 border border-red-50 dark:border-red-900/30 border">
+      <h3 class="text-base font-bold text-red-500 dark:text-red-400 mb-4">Metros competencia <span class="text-xs font-normal text-gray-400">— por producto</span></h3>
+      <div style="position:relative;height:280px"><canvas id="chartCompetencia"></canvas></div>
     </div>
     <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 border border-gray-100 dark:border-slate-700">
       <h3 class="text-base font-bold text-gray-700 dark:text-white mb-4">Metros por establecimiento — Top 10</h3>
@@ -200,6 +208,16 @@ function metrosNuestros(r) {
     return { valor: parseFloat(r.shelf_meters) || 0, esReal: true };
   return { valor: (r.our_faces_after || 0) * 0.4, esReal: false };
 }
+function metrosComp(r) {
+  // Suma shelf_meters por ítem de competencia, o caras*0.4 si no tiene
+  const items = r.competitoritems || [];
+  if (!items.length) return 0;
+  return items.reduce((s, i) => {
+    if (!i.presentation || i.presentation === 'SIN STOCK') return s;
+    if (i.shelf_meters != null && i.shelf_meters !== '') return s + (parseFloat(i.shelf_meters) || 0);
+    return s + (i.faces_after || 0) * 0.4;
+  }, 0);
+}
 function metrosTotal(r) {
   return (r.total_faces || r.total_faces_before || 0) * 0.4;
 }
@@ -236,7 +254,7 @@ async function loadData() {
   const lineaId = localStorage.getItem('sp-linea') || '';
 
   let q = supabaseClient.from('web_precios')
-    .select('id,created_at,promoter_name,state,zone,trade,our_faces_before_counted,total_faces_before,our_faces_after,total_faces,myitems,shelf_meters')
+    .select('id,created_at,promoter_name,state,zone,trade,our_faces_before_counted,total_faces_before,our_faces_after,total_faces,myitems,competitoritems,shelf_meters')
     .eq('empresa_id', empresaId);
 
   if (df)             q = q.gte('created_at', `${df}T00:00:00`);
@@ -253,20 +271,27 @@ async function loadData() {
 }
 
 function procesarDatos(registros) {
-  let sumN = 0, sumT = 0, cntReal = 0, cntEst = 0;
-  const porProd = {}, porEst = {};
+  let sumN = 0, sumC = 0, sumT = 0, cntReal = 0, cntEst = 0;
+  const porProd = {}, porProdComp = {}, porEst = {};
 
   registros.forEach(r => {
     const { valor: mN, esReal } = metrosNuestros(r);
+    const mC = metrosComp(r);
     const mT = metrosTotal(r);
     sumN += mN;
-    sumT += mT > 0 ? mT : mN;
+    sumC += mC;
+    sumT += mT > 0 ? mT : (mN + mC);
     if (esReal) cntReal++; else cntEst++;
     const comercio = r.trade || 'Sin nombre';
     porEst[comercio] = (porEst[comercio] || 0) + mN;
     (r.myitems || []).forEach(item => {
       if (!item.presentation) return;
       porProd[item.presentation] = (porProd[item.presentation] || 0) + ((item.faces_after || 0) * 0.4);
+    });
+    (r.competitoritems || []).forEach(item => {
+      if (!item.presentation || item.presentation === 'SIN STOCK') return;
+      const m = item.shelf_meters != null ? parseFloat(item.shelf_meters)||0 : (item.faces_after||0)*0.4;
+      porProdComp[item.presentation] = (porProdComp[item.presentation] || 0) + m;
     });
   });
 
@@ -281,10 +306,14 @@ function procesarDatos(registros) {
   document.getElementById('kpiEst').textContent      = numEst;
   document.getElementById('kpiPct').textContent      = pct.toFixed(1) + '%';
   document.getElementById('cobFill').style.width     = `${pct}%`;
-  document.getElementById('cobLabel').textContent    = `${sumN.toFixed(1)} m nuestros de ${sumT.toFixed(1)} m totales`;
+  document.getElementById('cobLabel').textContent    = `${sumN.toFixed(1)} m nuestros · ${sumC.toFixed(1)} m competencia · ${sumT.toFixed(1)} m total`;
   document.getElementById('cntReal').textContent     = cntReal;
   document.getElementById('cntEst').textContent      = cntEst;
   document.getElementById('registrosInfo').textContent = `${registros.length} visitas · ${pctReal}% con medición real`;
+
+  // KPI competencia (opcional, si existe el elemento)
+  const elKC = document.getElementById('kpiComp');
+  if (elKC) elKC.textContent = sumC.toFixed(1) + ' m';
 
   const cobEl = document.getElementById('kpiPct');
   const cobFill = document.getElementById('cobFill');
@@ -292,23 +321,26 @@ function procesarDatos(registros) {
   else if (pct >= 20) { cobEl.style.color = 'var(--amber)';  cobFill.style.background = 'linear-gradient(90deg,#f59e0b,#d97706)'; }
   else                { cobEl.style.color = 'var(--red)';    cobFill.style.background = 'linear-gradient(90deg,#ef4444,#dc2626)'; }
 
-  renderizarGraficos(porProd, porEst);
+  renderizarGraficos(porProd, porProdComp, porEst);
   renderizarTabla(registros);
 }
 
-function renderizarGraficos(porProd, porEst) {
+function renderizarGraficos(porProd, porProdComp, porEst) {
   const dark = document.documentElement.classList.contains('dark');
   const tc   = dark ? '#94a3b8' : '#4b5563';
   const gc   = dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
   const pal  = ['#4f46e5','#10b981','#f59e0b','#f43f5e','#8b5cf6','#14b8a6','#3b82f6','#ec4899','#6366f1','#84cc16','#22d3ee','#fb923c'];
-  const sP   = Object.entries(porProd).sort((a,b)=>b[1]-a[1]).slice(0,12);
-  const sE   = Object.entries(porEst).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const opts = { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
     scales:{ x:{ticks:{color:tc,font:{size:10},callback:v=>`${Number(v).toFixed(1)}m`},grid:{color:gc}},
              y:{ticks:{color:tc,font:{size:10}},grid:{color:gc}} } };
   if (chartProd) chartProd.destroy();
   if (chartEst)  chartEst.destroy();
+  if (window._chartComp) window._chartComp.destroy();
+  const sP   = Object.entries(porProd).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const sPC  = Object.entries(porProdComp).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const sE   = Object.entries(porEst).sort((a,b)=>b[1]-a[1]).slice(0,10);
   chartProd = new Chart(document.getElementById('chartProductos').getContext('2d'),{type:'bar',indexAxis:'y',data:{labels:sP.map(([k])=>k.length>20?k.slice(0,18)+'…':k),datasets:[{data:sP.map(([,v])=>+v.toFixed(2)),backgroundColor:sP.map((_,i)=>pal[i%pal.length]+'cc'),borderRadius:4}]},options:{...opts,indexAxis:'y'}});
+  window._chartComp = new Chart(document.getElementById('chartCompetencia').getContext('2d'),{type:'bar',indexAxis:'y',data:{labels:sPC.map(([k])=>k.length>20?k.slice(0,18)+'…':k),datasets:[{data:sPC.map(([,v])=>+v.toFixed(2)),backgroundColor:sPC.map(()=>'#f43f5ecc'),borderRadius:4}]},options:{...opts,indexAxis:'y'}});
   chartEst  = new Chart(document.getElementById('chartEstablecimientos').getContext('2d'),{type:'bar',indexAxis:'y',data:{labels:sE.map(([k])=>k.length>16?k.slice(0,14)+'…':k),datasets:[{data:sE.map(([,v])=>+v.toFixed(2)),backgroundColor:pal.map(c=>c+'cc').slice(0,10),borderRadius:4}]},options:{...opts,indexAxis:'y'}});
 }
 

@@ -111,38 +111,42 @@
   </div>
 
   <!-- ── KPIs — mismo estilo que dashboard ────────────────────────── -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
 
     <div class="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-xl text-center border border-indigo-100 dark:border-indigo-800">
       <p class="text-2xl font-extrabold text-indigo-600" id="sosDisplay">—</p>
-      <p class="text-xs text-indigo-500 dark:text-indigo-300 font-medium mt-1">SOS Total</p>
+      <p class="text-xs text-indigo-500 dark:text-indigo-300 font-medium mt-1">SOS Nuestro</p>
       <div class="w-full bg-indigo-200 dark:bg-indigo-900 rounded-full h-1.5 mt-2">
         <div id="sosFill" class="bg-indigo-600 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
       </div>
     </div>
 
+    <div class="bg-red-50 dark:bg-red-900/30 p-4 rounded-xl text-center border border-red-100 dark:border-red-800">
+      <p class="text-2xl font-extrabold text-red-500" id="compSosDisplay">—</p>
+      <p class="text-xs text-red-400 dark:text-red-300 font-medium mt-1">SOS Competencia</p>
+      <div class="w-full bg-red-200 dark:bg-red-900 rounded-full h-1.5 mt-2">
+        <div id="compSosFill" class="bg-red-400 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
+      </div>
+    </div>
+
     <div class="bg-green-50 dark:bg-green-900/30 p-4 rounded-xl text-center border border-green-100 dark:border-green-800">
       <p class="text-2xl font-extrabold text-green-600" id="totalAfterDisplay">—</p>
-      <p class="text-xs text-green-500 dark:text-green-300 font-medium mt-1">Caras después</p>
-      <div class="w-full bg-green-200 dark:bg-green-900 rounded-full h-1.5 mt-2">
-        <div id="afterFill" class="bg-green-500 h-1.5 rounded-full transition-all duration-500" style="width:60%"></div>
-      </div>
+      <p class="text-xs text-green-500 dark:text-green-300 font-medium mt-1">Caras nuestras</p>
+    </div>
+
+    <div class="bg-rose-50 dark:bg-rose-900/30 p-4 rounded-xl text-center border border-rose-100 dark:border-rose-800">
+      <p class="text-2xl font-extrabold text-rose-500" id="compAfterDisplay">—</p>
+      <p class="text-xs text-rose-400 dark:text-rose-300 font-medium mt-1">Caras competencia</p>
     </div>
 
     <div class="bg-amber-50 dark:bg-amber-900/30 p-4 rounded-xl text-center border border-amber-100 dark:border-amber-800">
       <p class="text-2xl font-extrabold text-amber-600" id="netChangeDisplay">—</p>
       <p class="text-xs text-amber-500 dark:text-amber-300 font-medium mt-1">Cambio neto</p>
-      <div class="w-full bg-amber-200 dark:bg-amber-900 rounded-full h-1.5 mt-2">
-        <div class="bg-amber-500 h-1.5 rounded-full" style="width:50%"></div>
-      </div>
     </div>
 
     <div class="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-xl text-center border border-purple-100 dark:border-purple-800">
       <p class="text-2xl font-extrabold text-purple-600" id="totalVisitasDisplay">—</p>
       <p class="text-xs text-purple-500 dark:text-purple-300 font-medium mt-1">Visitas</p>
-      <div class="w-full bg-purple-200 dark:bg-purple-900 rounded-full h-1.5 mt-2">
-        <div class="bg-purple-600 h-1.5 rounded-full" style="width:60%"></div>
-      </div>
     </div>
 
   </div>
@@ -230,7 +234,11 @@
 <script>
 tailwind.config = { darkMode: 'class' };
 
-const supabaseClient = window.db;
+function waitDb(fn) {
+  if (window.db) { fn(); return; }
+  const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
+}
+const supabaseClient = { from: (...a) => window.db.from(...a) };
 const empresaId = localStorage.getItem('empresa_id');
 if (!empresaId) window.location.href = '/';
 
@@ -283,7 +291,7 @@ async function loadData() {
   const lineaId = localStorage.getItem('sp-linea') || '';
 
   let q = supabaseClient.from('web_precios')
-    .select('id,created_at,promoter_name,state,zone,trade,total_faces_before,our_faces_before_manual,our_faces_before_counted,total_faces,our_faces_after,myitems')
+    .select('id,created_at,promoter_name,state,zone,trade,total_faces_before,our_faces_before_manual,our_faces_before_counted,total_faces,our_faces_after,myitems,competitoritems')
     .eq('empresa_id', empresaId);
 
   if (df)       q = q.gte('created_at', `${df}T00:00:00`);
@@ -303,7 +311,8 @@ async function loadData() {
 // ── Procesar ───────────────────────────────────────────────────────
 function processData(records) {
   let totalBeforeCounted = 0, totalAfter = 0, totalShelf = 0;
-  const productStats = {};
+  let compAfterTotal = 0, compBeforeTotal = 0;
+  const productStats = {}, compStats = {};
 
   records.forEach(r => {
     totalBeforeCounted += r.our_faces_before_counted || 0;
@@ -315,9 +324,20 @@ function processData(records) {
       productStats[item.presentation].before += item.faces_before || 0;
       productStats[item.presentation].after  += item.faces_after  || 0;
     });
+    (r.competitoritems || []).forEach(item => {
+      if (!item.presentation || item.presentation === 'SIN STOCK') return;
+      const fb = item.faces_before || 0;
+      const fa = item.faces_after  || 0;
+      compBeforeTotal += fb;
+      compAfterTotal  += fa;
+      if (!compStats[item.presentation]) compStats[item.presentation] = { before: 0, after: 0 };
+      compStats[item.presentation].before += fb;
+      compStats[item.presentation].after  += fa;
+    });
   });
 
   const sos       = totalShelf > 0 ? ((totalAfter / totalShelf) * 100).toFixed(1) : '0.0';
+  const compSos   = totalShelf > 0 ? ((compAfterTotal / totalShelf) * 100).toFixed(1) : '0.0';
   const netChange = totalAfter - totalBeforeCounted;
 
   document.getElementById('sosDisplay').textContent        = `${sos}%`;
@@ -326,31 +346,39 @@ function processData(records) {
   document.getElementById('netChangeDisplay').textContent  = (netChange >= 0 ? '+' : '') + netChange;
   document.getElementById('totalVisitasDisplay').textContent = records.length;
 
-  renderTable(productStats);
-  renderSosChart(
-    parseFloat(sos),
-    totalShelf > 0 ? ((Math.max(0, totalShelf - totalAfter) / totalShelf) * 100).toFixed(1) : 0
-  );
+  // KPIs competencia (si existen los elementos)
+  const elCA = document.getElementById('compAfterDisplay');
+  const elCS = document.getElementById('compSosDisplay');
+  const elCSF = document.getElementById('compSosFill');
+  if (elCA) elCA.textContent = compAfterTotal;
+  if (elCS) elCS.textContent = `${compSos}%`;
+  if (elCSF) elCSF.style.width = Math.min(100, parseFloat(compSos)) + '%';
+
+  renderTable(productStats, compStats);
+  renderSosChart(parseFloat(sos), parseFloat(compSos));
 }
 
 // ── Tabla productos ────────────────────────────────────────────────
-function renderTable(stats) {
+function renderTable(stats, compStats={}) {
   const tbody = document.getElementById('facesTableBody');
-  const items = Object.entries(stats).sort((a, b) => b[1].after - a[1].after);
-  if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-400">Sin datos para los filtros aplicados</td></tr>';
+  const myItems   = Object.entries(stats).sort((a,b)=>b[1].after-a[1].after);
+  const compItems = Object.entries(compStats).sort((a,b)=>b[1].after-a[1].after);
+  if (!myItems.length && !compItems.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-400">Sin datos para los filtros aplicados</td></tr>';
     return;
   }
-  tbody.innerHTML = items.map(([name, s]) => {
+  const renderRows = (items, badge) => items.map(([name, s]) => {
     const diff = s.after - s.before;
-    const dc   = diff > 0 ? 'text-green-600 dark:text-green-400' : diff < 0 ? 'text-red-500' : 'text-gray-400';
+    const dc   = diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-500' : 'text-gray-400';
     return `<tr class="hover:bg-indigo-50/40 dark:hover:bg-slate-700 transition-colors">
-      <td class="py-3 px-5 text-sm font-semibold text-gray-800 dark:text-gray-200">${name}</td>
-      <td class="py-3 px-5 text-center text-sm text-gray-500 dark:text-gray-400">${s.before}</td>
+      <td class="py-3 px-5 text-sm font-semibold text-gray-800 dark:text-gray-200">${name} ${badge}</td>
+      <td class="py-3 px-5 text-center text-sm text-gray-500">${s.before}</td>
       <td class="py-3 px-5 text-center text-sm font-bold text-indigo-600 dark:text-indigo-400">${s.after}</td>
       <td class="py-3 px-5 text-center text-sm font-bold ${dc}">${diff > 0 ? '+' : ''}${diff}</td>
     </tr>`;
   }).join('');
+  const sepComp = compItems.length ? `<tr><td colspan="4" class="py-2 px-5 text-xs font-bold text-red-500 uppercase tracking-wide bg-red-50 dark:bg-red-900/20">🏷️ Caras Competencia</td></tr>` : '';
+  tbody.innerHTML = renderRows(myItems, '<span class="text-xs bg-indigo-100 text-indigo-600 rounded px-1 ml-1">nuestro</span>') + sepComp + renderRows(compItems, '<span class="text-xs bg-red-100 text-red-500 rounded px-1 ml-1">comp</span>');
 }
 
 // ── Doughnut SOS ───────────────────────────────────────────────────
@@ -501,7 +529,7 @@ function setDates() {
 // Reaccionar al cambio de línea desde el navbar
 window.onLineaChanged = () => loadData();
 
-window.captaReady(async () => {
+waitDb(async () => {
   setDates();
   await loadCatalogs();
   await loadData();

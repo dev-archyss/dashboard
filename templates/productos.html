@@ -56,14 +56,22 @@
     </form>
   </div>
 
-  <!-- Filtros por línea -->
-  <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px">
-    <span style="font-size:.75rem;color:var(--muted);font-weight:600">Filtrar:</span>
-    <button id="filtro_todas" class="sp-btn sp-btn-primary sp-btn-sm"
-      style="border-radius:99px" onclick="aplicarFiltro('')">Todas</button>
-    <button id="filtro_sin_linea" class="sp-btn sp-btn-sec sp-btn-sm"
-      style="border-radius:99px" onclick="aplicarFiltro('__sin_linea__')">Sin línea</button>
-    <div id="filtros_lineas" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+  <!-- Buscador + Filtros por línea -->
+  <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px">
+    <div style="position:relative;flex:1;min-width:220px;max-width:360px">
+      <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.8rem;pointer-events:none"></i>
+      <input type="text" id="searchInput" class="sp-input" placeholder="Buscar producto…"
+        style="padding-left:32px"
+        oninput="aplicarBusqueda(this.value)">
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <span style="font-size:.75rem;color:var(--muted);font-weight:600">Línea:</span>
+      <button id="filtro_todas" class="sp-btn sp-btn-primary sp-btn-sm"
+        style="border-radius:99px" onclick="aplicarFiltro('')">Todas</button>
+      <button id="filtro_sin_linea" class="sp-btn sp-btn-sec sp-btn-sm"
+        style="border-radius:99px" onclick="aplicarFiltro('__sin_linea__')">Sin línea</button>
+      <div id="filtros_lineas" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
   </div>
 
   <!-- Tabla -->
@@ -184,6 +192,7 @@ let allProducts     = [];
 let allLineas       = [];
 let allCompetidores = [];
 let filtroActivo    = '';
+let textoBusqueda   = '';
 let editingId       = null;
 let compProductoId  = null;
 
@@ -237,6 +246,16 @@ function renderTable() {
   if (filtroActivo === '__sin_linea__')    items = allProducts.filter(p => !p.linea_id);
   else if (filtroActivo)                   items = allProducts.filter(p => String(p.linea_id) === String(filtroActivo));
 
+  // Filtro de texto
+  if (textoBusqueda.trim()) {
+    const q = textoBusqueda.trim().toLowerCase();
+    items = items.filter(p =>
+      (p.presentation||'').toLowerCase().includes(q) ||
+      (p.gramaje ? String(p.gramaje) : '').includes(q) ||
+      (p.unidad||'').toLowerCase().includes(q)
+    );
+  }
+
   document.getElementById('count_label').textContent = `${items.length} / ${allProducts.length} productos`;
 
   document.querySelectorAll('[id^="filtro_"]').forEach(b => {
@@ -249,7 +268,9 @@ function renderTable() {
   if (ab) { ab.classList.add('sp-btn-primary'); ab.classList.remove('sp-btn-sec'); }
 
   if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:36px">Sin productos para este filtro</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:36px">
+      <i class="fas fa-search" style="display:block;margin-bottom:8px;font-size:1.2rem;opacity:.4"></i>
+      Sin productos para este filtro</td></tr>`;
     return;
   }
 
@@ -260,8 +281,14 @@ function renderTable() {
     const lBdg = ln
       ? `<span class="sp-bdg sp-bdg-teal">${ln}</span>`
       : '<span class="sp-bdg sp-bdg-def">Sin línea</span>';
+    // highlight búsqueda
+    const hl = (txt) => {
+      if (!textoBusqueda.trim()) return txt;
+      const re = new RegExp(`(${textoBusqueda.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+      return String(txt).replace(re, '<mark style="background:#fef08a;border-radius:2px">$1</mark>');
+    };
     return `<tr id="prow-${p.id}">
-      <td class="sp-hi">${p.presentation}</td>
+      <td class="sp-hi">${hl(p.presentation)}</td>
       <td style="font-weight:600;color:var(--accent)">${fmtG(p)}</td>
       <td>${lBdg}</td>
       <td>${fmt(p.created_at)}</td>
@@ -283,7 +310,8 @@ function renderTable() {
   }).join('');
 }
 
-window.aplicarFiltro = v => { filtroActivo = v; renderTable(); };
+window.aplicarFiltro   = v => { filtroActivo = v; renderTable(); };
+window.aplicarBusqueda = v => { textoBusqueda = v; renderTable(); };
 
 // ── Crear ───────────────────────────────────────────────────────────
 document.getElementById('productForm').addEventListener('submit', async e => {
@@ -458,7 +486,7 @@ document.addEventListener('click', e => {
 });
 
 // ── Init ─────────────────────────────────────────────────────────────
-window.addEventListener('capta:db-ready', async () => {
+window.captaReady(async () => {
   await loadLineas();
   await loadCompetidores();
   await loadProducts();
