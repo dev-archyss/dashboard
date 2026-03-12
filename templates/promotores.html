@@ -82,6 +82,31 @@
           <div><label class="sp-label">Clientes asignados</label><input type="number" id="edit_clientes_asig" class="sp-input" min="0"></div>
           <div><label class="sp-label">Días de trabajo</label><input type="number" id="edit_dias_trabajo" class="sp-input" min="0"></div>
         </div>
+        <!-- Sección cambio de contraseña -->
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--brd)">
+          <div style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">
+            <i class="fas fa-key" style="color:var(--amber);margin-right:5px"></i>Cambiar contraseña PWA
+          </div>
+          <div class="sp-grid sp-g2 sp-gap3">
+            <div style="position:relative">
+              <label class="sp-label">Nueva contraseña</label>
+              <input type="password" id="edit_new_password" class="sp-input" placeholder="Dejar vacío para no cambiar" autocomplete="new-password">
+              <button type="button" onclick="togglePassVis('edit_new_password','eyeNew')"
+                style="position:absolute;right:10px;top:32px;background:none;border:none;cursor:pointer;color:var(--muted)">
+                <i id="eyeNew" class="fas fa-eye"></i>
+              </button>
+            </div>
+            <div style="position:relative">
+              <label class="sp-label">Confirmar contraseña</label>
+              <input type="password" id="edit_confirm_password" class="sp-input" placeholder="Repetir nueva contraseña" autocomplete="new-password">
+              <button type="button" onclick="togglePassVis('edit_confirm_password','eyeConf')"
+                style="position:absolute;right:10px;top:32px;background:none;border:none;cursor:pointer;color:var(--muted)">
+                <i id="eyeConf" class="fas fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <p id="passMsg" style="display:none;font-size:.72rem;margin-top:6px;padding:6px 10px;border-radius:6px"></p>
+        </div>
       </form>
     </div>
     <div class="sp-modal-footer">
@@ -238,17 +263,57 @@ async function editPromoter(id){
   document.getElementById('edit_promoter_name').value=p.promoter_name;
   document.getElementById('edit_clientes_asig').value=p.clientes_asig||0;
   document.getElementById('edit_dias_trabajo').value=p.dias_trabajo||0;
+  // Limpiar campos de contraseña al abrir
+  document.getElementById('edit_new_password').value='';
+  document.getElementById('edit_confirm_password').value='';
+  const pm=document.getElementById('passMsg'); pm.style.display='none'; pm.textContent='';
   await loadEstados('edit_estado_id');
   document.getElementById('edit_estado_id').value=p.estado_id||'';
   if(p.estado_id){await loadZonas(p.estado_id,'edit_zona_id');document.getElementById('edit_zona_id').value=p.zona_id||'';}
   document.getElementById('editModal').classList.add('open');
 }
 
+function togglePassVis(inputId, iconId) {
+  const inp = document.getElementById(inputId);
+  const ico = document.getElementById(iconId);
+  if (inp.type === 'password') { inp.type = 'text'; ico.className = 'fas fa-eye-slash'; }
+  else { inp.type = 'password'; ico.className = 'fas fa-eye'; }
+}
+
 async function saveEdit(){
-  const id=document.getElementById('edit_id').value;
-  const{error}=await db.from('web_promotores').update({promoter_name:document.getElementById('edit_promoter_name').value.trim().toUpperCase(),estado_id:document.getElementById('edit_estado_id').value||null,zona_id:document.getElementById('edit_zona_id').value||null,clientes_asig:parseInt(document.getElementById('edit_clientes_asig').value)||0,dias_trabajo:parseInt(document.getElementById('edit_dias_trabajo').value)||0}).eq('id',id).eq('empresa_id',empresaId);
-  if(error){captaToast('Error: '+error.message,'error');return;}
-  captaToast('Actualizado','success');closeModal('editModal');loadPromoters();
+  const id = document.getElementById('edit_id').value;
+  const newPass    = document.getElementById('edit_new_password').value.trim();
+  const confPass   = document.getElementById('edit_confirm_password').value.trim();
+  const pm = document.getElementById('passMsg');
+
+  // Validar contraseña si se ingresó
+  if (newPass || confPass) {
+    if (newPass.length < 4) {
+      pm.textContent = '⚠ La contraseña debe tener al menos 4 caracteres.';
+      pm.style.cssText = 'display:block;background:#fef3c7;color:#92400e;font-size:.72rem;margin-top:6px;padding:6px 10px;border-radius:6px';
+      return;
+    }
+    if (newPass !== confPass) {
+      pm.textContent = '⚠ Las contraseñas no coinciden.';
+      pm.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;font-size:.72rem;margin-top:6px;padding:6px 10px;border-radius:6px';
+      return;
+    }
+  }
+  pm.style.display = 'none';
+
+  const payload = {
+    promoter_name: document.getElementById('edit_promoter_name').value.trim().toUpperCase(),
+    estado_id:     document.getElementById('edit_estado_id').value || null,
+    zona_id:       document.getElementById('edit_zona_id').value   || null,
+    clientes_asig: parseInt(document.getElementById('edit_clientes_asig').value) || 0,
+    dias_trabajo:  parseInt(document.getElementById('edit_dias_trabajo').value)  || 0,
+  };
+  if (newPass) payload.password = newPass;
+
+  const { error } = await db.from('web_promotores').update(payload).eq('id', id).eq('empresa_id', empresaId);
+  if (error) { captaToast('Error: '+error.message, 'error'); return; }
+  captaToast(newPass ? 'Promotor y contraseña actualizados' : 'Promotor actualizado', 'success');
+  closeModal('editModal'); loadPromoters();
 }
 
 async function deletePromoter(id){
