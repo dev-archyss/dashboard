@@ -21,6 +21,18 @@ headers = {
     "Content-Type": "application/json",
     "Prefer": "count=exact"
 }
+def _supabase_error_msg(res):
+    try:
+        info = res.json()
+        msg  = info.get("message") or info.get("details") or info.get("hint") or res.text
+    except Exception:
+        msg = res.text or "Error desconocido"
+    # Traducir mensajes técnicos a algo legible
+    if "uix_myproductos_nombre_gramaje_empresa" in msg or "uix_competidor_nombre_gramaje_empresa" in msg:
+        return "Ya existe un producto con ese nombre y gramaje en tu empresa."
+    if "unique" in msg.lower():
+        return "Ya existe un producto con esos datos en tu empresa."
+    return msg
 
 # ─── Caché en memoria con TTL ─────────────────────────────────────────────────
 # { cache_key: { "data": ..., "ts": timestamp } }
@@ -37,6 +49,7 @@ def cache_get(key: str):
 
 def cache_set(key: str, data):
     _cache[key] = {"data": data, "ts": time.time()}
+
 
 
 def cache_invalidate_prefix(prefix: str):
@@ -659,56 +672,54 @@ def delete_records():
     return jsonify({"success": res.ok})
 
 
-# ─── API: Competitor products ─────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────────────
+# PRODUCTOS COMPETENCIA
+# ──────────────────────────────────────────────────────────────────────
 @app.route('/api/competitorproducts', methods=['GET', 'POST'])
 def handle_competitor_products():
 
-    # GET — listar productos competencia de la empresa
     if request.method == 'GET':
         empresa_id = request.args.get('empresa_id')
         if not empresa_id:
             return jsonify({"error": "empresa_id es requerido"}), 400
-        products = fetch_table(
-            "web_competidor",
-            params=[("order", "presentation.asc")],
-            empresa_id=empresa_id
-        )
-        return jsonify({"products": products})
 
-    # POST — crear producto competencia
+        res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/web_competidor"
+            f"?empresa_id=eq.{empresa_id}"
+            f"&select=id,presentation,gramaje,unidad,created_at"
+            f"&order=presentation.asc",
+            headers=headers, timeout=10
+        )
+        return jsonify({"products": res.json() if res.ok else []})
+
     if not request.is_json:
         return jsonify({"error": "Se esperaba JSON"}), 400
 
     data         = request.json
     empresa_id   = data.get("empresa_id")
-    presentation = data.get("presentation", "").strip()
+    presentation = data.get("presentation", "").strip().upper()
 
     if not presentation:
-        return jsonify({"error": "presentation es requerido"}), 400
+        return jsonify({"error": "El nombre del producto es requerido"}), 400
     if not empresa_id:
         return jsonify({"error": "empresa_id es requerido"}), 400
 
-    payload = {
-        "presentation": presentation.upper(),
-        "empresa_id":   empresa_id,
-    }
+    payload = {"presentation": presentation, "empresa_id": empresa_id}
     if data.get("gramaje") is not None:
-        payload["gramaje"] = data["gramaje"]
+        payload["gramaje"] = float(data["gramaje"])
     if data.get("unidad"):
         payload["unidad"] = data["unidad"]
+    if data.get("linea_id"):
+        payload["linea_id"] = data["linea_id"]
 
     res = requests.post(
         f"{SUPABASE_URL}/rest/v1/web_competidor",
-        headers=headers,
-        json=payload
+        headers=headers, json=payload, timeout=10
     )
     if res.status_code in (200, 201):
         return jsonify({"success": True}), 201
-    try:
-        error_detail = res.json()
-    except Exception:
-        error_detail = {"message": res.text or "Error desconocido"}
-    return jsonify({"error": error_detail.get("message", "No se pudo crear")}), res.status_code
+    return jsonify({"error": _supabase_error_msg(res)}), res.status_code
 
 
 @app.route('/api/competitorproducts/<product_id>', methods=['PATCH', 'DELETE'])
@@ -724,27 +735,28 @@ def update_delete_competitor(product_id):
     if not empresa_id:
         return jsonify({"error": "empresa_id es requerido"}), 400
 
-    # Verificar que el registro pertenece a la empresa
     check = requests.get(
-        f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}&empresa_id=eq.{empresa_id}&select=id",
-        headers=headers
+        f"{SUPABASE_URL}/rest/v1/web_competidor"
+        f"?id=eq.{product_id}&empresa_id=eq.{empresa_id}&select=id",
+        headers=headers, timeout=10
     )
     if not check.ok or not check.json():
         return jsonify({"error": "Registro no encontrado o sin permiso"}), 404
 
-    operation_url = f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}&empresa_id=eq.{empresa_id}"
+    op_url = f"{SUPABASE_URL}/rest/v1/web_competidor?id=eq.{product_id}&empresa_id=eq.{empresa_id}"
 
     try:
         if request.method == 'PATCH':
             payload = {k: v for k, v in request.json.items() if k != 'empresa_id'}
-            res = requests.patch(operation_url, headers=headers, json=payload, timeout=10)
+            if 'gramaje' in payload and payload['gramaje'] is not None:
+                payload['gramaje'] = float(payload['gramaje'])
+            res = requests.patch(op_url, headers=headers, json=payload, timeout=10)
         else:
-            res = requests.delete(operation_url, headers=headers, timeout=10)
+            res = requests.delete(op_url, headers=headers, timeout=10)
 
         if res.status_code in (200, 204):
-            return jsonify({"success": True}), 200 if request.method == 'PATCH' else 204
-
-        return jsonify({"error": "Error en Supabase", "detail": res.text}), res.status_code
+            return jsonify({"success": True}), (200 if request.method == 'PATCH' else 204)
+        return jsonify({"error": _supabase_error_msg(res)}), res.status_code
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -754,38 +766,37 @@ def update_delete_competitor(product_id):
 @app.route('/api/myproducts', methods=['GET', 'POST'])
 def handle_my_products():
 
-    # GET — listar productos de la empresa
+    # GET — listar productos de la empresa (con linea join)
     if request.method == 'GET':
         empresa_id = request.args.get('empresa_id')
         if not empresa_id:
             return jsonify({"error": "empresa_id es requerido"}), 400
-        products = fetch_table(
-            "web_myproductos",
-            params=[("order", "presentation.asc")],
-            empresa_id=empresa_id
+
+        res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/web_myproductos"
+            f"?empresa_id=eq.{empresa_id}"
+            f"&select=id,presentation,gramaje,unidad,linea_id,created_at,web_lineas(nombre)"
+            f"&order=presentation.asc",
+            headers=headers, timeout=10
         )
-        return jsonify({"products": products})
+        return jsonify({"products": res.json() if res.ok else []})
 
     # POST — crear producto
     if not request.is_json:
         return jsonify({"error": "Se esperaba JSON"}), 400
 
-    data       = request.json
-    empresa_id = data.get("empresa_id")
-    presentation = data.get("presentation", "").strip()
+    data         = request.json
+    empresa_id   = data.get("empresa_id")
+    presentation = data.get("presentation", "").strip().upper()
 
     if not presentation:
-        return jsonify({"error": "presentation es requerido"}), 400
+        return jsonify({"error": "El nombre del producto es requerido"}), 400
     if not empresa_id:
         return jsonify({"error": "empresa_id es requerido"}), 400
 
-    payload = {
-        "presentation": presentation.upper(),
-        "empresa_id":   empresa_id,
-    }
-    # Campos opcionales — solo incluir si vienen en el request
+    payload = {"presentation": presentation, "empresa_id": empresa_id}
     if data.get("gramaje") is not None:
-        payload["gramaje"] = data["gramaje"]
+        payload["gramaje"] = float(data["gramaje"])
     if data.get("unidad"):
         payload["unidad"] = data["unidad"]
     if data.get("linea_id"):
@@ -793,17 +804,11 @@ def handle_my_products():
 
     res = requests.post(
         f"{SUPABASE_URL}/rest/v1/web_myproductos",
-        headers=headers,
-        json=payload
+        headers=headers, json=payload, timeout=10
     )
     if res.status_code in (200, 201):
         return jsonify({"success": True}), 201
-    try:
-        error_info = res.json()
-    except Exception:
-        error_info = {"message": res.text}
-    return jsonify({"error": error_info.get("message", "Error al crear")}), res.status_code
-
+    return jsonify({"error": _supabase_error_msg(res)}), res.status_code
 
 
 @app.route('/api/myproducts/<product_id>', methods=['PATCH', 'DELETE'])
@@ -819,28 +824,30 @@ def update_delete_myproduct(product_id):
     if not empresa_id:
         return jsonify({"error": "empresa_id es requerido"}), 400
 
-    # Verificar que el registro pertenece a la empresa
+    # Verificar propiedad
     check = requests.get(
-        f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{product_id}&empresa_id=eq.{empresa_id}&select=id",
-        headers=headers
+        f"{SUPABASE_URL}/rest/v1/web_myproductos"
+        f"?id=eq.{product_id}&empresa_id=eq.{empresa_id}&select=id",
+        headers=headers, timeout=10
     )
     if not check.ok or not check.json():
         return jsonify({"error": "Registro no encontrado o sin permiso"}), 404
 
-    operation_url = f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{product_id}&empresa_id=eq.{empresa_id}"
+    op_url = f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{product_id}&empresa_id=eq.{empresa_id}"
 
     try:
         if request.method == 'PATCH':
-            # Pasar todos los campos excepto empresa_id (ya está en la URL)
             payload = {k: v for k, v in request.json.items() if k != 'empresa_id'}
-            res = requests.patch(operation_url, headers=headers, json=payload, timeout=10)
+            # Asegurar float en gramaje
+            if 'gramaje' in payload and payload['gramaje'] is not None:
+                payload['gramaje'] = float(payload['gramaje'])
+            res = requests.patch(op_url, headers=headers, json=payload, timeout=10)
         else:
-            res = requests.delete(operation_url, headers=headers, timeout=10)
+            res = requests.delete(op_url, headers=headers, timeout=10)
 
         if res.status_code in (200, 204):
-            return jsonify({"success": True}), 200 if request.method == 'PATCH' else 204
-
-        return jsonify({"error": "Error en Supabase", "detail": res.text}), res.status_code
+            return jsonify({"success": True}), (200 if request.method == 'PATCH' else 204)
+        return jsonify({"error": _supabase_error_msg(res)}), res.status_code
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -887,6 +894,83 @@ def upload_planogram():
         return jsonify({"success": True, "url": public_url})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+    
+    # ──────────────────────────────────────────────────────────────────────
+# COMPETENCIA DIRECTA POR PRODUCTO
+# GET  /api/producto_competencia?producto_id=X&empresa_id=Y  → lista
+# POST /api/producto_competencia  {producto_id, competidor_id, empresa_id}
+# DELETE /api/producto_competencia/<id>?empresa_id=Y
+# ──────────────────────────────────────────────────────────────────────
+@app.route('/api/producto_competencia', methods=['GET', 'POST'])
+def handle_producto_competencia():
+
+    if request.method == 'GET':
+        producto_id = request.args.get('producto_id')
+        empresa_id  = request.args.get('empresa_id')
+        if not producto_id or not empresa_id:
+            return jsonify({"error": "producto_id y empresa_id son requeridos"}), 400
+
+        res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/web_producto_competencia"
+            f"?producto_id=eq.{producto_id}&empresa_id=eq.{empresa_id}"
+            f"&select=id,competidor_id,web_competidor(id,presentation,gramaje,unidad)"
+            f"&order=created_at.asc",
+            headers=headers, timeout=10
+        )
+        return jsonify({"relaciones": res.json() if res.ok else []})
+
+    if not request.is_json:
+        return jsonify({"error": "Se esperaba JSON"}), 400
+
+    data          = request.json
+    empresa_id    = data.get("empresa_id")
+    producto_id   = data.get("producto_id")
+    competidor_id = data.get("competidor_id")
+
+    if not all([empresa_id, producto_id, competidor_id]):
+        return jsonify({"error": "empresa_id, producto_id y competidor_id son requeridos"}), 400
+
+    # Verificar que producto pertenece a la empresa
+    chk = requests.get(
+        f"{SUPABASE_URL}/rest/v1/web_myproductos?id=eq.{producto_id}&empresa_id=eq.{empresa_id}&select=id",
+        headers=headers, timeout=10
+    )
+    if not chk.ok or not chk.json():
+        return jsonify({"error": "Producto no encontrado o sin permiso"}), 404
+
+    res = requests.post(
+        f"{SUPABASE_URL}/rest/v1/web_producto_competencia",
+        headers=headers,
+        json={"empresa_id": empresa_id, "producto_id": producto_id, "competidor_id": competidor_id},
+        timeout=10
+    )
+    if res.status_code in (200, 201):
+        return jsonify({"success": True}), 201
+    try:
+        info = res.json()
+        msg  = info.get("message", "")
+    except Exception:
+        msg = res.text
+    if "unique" in msg.lower() or "web_producto_competencia_unique" in msg:
+        return jsonify({"error": "Ese competidor ya está vinculado a este producto"}), 409
+    return jsonify({"error": msg or "Error al vincular"}), res.status_code
+
+
+@app.route('/api/producto_competencia/<relacion_id>', methods=['DELETE'])
+def delete_producto_competencia(relacion_id):
+    empresa_id = request.args.get('empresa_id')
+    if not empresa_id:
+        return jsonify({"error": "empresa_id es requerido"}), 400
+
+    res = requests.delete(
+        f"{SUPABASE_URL}/rest/v1/web_producto_competencia"
+        f"?id=eq.{relacion_id}&empresa_id=eq.{empresa_id}",
+        headers=headers, timeout=10
+    )
+    if res.status_code in (200, 204):
+        return jsonify({"success": True}), 204
+    return jsonify({"error": "No se pudo eliminar"}), res.status_code
+
 
 
 # ─── Entrypoint ───────────────────────────────────────────────────────────────
