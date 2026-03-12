@@ -215,7 +215,9 @@ body{
   font-weight:900;font-size:1.5rem;letter-spacing:.05em;
   color:#fff;line-height:1;
   background:linear-gradient(135deg,#fff 30%,rgba(255,255,255,.7));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
 }
 .hero-logo-sub{
   font-size:.7rem;font-weight:500;letter-spacing:.15em;
@@ -518,15 +520,15 @@ footer{
           <div class="form-divider"></div>
         </div>
 
-        <!-- Mensajes Flask ({% with messages = get_flashed_messages(with_categories=true) %}) -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% for category, message in messages %}
+        <!-- Mensajes flash de Flask -->
+        {%- with messages = get_flashed_messages(with_categories=true) -%}
+          {%- for category, message in messages -%}
             <div class="flash {{ category }}">
               <i class="fas fa-{% if category == 'error' %}exclamation-circle{% else %}check-circle{% endif %}"></i>
               {{ message }}
             </div>
-          {% endfor %}
-        {% endwith %}
+          {%- endfor -%}
+        {%- endwith -%}
 
         <!-- Form -->
         <form method="POST" action="{{ url_for('login') }}" id="loginForm" autocomplete="off">
