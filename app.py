@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, session, redirect, url_for
+from flask import Flask, render_template,flash, jsonify, request, session, redirect, url_for
 import requests
 import os
 import time
@@ -271,10 +271,39 @@ def build_records_params(empresa_id, date_from=None, date_to=None,
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
+    if 'empresa_id' in session:
+        return redirect(url_for('dashboard'))
+
     if request.method == 'POST':
-        empresa = request.form.get('empresa')
-        clave   = request.form.get('clave')
-      
+        empresa_nombre = request.form.get('empresa', '').strip()
+        clave          = request.form.get('clave', '').strip()
+
+        if not empresa_nombre or not clave:
+            flash('Completa todos los campos.', 'error')
+            return render_template('login.html', now=datetime.now())
+
+        try:
+            # Buscar empresa por nombre y clave_acceso
+            result = fetch_table('empresas', params=[
+                ('nombre',        f'ilike.{empresa_nombre}'),
+                ('clave_acceso',  f'eq.{clave}'),
+                ('select',        'id,nombre'),
+            ])
+
+            if not result:
+                flash('Empresa o clave incorrecta.', 'error')
+                return render_template('login.html', now=datetime.now())
+
+            empresa = result[0]
+            session['empresa_id']     = empresa['id']
+            session['empresa_nombre'] = empresa['nombre']
+            return redirect(url_for('dashboard'))
+
+        except Exception as e:
+            app.logger.error(f'Login error: {e}')
+            flash('Error interno. Intenta de nuevo.', 'error')
+            return render_template('login.html', now=datetime.now())
+
     return render_template('login.html', now=datetime.now())
 
 
