@@ -136,125 +136,164 @@
 </div>
 
 <script>
-/* ── CAPTA NAV v3 ── */
-const SUPA_URL='https://djjylikkocemrlsjxscr.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
-let _captaLineas=[];let _captaLinea=localStorage.getItem('sp-linea')||'';
+/* ── CAPTA NAV v4 — credenciales desde backend ── */
+
+// window.db se inicializa aquí y queda disponible para TODOS los templates
+window.db = null;
+let _captaLineas = [];
+let _captaLinea  = localStorage.getItem('sp-linea') || '';
+
+/* ── Cargar config desde Flask y crear cliente Supabase ── */
+async function _initSupabase() {
+  try {
+    const res = await fetch('/api/config');
+    if (!res.ok) { window.location.href = '/'; return; }
+    const cfg = await res.json();
+    // Guardar temporalmente en memoria (no en localStorage ni DOM)
+    window._SUPA_URL = cfg.supabase_url;
+    window._SUPA_KEY = cfg.supabase_key;
+    window.db = supabase.createClient(cfg.supabase_url, cfg.supabase_key);
+    // Cargar líneas una vez db esté listo
+    await _loadLineas();
+    // Avisar a la página que db ya está listo
+    window.dispatchEvent(new Event('capta:db-ready'));
+  } catch(e) {
+    console.error('CAPTA: error inicializando Supabase', e);
+    window.location.href = '/';
+  }
+}
 
 /* ── ANÁLISIS DROPDOWN ── */
-window.toggleAnalisisDropdown=function(e){
+window.toggleAnalisisDropdown = function(e) {
   e.stopPropagation();
-  const wrap=document.getElementById('analisisDropdownWrap');
-  wrap.classList.toggle('open');
+  document.getElementById('analisisDropdownWrap').classList.toggle('open');
 };
-// Cerrar solo si el click fue FUERA del dropdown wrap
-document.addEventListener('click',function(e){
-  const wrap=document.getElementById('analisisDropdownWrap');
-  if(wrap && !wrap.contains(e.target)) wrap.classList.remove('open');
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('analisisDropdownWrap');
+  if (wrap && !wrap.contains(e.target)) wrap.classList.remove('open');
 });
 
 /* ── THEME ── */
-function syncTheme(){
-  const d=document.documentElement.classList.contains('dark');
-  const s=(id,show)=>{const e=document.getElementById(id);if(e)e.style.display=show?'inline':'none';};
-  s('icoMoon',d);s('icoSun',!d);s('drawerMoon',d);s('drawerSun',!d);
-  const l=document.getElementById('drawerThemeLbl');if(l)l.textContent=d?'Oscuro':'Claro';
+function syncTheme() {
+  const d = document.documentElement.classList.contains('dark');
+  const s = (id, show) => { const e = document.getElementById(id); if (e) e.style.display = show ? 'inline' : 'none'; };
+  s('icoMoon', d); s('icoSun', !d); s('drawerMoon', d); s('drawerSun', !d);
+  const l = document.getElementById('drawerThemeLbl'); if (l) l.textContent = d ? 'Oscuro' : 'Claro';
 }
-window.toggleTheme=function(){
+window.toggleTheme = function() {
   document.documentElement.classList.toggle('dark');
-  localStorage.setItem('sp-theme',document.documentElement.classList.contains('dark')?'dark':'light');
+  localStorage.setItem('sp-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
   syncTheme();
 };
 syncTheme();
 
 /* ── NOMBRE EMPRESA ── */
-(function(){
-  const n=localStorage.getItem('empresa_nombre')||'';
-  ['navEmpresa','drawerEmpresa'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=n||'Sistema';});
+(function() {
+  const n = localStorage.getItem('empresa_nombre') || '';
+  ['navEmpresa', 'drawerEmpresa'].forEach(id => {
+    const e = document.getElementById(id); if (e) e.textContent = n || 'Sistema';
+  });
 })();
 
 /* ── ACTIVO ── */
-(function(){
-  const path=window.location.pathname;
-  document.querySelectorAll('[data-nav]').forEach(a=>{
-    const href=a.getAttribute('href');
-    if(href&&path.startsWith(href)&&href!=='/')a.classList.add('active');
+(function() {
+  const path = window.location.pathname;
+  document.querySelectorAll('[data-nav]').forEach(a => {
+    const href = a.getAttribute('href');
+    if (href && path.startsWith(href) && href !== '/') a.classList.add('active');
   });
-  // Si estamos en una página de análisis, marcar el botón de análisis
-  const analisisPages=['/analisis','/caras','/metros_espacios'];
-  if(analisisPages.some(p=>path.startsWith(p))){
+  const analisisPages = ['/analisis', '/caras', '/metros_espacios'];
+  if (analisisPages.some(p => path.startsWith(p)))
     document.getElementById('analisisNavBtn')?.classList.add('active');
-  }
 })();
 
 /* ── LÍNEAS ── */
-window.onLineaChange=function(val){
-  _captaLinea=val;localStorage.setItem('sp-linea',val);
-  ['navLineaSel','drawerLineaSel'].forEach(id=>{const e=document.getElementById(id);if(e&&e.value!==val)e.value=val;});
-  if(typeof window.onLineaChanged==='function')window.onLineaChanged(val);
-};
-window.captaToast=function(msg,type='info'){
-  const t=document.createElement('div');
-  const c={success:'var(--green)',error:'var(--red)',warn:'var(--amber)',info:'var(--accent)'};
-  t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;background:${c[type]||c.info};color:#fff;padding:11px 18px;border-radius:10px;font-size:.83rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.22);animation:fadeIn .2s ease`;
-  t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3200);
-};
-window.captaLightbox=function(src){
-  const lb=document.createElement('div');lb.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;cursor:zoom-out';
-  lb.innerHTML=`<img src="${src}" style="max-width:94vw;max-height:94vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6)">`;
-  lb.onclick=()=>lb.remove();document.body.appendChild(lb);
+window.onLineaChange = function(val) {
+  _captaLinea = val;
+  localStorage.setItem('sp-linea', val);
+  ['navLineaSel', 'drawerLineaSel'].forEach(id => {
+    const e = document.getElementById(id); if (e && e.value !== val) e.value = val;
+  });
+  if (typeof window.onLineaChanged === 'function') window.onLineaChanged(val);
 };
 
-async function _loadLineas(){
-  const eid=localStorage.getItem('empresa_id');if(!eid)return;
-  try{
-    const r=await fetch(`${SUPA_URL}/rest/v1/web_lineas?activa=eq.true&empresa_id=eq.${eid}&select=id,nombre&order=nombre`,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
-    _captaLineas=await r.json();
-    ['navLineaSel','drawerLineaSel'].forEach(sid=>{
-      const sel=document.getElementById(sid);if(!sel)return;
-      sel.innerHTML='<option value="">Todas las líneas</option>';
-      _captaLineas.forEach(l=>sel.innerHTML+=`<option value="${l.id}">${l.nombre}</option>`);
-      sel.value=_captaLinea||'';
+async function _loadLineas() {
+  const eid = localStorage.getItem('empresa_id'); if (!eid) return;
+  try {
+    const r = await fetch(
+      `${window._SUPA_URL}/rest/v1/web_lineas?activa=eq.true&empresa_id=eq.${eid}&select=id,nombre&order=nombre`,
+      { headers: { 'apikey': window._SUPA_KEY, 'Authorization': 'Bearer ' + window._SUPA_KEY } }
+    );
+    _captaLineas = await r.json();
+    ['navLineaSel', 'drawerLineaSel'].forEach(sid => {
+      const sel = document.getElementById(sid); if (!sel) return;
+      sel.innerHTML = '<option value="">Todas las líneas</option>';
+      _captaLineas.forEach(l => sel.innerHTML += `<option value="${l.id}">${l.nombre}</option>`);
+      sel.value = _captaLinea || '';
     });
-  }catch(e){console.warn('Nav líneas:',e);}
+  } catch(e) { console.warn('Nav líneas:', e); }
 }
 
+/* ── TOAST ── */
+window.captaToast = function(msg, type = 'info') {
+  const t = document.createElement('div');
+  const c = { success: 'var(--green)', error: 'var(--red)', warn: 'var(--amber)', info: 'var(--accent)' };
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;background:${c[type]||c.info};color:#fff;padding:11px 18px;border-radius:10px;font-size:.83rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.22);animation:fadeIn .2s ease`;
+  t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3200);
+};
+
+/* ── LIGHTBOX ── */
+window.captaLightbox = function(src) {
+  const lb = document.createElement('div');
+  lb.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  lb.innerHTML = `<img src="${src}" style="max-width:94vw;max-height:94vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6)">`;
+  lb.onclick = () => lb.remove(); document.body.appendChild(lb);
+};
+
 /* ── OVERFLOW RESPONSIVO ── */
-function _checkNavOverflow(){
-  const nav=document.getElementById('navLinks');const more=document.getElementById('navMore');if(!nav||!more)return;
-  const dd=document.getElementById('navDropdown');dd.innerHTML='';
-  Array.from(nav.children).forEach(el=>el.style.display='');
-  let overflow=false;
-  Array.from(nav.children).forEach(el=>{
-    if(nav.scrollWidth>nav.offsetWidth+4||overflow){
-      overflow=true;
-      if(el.classList.contains('sp-nav-link')||el.tagName==='A'){
-        const cl=el.cloneNode(true);dd.appendChild(cl);el.style.display='none';
+function _checkNavOverflow() {
+  const nav = document.getElementById('navLinks');
+  const more = document.getElementById('navMore'); if (!nav || !more) return;
+  const dd = document.getElementById('navDropdown'); dd.innerHTML = '';
+  Array.from(nav.children).forEach(el => el.style.display = '');
+  let overflow = false;
+  Array.from(nav.children).forEach(el => {
+    if (nav.scrollWidth > nav.offsetWidth + 4 || overflow) {
+      overflow = true;
+      if (el.classList.contains('sp-nav-link') || el.tagName === 'A') {
+        const cl = el.cloneNode(true); dd.appendChild(cl); el.style.display = 'none';
       }
     }
   });
-  more.style.display=dd.children.length?'flex':'none';
+  more.style.display = dd.children.length ? 'flex' : 'none';
 }
-const _moreBtn=document.getElementById('navMoreBtn');
-if(_moreBtn)_moreBtn.onclick=()=>{
-  const dd=document.getElementById('navDropdown');const ico=document.getElementById('navMoreIco');
-  dd.classList.toggle('open');ico.style.transform=dd.classList.contains('open')?'rotate(180deg)':'';
+const _moreBtn = document.getElementById('navMoreBtn');
+if (_moreBtn) _moreBtn.onclick = () => {
+  const dd = document.getElementById('navDropdown');
+  const ico = document.getElementById('navMoreIco');
+  dd.classList.toggle('open');
+  ico.style.transform = dd.classList.contains('open') ? 'rotate(180deg)' : '';
 };
-document.addEventListener('click',e=>{
-  const dd=document.getElementById('navDropdown');
-  if(dd&&!dd.closest('.sp-nav-more')?.contains(e.target))dd.classList.remove('open');
+document.addEventListener('click', e => {
+  const dd = document.getElementById('navDropdown');
+  if (dd && !dd.closest('.sp-nav-more')?.contains(e.target)) dd.classList.remove('open');
 });
-window.openDrawer=function(){document.getElementById('drawer').classList.add('open');};
-window.closeDrawer=function(){document.getElementById('drawer').classList.remove('open');};
-document.getElementById('drawer')?.addEventListener('click',e=>{if(e.target.id==='drawer')closeDrawer();});
+window.openDrawer  = function() { document.getElementById('drawer').classList.add('open'); };
+window.closeDrawer = function() { document.getElementById('drawer').classList.remove('open'); };
+document.getElementById('drawer')?.addEventListener('click', e => { if (e.target.id === 'drawer') closeDrawer(); });
 
-/* ── HAMBURGER VISIBLE ── */
-function _updateHamburger(){
-  const nav=document.getElementById('navLinks');const ham=document.querySelector('.sp-hamburger');
-  if(!nav||!ham)return;ham.style.display=nav.offsetWidth<200?'':'none';
+function _updateHamburger() {
+  const nav = document.getElementById('navLinks');
+  const ham = document.querySelector('.sp-hamburger');
+  if (!nav || !ham) return; ham.style.display = nav.offsetWidth < 200 ? '' : 'none';
 }
 
-window.addEventListener('load',()=>{_loadLineas();_checkNavOverflow();_updateHamburger();});
-window.addEventListener('resize',()=>{_checkNavOverflow();_updateHamburger();});
-new ResizeObserver(()=>{_checkNavOverflow();_updateHamburger();}).observe(document.body);
+/* ── INIT — primero db, luego layout ── */
+window.addEventListener('load', () => {
+  _initSupabase();   // async: inicializa db y dispara capta:db-ready
+  _checkNavOverflow();
+  _updateHamburger();
+});
+window.addEventListener('resize', () => { _checkNavOverflow(); _updateHamburger(); });
+new ResizeObserver(() => { _checkNavOverflow(); _updateHamburger(); }).observe(document.body);
 </script>

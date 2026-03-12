@@ -458,7 +458,7 @@ document.addEventListener('click', e => {
 });
 
 // ── Init ─────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('capta:db-ready', async () => {
   await loadLineas();
   await loadCompetidores();
   await loadProducts();

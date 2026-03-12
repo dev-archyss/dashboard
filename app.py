@@ -401,7 +401,20 @@ def dashboard_config():
         "empresa_nombre": session.get('empresa_nombre', ''),
     
     })
-
+@app.route('/api/config')
+def get_config():
+    """
+    Devuelve las credenciales públicas de Supabase SOLO si el usuario
+    tiene sesión activa en Flask. El frontend las recibe en memoria,
+    nunca se hardcodean en el HTML ni en archivos estáticos.
+    """
+    if 'empresa_id' not in session:
+        return jsonify({'error': 'No autorizado'}), 401
+ 
+    return jsonify({
+        'supabase_url': SUPABASE_URL,
+        'supabase_key': SUPABASE_KEY
+    })
 
 @app.route('/api/pwa-config')
 def pwa_config():

@@ -92,9 +92,7 @@
 </div>
 
 <script>
-const supabaseUrl='https://djjylikkocemrlsjxscr.supabase.co';
-const supabaseKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
-const db=supabase.createClient(supabaseUrl,supabaseKey);
+const db = window.db;
 const empresaId=localStorage.getItem('empresa_id');
 const STORAGE_BASE='https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/planogramas/';
 if(!empresaId) window.location.href='/';
@@ -200,7 +198,7 @@ document.getElementById('createForm').addEventListener('submit',async e=>{
   captaToast(`Línea "${nombre}" creada`,'success');document.getElementById('createForm').reset();document.getElementById('planogram_preview_create').style.display='none';loadLineas();
 });
 
-document.addEventListener('DOMContentLoaded',()=>loadLineas());
+window.addEventListener('capta:db-ready',()=>loadLineas());
 </script>
 </body>
 </html>

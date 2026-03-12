@@ -6,9 +6,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
-.presentation-item{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:600;cursor:pointer;border:1px solid var(--brd);background:var(--inp);color:var(--txt2);transition:all .12s;margin:2px}
-.presentation-item:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
-.presentation-item.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
+.badge-sin-comp {
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:99px;font-size:.68rem;font-weight:700;
+  background:#f3f4f6;color:#6b7280;border:1px dashed #d1d5db;
+}
+.dark .badge-sin-comp { background:#1e293b;color:#64748b;border-color:#475569; }
 </style>
 </head>
 <body>
@@ -18,7 +21,7 @@
   <div class="sp-page-hdr">
     <div>
       <h1 class="sp-page-title">Análisis de Precios</h1>
-      <p class="sp-page-sub">Comparativa de precios nuestros vs competencia (USD/kg).</p>
+      <p class="sp-page-sub">Comparativa de precios nuestros vs competencia directa asignada (USD/kg).</p>
     </div>
   </div>
 
@@ -31,249 +34,536 @@
       <div><label class="sp-label">Estado</label><select id="fEstado" class="sp-select"><option value="">Todos</option></select></div>
       <div><label class="sp-label">Zona</label><select id="fZona" class="sp-select"><option value="">Todas</option></select></div>
       <div><label class="sp-label">Promotor</label><select id="fPromotor" class="sp-select"><option value="">Todos</option></select></div>
-      <div><label class="sp-label">Tipo comercio</label>
-        <select id="fTipoComercio" class="sp-select"><option>Todos</option><option>Detal</option><option>Mayorista</option></select>
+      <div><label class="sp-label">Tipo de comercio</label>
+        <select id="fTipoComercio" class="sp-select">
+          <option>Todos</option><option>Detal</option><option>Mayorista</option>
+        </select>
       </div>
-      <div><label class="sp-label">Nuestra presentación</label>
-        <select id="fNuestraPres" class="sp-select"><option value="">Todas</option></select>
+      <div><label class="sp-label">Nuestro producto</label>
+        <select id="fNuestroProducto" class="sp-select"><option value="">Todos</option></select>
       </div>
-      <div>
-        <label class="sp-label">Comercio (búsqueda)</label>
-        <input type="text" id="fComercioSearch" class="sp-input" placeholder="Escribe para buscar…" oninput="buscarComercio(this.value)">
-        <div id="comercioDropdown" style="display:none;position:absolute;z-index:200;background:var(--card);border:1px solid var(--brd);border-radius:var(--r2);box-shadow:var(--sh3);max-height:180px;overflow-y:auto;min-width:220px"></div>
+      <div style="position:relative">
+        <label class="sp-label">Comercio</label>
+        <input type="text" id="fComercioSearch" class="sp-input" placeholder="Buscar comercio…" oninput="buscarComercio(this.value)">
+        <div id="comercioDropdown" style="display:none;position:absolute;z-index:200;width:100%;background:var(--card);border:1px solid var(--brd);border-radius:var(--r2);box-shadow:var(--sh3);max-height:180px;overflow-y:auto"></div>
         <input type="hidden" id="fComercioSelected">
       </div>
     </div>
-    <!-- Presentaciones competencia -->
-    <div style="margin-bottom:12px">
-      <label class="sp-label">Presentaciones competencia</label>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px;border:1px solid var(--brd);border-radius:var(--r1);background:var(--inp);min-height:38px;cursor:pointer" onclick="toggleCompPresList()" id="selectedCompPres">
-        <span style="font-size:.72rem;color:var(--muted)">Haz clic para seleccionar</span>
-      </div>
-      <div id="compPresList" style="display:none;position:absolute;z-index:200;background:var(--card);border:1px solid var(--brd);border-radius:var(--r2);box-shadow:var(--sh3);padding:10px;max-width:500px;max-height:250px;overflow-y:auto">
-        <input type="text" id="searchCompPres" class="sp-input sp-input-sm" placeholder="Filtrar presentaciones…" style="margin-bottom:8px">
-        <div id="compPresItems" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="btnFiltrar" onclick="fetchDataAnalisis()" class="sp-btn sp-btn-primary">
+        <i class="fas fa-filter"></i> Aplicar filtros
+      </button>
+      <button onclick="limpiarFiltros()" class="sp-btn sp-btn-sec">
+        <i class="fas fa-undo"></i> Limpiar
+      </button>
+    </div>
+  </div>
+
+  <!-- Aviso sin competencia -->
+  <div id="avisoSinComp" style="display:none" class="sp-card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <i class="fas fa-triangle-exclamation" style="color:var(--amber);font-size:1.1rem;margin-top:2px"></i>
+      <div>
+        <div style="font-weight:700;font-size:.85rem;margin-bottom:4px">Productos sin competencia directa asignada</div>
+        <div id="listaSinComp" style="font-size:.78rem;color:var(--muted)"></div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:6px">
+          Ve a <a href="/productos" style="color:var(--accent);text-decoration:underline">Productos</a>
+          y usa el botón <i class="fas fa-chess-board"></i> para vincular competidores directos a cada producto.
+        </div>
       </div>
     </div>
-    <div style="display:flex;gap:8px">
-      <button id="btnFiltrar" onclick="fetchDataAnalisis()" class="sp-btn sp-btn-primary"><i class="fas fa-filter"></i> Aplicar filtros</button>
-      <button id="btnLimpiar" onclick="limpiarFiltros()" class="sp-btn sp-btn-sec"><i class="fas fa-undo"></i> Limpiar</button>
+  </div>
+
+  <!-- KPIs resumen -->
+  <div class="sp-grid sp-g4 sp-gap4" style="margin-bottom:20px">
+    <div class="sp-card sp-kpi indigo">
+      <div class="sp-kpi-top">
+        <div class="sp-kpi-icon"><i class="fas fa-scale-balanced"></i></div>
+        <div style="text-align:right">
+          <div class="sp-kpi-val" id="kpiTotalComp">—</div>
+          <div class="sp-kpi-lbl">Comparaciones</div>
+        </div>
+      </div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:80%;background:var(--accent)"></div></div>
+    </div>
+    <div class="sp-card sp-kpi green">
+      <div class="sp-kpi-top">
+        <div class="sp-kpi-icon"><i class="fas fa-arrow-trend-down"></i></div>
+        <div style="text-align:right">
+          <div class="sp-kpi-val" id="kpiMasBaratos">—</div>
+          <div class="sp-kpi-lbl">Somos más baratos</div>
+        </div>
+      </div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="barMasBaratos" style="width:0%;background:var(--green)"></div></div>
+    </div>
+    <div class="sp-card sp-kpi red" style="--kpi-color:var(--red)">
+      <div class="sp-kpi-top">
+        <div class="sp-kpi-icon" style="background:rgba(239,68,68,.12);color:var(--red)"><i class="fas fa-arrow-trend-up"></i></div>
+        <div style="text-align:right">
+          <div class="sp-kpi-val" id="kpiMasCaros" style="color:var(--red)">—</div>
+          <div class="sp-kpi-lbl">Somos más caros</div>
+        </div>
+      </div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="barMasCaros" style="width:0%;background:var(--red)"></div></div>
+    </div>
+    <div class="sp-card sp-kpi amber">
+      <div class="sp-kpi-top">
+        <div class="sp-kpi-icon"><i class="fas fa-chart-line"></i></div>
+        <div style="text-align:right">
+          <div class="sp-kpi-val" id="kpiDifPromedio">—</div>
+          <div class="sp-kpi-lbl">Diferencia promedio</div>
+        </div>
+      </div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:60%;background:var(--amber)"></div></div>
     </div>
   </div>
 
   <!-- Gráfico -->
   <div class="sp-card" style="margin-bottom:20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <p class="sp-sec-title" style="margin-bottom:0">Comparativa de Precios (USD/kg)</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <p class="sp-sec-title" style="margin-bottom:0">Comparativa de precios (USD/kg) — por par producto↔competidor</p>
       <select id="chartType" class="sp-select" style="width:auto" onchange="drawChart()">
         <option value="bar">Barras</option>
         <option value="line">Línea (Tendencia)</option>
       </select>
     </div>
-    <div style="position:relative;height:320px;width:100%">
+    <div style="position:relative;height:340px;width:100%">
       <canvas id="chartComparativa"></canvas>
     </div>
+    <p style="font-size:.72rem;color:var(--muted);margin-top:8px;text-align:center">
+      Solo se grafican pares con competencia directa vinculada. Precio promedio por presentación.
+    </p>
   </div>
 
   <!-- Tabla detalle -->
-  <div class="sp-tbl-wrap">
+  <div class="sp-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <p class="sp-sec-title" style="margin-bottom:0">Detalle de comparaciones</p>
+      <span id="analisisInfo" class="sp-bdg sp-bdg-accent" style="font-size:.75rem">—</span>
+    </div>
     <div style="overflow-x:auto;max-height:65vh">
       <table class="sp-tbl">
         <thead><tr>
-          <th>Fecha</th><th>Estado</th><th>Zona</th><th>Comercio</th><th>Tipo</th>
-          <th>Ntra. Pres.</th><th>Precio Nuestro (/kg)</th>
-          <th>Comp. Pres.</th><th>Precio Comp. (/kg)</th><th>Diferencia %</th>
+          <th>Fecha</th>
+          <th>Comercio</th>
+          <th>Estado / Zona</th>
+          <th>Tipo</th>
+          <th>Nuestro producto</th>
+          <th style="text-align:center">Precio nuestro<br><small style="font-weight:400;color:var(--muted)">(USD/kg)</small></th>
+          <th>Competidor directo</th>
+          <th style="text-align:center">Precio competidor<br><small style="font-weight:400;color:var(--muted)">(USD/kg)</small></th>
+          <th style="text-align:center">Diferencia %</th>
         </tr></thead>
         <tbody id="tbodyAnalisis">
-          <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted)">Aplica los filtros para ver datos</td></tr>
+          <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">Aplica los filtros para ver datos</td></tr>
         </tbody>
       </table>
-    </div>
-    <div style="padding:10px 14px;border-top:1px solid var(--brd)">
-      <p style="font-size:.75rem;color:var(--muted)" id="analisisInfo">—</p>
     </div>
   </div>
 </main>
 
 <script>
-const{createClient}=supabase;
-const supabaseClient=createClient('https://djjylikkocemrlsjxscr.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M');
-const empresaId=localStorage.getItem('empresa_id');
-const empresaNombre=localStorage.getItem('empresa_nombre')||'—';
-if(!empresaId)window.location.href='/';
-const $=id=>document.getElementById(id);
+const supabaseClient = window.db;
+const empresaId = localStorage.getItem('empresa_id');
+if (!empresaId) window.location.href = '/';
+const $ = id => document.getElementById(id);
 
-let tasasCache=[],analisisData=[],todasPresentaciones={nuestras:new Set(),competencia:new Set()};
-let selectedCompPres=new Set(),selectedComercio='';
-let estadosData=[],zonasData=[],chartInst=null,comercioTimer=null;
+// ── Estado global ────────────────────────────────────────────────
+let tasasCache   = [];
+let analisisData = [];
+let estadosData  = [], zonasData = [], chartInst = null, comercioTimer = null;
 
-/* TASAS */
-async function cargarTasas(){
-  try{const{data}=await supabaseClient.from('web_tasa').select('fecha,tasa_bs_usd,tasa_cop_usd').order('fecha',{ascending:false});tasasCache=data||[];}
-  catch(e){console.error(e);}
+// Mapa de competencia directa:
+// mapCompDirecta[presentation_nuestro] = Set([presentation_competidor, ...])
+let mapCompDirecta = {};
+// productos sin competencia asignada (presentaciones)
+let sinCompAsignada = new Set();
+
+// ── Tasas de cambio ──────────────────────────────────────────────
+async function cargarTasas() {
+  try {
+    const { data } = await supabaseClient.from('web_tasa')
+      .select('fecha,tasa_bs_usd,tasa_cop_usd').order('fecha', { ascending: false });
+    tasasCache = data || [];
+  } catch(e) { console.error(e); }
 }
-function obtenerTasa(fechaStr){
-  if(!tasasCache.length)return{tasa_bs_usd:36.5,tasa_cop_usd:4200};
-  const fecha=new Date(fechaStr);const sorted=[...tasasCache].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
-  return sorted.find(t=>new Date(t.fecha)<=fecha)||sorted[0]||{tasa_bs_usd:36.5,tasa_cop_usd:4200};
+function obtenerTasa(fechaStr) {
+  if (!tasasCache.length) return { tasa_bs_usd: 36.5, tasa_cop_usd: 4200 };
+  const sorted = [...tasasCache].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  return sorted.find(t => new Date(t.fecha) <= new Date(fechaStr)) || sorted[0];
 }
-function normalizarMoneda(m){
-  if(!m)return'USD';const raw=String(m).trim().toUpperCase();
-  const map={BS:'Bs','B$':'Bs','BS.':'Bs',VES:'Bs',VEF:'Bs',COP:'COP',COL:'COP',USD:'USD','US$':'USD'};
-  return map[raw]||(/^COP$/i.test(raw)?'COP':/^BS/i.test(raw)?'Bs':/^USD$/i.test(raw)?'USD':raw);
+function normalizarMoneda(m) {
+  if (!m) return 'USD';
+  const raw = String(m).trim().toUpperCase();
+  const map = { BS:'Bs','B$':'Bs','BS.':'Bs',VES:'Bs',VEF:'Bs',COP:'COP',COL:'COP',USD:'USD','US$':'USD' };
+  return map[raw] || (/^COP$/i.test(raw)?'COP':/^BS/i.test(raw)?'Bs':/^USD$/i.test(raw)?'USD':raw);
 }
-function convertirAPrecioUSD(precio,moneda,fecha){
-  if(!precio)return null;
-  const aNum=v=>{let s=String(v).replace(/[A-Za-z$€¥£₽]|COP|COL|VES|VEF|Bs\.?|B\$|US\$|USD/gi,'').replace(/\s/g,'').replace(/\./g,'').replace(',','.');return parseFloat(s)||NaN;};
-  const n=aNum(precio);if(isNaN(n))return null;
-  const mn=normalizarMoneda(moneda);const t=obtenerTasa(fecha);
-  if(mn==='USD')return n;if(mn==='Bs')return n/parseFloat(t.tasa_bs_usd||1);if(mn==='COP')return n/parseFloat(t.tasa_cop_usd||1);
+function convertirAPrecioUSD(precio, moneda, fecha) {
+  if (!precio) return null;
+  const aNum = v => parseFloat(String(v).replace(/[A-Za-z$€¥£₽]|COP|COL|VES|VEF|Bs\.?|B\$|US\$|USD/gi,'').replace(/\s/g,'').replace(/\./g,'').replace(',','.')) || NaN;
+  const n = aNum(precio); if (isNaN(n)) return null;
+  const mn = normalizarMoneda(moneda), t = obtenerTasa(fecha);
+  if (mn === 'USD') return n;
+  if (mn === 'Bs')  return n / parseFloat(t.tasa_bs_usd || 1);
+  if (mn === 'COP') return n / parseFloat(t.tasa_cop_usd || 1);
   return n;
 }
-function normalizarPesoEnKg(p){
-  if(!p)return null;const l=p.toLowerCase();
-  const mg=l.match(/(\d+\.?\d*)\s*g(r)?\b/);if(mg)return parseFloat(mg[1])/1000;
-  const mk=l.match(/(\d+\.?\d*)\s*k(g)?\b/);if(mk)return parseFloat(mk[1]);
-  const mn=l.match(/(\d+\.?\d*)/);if(mn&&parseFloat(mn[1])>100)return parseFloat(mn[1])/1000;
+function normalizarPesoEnKg(p) {
+  if (!p) return null;
+  const l = p.toLowerCase();
+  const mg = l.match(/(\d+\.?\d*)\s*g(r)?\b/); if (mg) return parseFloat(mg[1]) / 1000;
+  const mk = l.match(/(\d+\.?\d*)\s*k(g)?\b/);  if (mk) return parseFloat(mk[1]);
+  const mn = l.match(/(\d+\.?\d*)/); if (mn && parseFloat(mn[1]) > 100) return parseFloat(mn[1]) / 1000;
   return null;
 }
 
-/* CATÁLOGOS */
-async function loadCatalogs(){
-  try{
-    const{data:estados}=await supabaseClient.from('web_estados').select('id,nombre').order('nombre');
-    estadosData=estados||[];
-    $('fEstado').innerHTML='<option value="">Todos</option>'+estadosData.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join('');
-    const{data:promos}=await supabaseClient.from('web_promotores').select('promoter_name').eq('empresa_id',empresaId).order('promoter_name');
-    $('fPromotor').innerHTML='<option value="">Todos</option>'+(promos||[]).map(p=>`<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
-    const{data:zonas}=await supabaseClient.from('web_zonas').select('id,nombre,estado_id').order('nombre');
-    zonasData=zonas||[];
-    await cargarPresentaciones();
-    $('fEstado').addEventListener('change',()=>{
-      const eid=estadosData.find(e=>e.nombre===$('fEstado').value)?.id;
-      $('fZona').innerHTML='<option value="">Todas</option>';
-      if(eid)(zonasData.filter(z=>z.estado_id===eid)||[]).forEach(z=>$('fZona').innerHTML+=`<option value="${z.nombre}">${z.nombre}</option>`);
-    });
-    fetchDataAnalisis();
-  }catch(e){console.error(e);}
-}
+// ── Cargar mapa de competencia directa ─────────────────────────
+// web_producto_competencia → product(presentation) → [competitor(presentation)]
+async function cargarMapaCompDirecta() {
+  const { data, error } = await supabaseClient
+    .from('web_producto_competencia')
+    .select(`
+      producto_id,
+      competidor_id,
+      web_myproductos!fk_prod_comp_producto(presentation, gramaje, unidad),
+      web_competidor!fk_prod_comp_competidor(presentation, gramaje, unidad)
+    `)
+    .eq('empresa_id', empresaId);
 
-async function cargarPresentaciones(){
-  try{
-    const{data}=await supabaseClient.from('web_precios').select('myitems,competitoritems').eq('empresa_id',empresaId);
-    todasPresentaciones={nuestras:new Set(),competencia:new Set()};
-    (data||[]).forEach(row=>{
-      let mi=Array.isArray(row.myitems)?row.myitems:(typeof row.myitems==='string'?JSON.parse(row.myitems):[]);
-      let ci=Array.isArray(row.competitoritems)?row.competitoritems:(typeof row.competitoritems==='string'?JSON.parse(row.competitoritems):[]);
-      mi.forEach(i=>i?.presentation&&todasPresentaciones.nuestras.add(i.presentation));
-      ci.forEach(i=>i?.presentation&&todasPresentaciones.competencia.add(i.presentation));
-    });
-    $('fNuestraPres').innerHTML='<option value="">Todas</option>'+[...todasPresentaciones.nuestras].sort().map(p=>`<option value="${p}">${p}</option>`).join('');
-    renderCompPresList();
-  }catch(e){console.error(e);}
-}
+  mapCompDirecta = {};
+  if (error || !data) return;
 
-function renderCompPresList(filter=''){
-  const items=$('compPresItems');items.innerHTML='';
-  const list=[...todasPresentaciones.competencia].sort().filter(p=>!filter||p.toLowerCase().includes(filter.toLowerCase()));
-  list.forEach(pres=>{
-    const el=document.createElement('span');el.className='presentation-item'+(selectedCompPres.has(pres)?' selected':'');
-    el.textContent=pres;el.onclick=()=>{selectedCompPres.has(pres)?selectedCompPres.delete(pres):selectedCompPres.add(pres);renderCompPresList(filter);renderSelectedCompPres();};
-    items.appendChild(el);
+  data.forEach(rel => {
+    const pN = rel.web_myproductos;
+    const pC = rel.web_competidor;
+    if (!pN || !pC) return;
+
+    // Clave = presentation con gramaje (igual a como aparece en myitems)
+    const keyN = buildKey(pN.presentation, pN.gramaje, pN.unidad);
+    const keyC = buildKey(pC.presentation, pC.gramaje, pC.unidad);
+
+    if (!mapCompDirecta[keyN]) mapCompDirecta[keyN] = new Set();
+    mapCompDirecta[keyN].add(keyC);
   });
 }
-function renderSelectedCompPres(){
-  const c=$('selectedCompPres');
-  if(!selectedCompPres.size){c.innerHTML='<span style="font-size:.72rem;color:var(--muted)">Haz clic para seleccionar</span>';return;}
-  c.innerHTML=[...selectedCompPres].map(p=>`<span class="presentation-item selected">${p}</span>`).join('');
-}
-function toggleCompPresList(){
-  const l=$('compPresList');l.style.display=l.style.display==='none'?'block':'none';
-  if(l.style.display==='block')renderCompPresList();
-}
-document.addEventListener('click',e=>{const l=$('compPresList');if(l&&!l.contains(e.target)&&e.target.id!=='selectedCompPres'&&!$('selectedCompPres').contains(e.target))l.style.display='none';});
-document.addEventListener('input',e=>{if(e.target.id==='searchCompPres')renderCompPresList(e.target.value);});
 
-function buscarComercio(term){
-  clearTimeout(comercioTimer);const dd=$('comercioDropdown');
-  if(!term.trim()){dd.style.display='none';selectedComercio='';return;}
-  comercioTimer=setTimeout(async()=>{
-    const{data}=await supabaseClient.from('web_precios').select('trade').eq('empresa_id',empresaId).ilike('trade',`%${term}%`).limit(20);
-    const trades=[...new Set((data||[]).map(r=>r.trade).filter(Boolean))].sort();
-    if(!trades.length){dd.style.display='none';return;}
-    dd.innerHTML=trades.map(t=>`<div style="padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--brd)" onmousedown="selecComercio('${t.replace(/'/g,"\\'")}','${t.replace(/'/g,"\\'")}') ">${t}</div>`).join('');
-    dd.style.display='block';
-  },300);
+// Construir la clave de presentación igual a como la guarda la PWA
+// La PWA guarda "MAÍZ TOSTADO 100g" — concatena nombre+gramaje+unidad
+function buildKey(presentation, gramaje, unidad) {
+  if (!gramaje) return presentation;
+  const g = gramaje % 1 === 0 ? parseInt(gramaje) : gramaje;
+  return `${presentation} ${g}${unidad || ''}`;
 }
-function selecComercio(trade,display){selectedComercio=trade;$('fComercioSearch').value=display;$('comercioDropdown').style.display='none';}
 
-async function fetchDataAnalisis(){
-  const btn=$('btnFiltrar');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Cargando…';
-  try{
+// ── Catálogos ────────────────────────────────────────────────────
+async function loadCatalogs() {
+  try {
+    const { data: estados } = await supabaseClient.from('web_estados').select('id,nombre').order('nombre');
+    estadosData = estados || [];
+    $('fEstado').innerHTML = '<option value="">Todos</option>' +
+      estadosData.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
+
+    const { data: promos } = await supabaseClient.from('web_promotores')
+      .select('promoter_name').eq('empresa_id', empresaId).order('promoter_name');
+    $('fPromotor').innerHTML = '<option value="">Todos</option>' +
+      (promos || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
+
+    const { data: zonas } = await supabaseClient.from('web_zonas').select('id,nombre,estado_id').order('nombre');
+    zonasData = zonas || [];
+
+    $('fEstado').addEventListener('change', () => {
+      const eid = estadosData.find(e => e.nombre === $('fEstado').value)?.id;
+      $('fZona').innerHTML = '<option value="">Todas</option>';
+      if (eid) zonasData.filter(z => z.estado_id === eid)
+        .forEach(z => $('fZona').innerHTML += `<option value="${z.nombre}">${z.nombre}</option>`);
+    });
+
+    // Poblar selector de nuestros productos (desde mapCompDirecta)
+    await cargarMapaCompDirecta();
+    poblarSelectProductos();
+
+    await fetchDataAnalisis();
+  } catch(e) { console.error(e); }
+}
+
+function poblarSelectProductos() {
+  const opts = Object.keys(mapCompDirecta).sort();
+  $('fNuestroProducto').innerHTML = '<option value="">Todos</option>' +
+    opts.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+// ── Búsqueda comercio ─────────────────────────────────────────
+function buscarComercio(term) {
+  clearTimeout(comercioTimer);
+  const dd = $('comercioDropdown');
+  if (!term.trim()) { dd.style.display = 'none'; return; }
+  comercioTimer = setTimeout(async () => {
+    const { data } = await supabaseClient.from('web_precios')
+      .select('trade').eq('empresa_id', empresaId).ilike('trade', `%${term}%`).limit(20);
+    const trades = [...new Set((data || []).map(r => r.trade).filter(Boolean))].sort();
+    if (!trades.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = trades.map(t =>
+      `<div style="padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--brd)"
+        onmousedown="selecComercio('${t.replace(/'/g,"\\'")}')">
+        <i class="fas fa-store" style="color:var(--accent);margin-right:6px;font-size:.75rem"></i>${t}
+       </div>`).join('');
+    dd.style.display = 'block';
+  }, 300);
+}
+function selecComercio(trade) {
+  $('fComercioSelected').value = trade;
+  $('fComercioSearch').value   = trade;
+  $('comercioDropdown').style.display = 'none';
+}
+document.addEventListener('click', e => {
+  const wrap = $('fComercioSearch')?.parentElement;
+  if (wrap && !wrap.contains(e.target)) $('comercioDropdown').style.display = 'none';
+});
+
+// ── Fetch y procesamiento principal ──────────────────────────────
+async function fetchDataAnalisis() {
+  const btn = $('btnFiltrar');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando…';
+
+  try {
     await cargarTasas();
-    const desde=$('fDesde').value,hasta=$('fHasta').value,est=$('fEstado').value,zona=$('fZona').value,prom=$('fPromotor').value,nuestraPres=$('fNuestraPres').value,tipoComercio=$('fTipoComercio').value;
-    let q=supabaseClient.from('web_precios').select('*').eq('empresa_id',empresaId);
-    if(desde)q=q.gte('created_at',new Date(desde).toISOString());
-    if(hasta){const to=new Date(hasta);to.setDate(to.getDate()+1);q=q.lt('created_at',to.toISOString());}
-    if(est)q=q.eq('state',est);if(zona)q=q.eq('zone',zona);if(prom)q=q.eq('promoter_name',prom);
-    if(selectedComercio)q=q.eq('trade',selectedComercio);
-    if(tipoComercio!=='Todos')q=q.eq('p_mayorista',tipoComercio==='Detal'?'No':'Si');
-    const{data,error}=await q.order('created_at',{ascending:false});if(error)throw error;
-    const filas=[];
-    (data||[]).forEach(row=>{
-      let mi=Array.isArray(row.myitems)?row.myitems:(typeof row.myitems==='string'?JSON.parse(row.myitems):[]);
-      let ci=Array.isArray(row.competitoritems)?row.competitoritems:(typeof row.competitoritems==='string'?JSON.parse(row.competitoritems):[]);
-      mi.forEach(m=>{
-        if(nuestraPres&&m.presentation!==nuestraPres)return;
-        const nUSD=convertirAPrecioUSD(m.price,m.currency,row.created_at);const nKg=normalizarPesoEnKg(m.presentation);const nPKg=nUSD&&nKg?nUSD/nKg:null;
-        ci.forEach(c=>{
-          if(selectedCompPres.size>0&&!selectedCompPres.has(c.presentation))return;
-          const cUSD=convertirAPrecioUSD(c.price,c.currency,row.created_at);const cKg=normalizarPesoEnKg(c.presentation);const cPKg=cUSD&&cKg?cUSD/cKg:null;
-          if(nPKg&&cPKg)filas.push({...row,nuestraPresentacion:m.presentation,nuestroPrecioPorKg:nPKg,nuestroPrecioOriginal:m.price,monedaOriginal:m.currency,competencia:c.presentation,compPrecioPorKg:cPKg,compPrecioOriginal:c.price,monedaComp:c.currency,fecha:row.created_at,diferenciaPorcentaje:((nPKg-cPKg)/nPKg)*100,p_mayorista:row.p_mayorista});
+
+    const desde       = $('fDesde').value;
+    const hasta       = $('fHasta').value;
+    const est         = $('fEstado').value;
+    const zona        = $('fZona').value;
+    const prom        = $('fPromotor').value;
+    const filtroProd  = $('fNuestroProducto').value;
+    const tipoComercio= $('fTipoComercio').value;
+    const comercio    = $('fComercioSelected').value;
+    const lineaId     = localStorage.getItem('sp-linea') || '';
+
+    let q = supabaseClient.from('web_precios').select('*').eq('empresa_id', empresaId);
+    if (desde)   q = q.gte('created_at', new Date(desde).toISOString());
+    if (hasta)   { const t = new Date(hasta); t.setDate(t.getDate()+1); q = q.lt('created_at', t.toISOString()); }
+    if (est)     q = q.eq('state', est);
+    if (zona)    q = q.eq('zone', zona);
+    if (prom)    q = q.eq('promoter_name', prom);
+    if (comercio)q = q.eq('trade', comercio);
+    if (lineaId) q = q.eq('linea_id', lineaId);
+    if (tipoComercio !== 'Todos') q = q.eq('p_mayorista', tipoComercio === 'Detal' ? 'No' : 'Si');
+
+    const { data, error } = await q.order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const filas = [];
+    sinCompAsignada = new Set();
+
+    (data || []).forEach(row => {
+      const mi = parseJSON(row.myitems);
+      const ci = parseJSON(row.competitoritems);
+
+      // Índice de competitoritems por presentación (clave limpia)
+      const ciIdx = {};
+      ci.forEach(c => { if (c.presentation) ciIdx[c.presentation] = c; });
+
+      mi.forEach(m => {
+        if (!m.presentation) return;
+        if (filtroProd && m.presentation !== filtroProd) return;
+
+        const keyN = m.presentation; // en myitems ya viene "MAÍZ TOSTADO 100g"
+        const competidoresVinculados = mapCompDirecta[keyN];
+
+        if (!competidoresVinculados || competidoresVinculados.size === 0) {
+          sinCompAsignada.add(keyN);
+          return; // sin competencia directa → omitir de comparaciones
+        }
+
+        const nUSD = convertirAPrecioUSD(m.price, m.currency, row.created_at);
+        const nKg  = normalizarPesoEnKg(keyN);
+        const nPKg = nUSD && nKg ? nUSD / nKg : null;
+
+        // Solo cruzar con los competidores vinculados
+        competidoresVinculados.forEach(keyC => {
+          const cItem = ciIdx[keyC];
+          if (!cItem) return; // el competidor vinculado no fue capturado en esta visita
+
+          const cUSD = convertirAPrecioUSD(cItem.price, cItem.currency, row.created_at);
+          const cKg  = normalizarPesoEnKg(keyC);
+          const cPKg = cUSD && cKg ? cUSD / cKg : null;
+
+          if (nPKg && cPKg) {
+            filas.push({
+              fecha:              row.created_at,
+              state:              row.state,
+              zone:               row.zone,
+              trade:              row.trade,
+              p_mayorista:        row.p_mayorista,
+              nuestroProd:        keyN,
+              nPKg,
+              nPrecioOrig:        m.price,
+              nMoneda:            m.currency,
+              compProd:           keyC,
+              cPKg,
+              cPrecioOrig:        cItem.price,
+              cMoneda:            cItem.currency,
+              diferencia:         ((nPKg - cPKg) / nPKg) * 100
+            });
+          }
         });
       });
     });
-    analisisData=filas;renderAnalisis(filas);drawChart();
-  }catch(e){console.error(e);captaToast('Error: '+e.message,'error');}
-  finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-filter"></i> Aplicar filtros';}
+
+    analisisData = filas;
+    mostrarAvisoSinComp();
+    actualizarKPIs(filas);
+    renderAnalisis(filas);
+    drawChart();
+
+  } catch(e) {
+    console.error(e);
+    captaToast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-filter"></i> Aplicar filtros';
+  }
 }
 
-function renderAnalisis(filas){
-  const tbody=$('tbodyAnalisis');
-  $('analisisInfo').textContent=`${filas.length} comparaciones encontradas`;
-  if(!filas.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted)">Sin datos con los filtros actuales</td></tr>';return;}
-  const fmt=n=>n!=null?`$${n.toFixed(2)}`:'—';const fmtD=d=>{const s=d>0?'+':'';const c=d>0?'var(--red)':d<0?'var(--green)':'var(--muted)';return`<span style="color:${c};font-weight:700">${s}${d.toFixed(1)}%</span>`;};
-  const fmtDt=s=>new Date(s).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'});
-  tbody.innerHTML=filas.map(f=>`<tr>
-    <td>${fmtDt(f.fecha)}</td><td>${f.state||'—'}</td><td>${f.zone||'—'}</td><td>${f.trade||'—'}</td>
-    <td>${f.p_mayorista==='Si'?'<span class="sp-bdg sp-bdg-accent">Mayor</span>':'<span class="sp-bdg sp-bdg-def">Detal</span>'}</td>
-    <td class="sp-hi">${f.nuestraPresentacion}</td><td style="color:var(--accent);font-weight:600">${fmt(f.nuestroPrecioPorKg)}</td>
-    <td class="sp-hi">${f.competencia}</td><td>${fmt(f.compPrecioPorKg)}</td>
-    <td>${fmtD(f.diferenciaPorcentaje)}</td>
+function parseJSON(v) {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') { try { return JSON.parse(v); } catch { return []; } }
+  return [];
+}
+
+// ── Aviso productos sin competencia ──────────────────────────────
+function mostrarAvisoSinComp() {
+  const aviso = $('avisoSinComp');
+  if (!sinCompAsignada.size) { aviso.style.display = 'none'; return; }
+  aviso.style.display = 'block';
+  $('listaSinComp').innerHTML =
+    [...sinCompAsignada].sort().map(p =>
+      `<span class="badge-sin-comp"><i class="fas fa-link-slash"></i> ${p}</span>`
+    ).join(' ');
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────
+function actualizarKPIs(filas) {
+  const total     = filas.length;
+  const masBarato = filas.filter(f => f.diferencia < 0).length;
+  const masCaro   = filas.filter(f => f.diferencia > 0).length;
+  const difProm   = total > 0 ? filas.reduce((s,f) => s + f.diferencia, 0) / total : 0;
+  const pctBarat  = total > 0 ? Math.round((masBarato / total) * 100) : 0;
+  const pctCaro   = total > 0 ? Math.round((masCaro   / total) * 100) : 0;
+
+  $('kpiTotalComp').textContent  = total;
+  $('kpiMasBaratos').textContent = `${masBarato} (${pctBarat}%)`;
+  $('kpiMasCaros').textContent   = `${masCaro} (${pctCaro}%)`;
+  $('kpiDifPromedio').textContent= (difProm > 0 ? '+' : '') + difProm.toFixed(1) + '%';
+  $('barMasBaratos').style.width = `${pctBarat}%`;
+  $('barMasCaros').style.width   = `${pctCaro}%`;
+  $('kpiDifPromedio').style.color= difProm > 0 ? 'var(--red)' : difProm < 0 ? 'var(--green)' : 'var(--muted)';
+}
+
+// ── Tabla ─────────────────────────────────────────────────────────
+function renderAnalisis(filas) {
+  $('analisisInfo').textContent = `${filas.length} comparaciones`;
+  const tbody = $('tbodyAnalisis');
+
+  if (!filas.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">
+      Sin datos con los filtros actuales${sinCompAsignada.size ? ' — revisa los vínculos de competencia directa' : ''}
+    </td></tr>`;
+    return;
+  }
+
+  const fmt   = n => n != null ? `$${n.toFixed(2)}` : '—';
+  const fmtDt = s => new Date(s).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' });
+  const fmtD  = d => {
+    const s = d > 0 ? '+' : '';
+    const c = d > 0 ? 'var(--red)' : d < 0 ? 'var(--green)' : 'var(--muted)';
+    const ico = d > 0 ? 'fa-arrow-trend-up' : d < 0 ? 'fa-arrow-trend-down' : 'fa-minus';
+    return `<span style="color:${c};font-weight:700"><i class="fas ${ico}" style="font-size:.75rem"></i> ${s}${d.toFixed(1)}%</span>`;
+  };
+
+  tbody.innerHTML = filas.map(f => `<tr>
+    <td class="sp-hi">${fmtDt(f.fecha)}</td>
+    <td>${f.trade || '—'}</td>
+    <td style="font-size:.78rem;color:var(--muted)">${f.state || '—'}${f.zone ? ' / ' + f.zone : ''}</td>
+    <td>${f.p_mayorista === 'Si'
+      ? '<span class="sp-bdg sp-bdg-accent">Mayor</span>'
+      : '<span class="sp-bdg sp-bdg-def">Detal</span>'}</td>
+    <td style="font-weight:600;color:var(--accent)">${f.nuestroProd}</td>
+    <td style="text-align:center;font-weight:700">${fmt(f.nPKg)}</td>
+    <td style="color:var(--txt2)">${f.compProd}</td>
+    <td style="text-align:center">${fmt(f.cPKg)}</td>
+    <td style="text-align:center">${fmtD(f.diferencia)}</td>
   </tr>`).join('');
 }
 
-function drawChart(){
-  const type=$('chartType').value;const dark=document.documentElement.classList.contains('dark');
-  const agrupado={};analisisData.forEach(f=>{const k=f.nuestraPresentacion;if(!agrupado[k])agrupado[k]={n:[],c:[]};agrupado[k].n.push(f.nuestroPrecioPorKg);agrupado[k].c.push(f.compPrecioPorKg);});
-  const labels=Object.keys(agrupado);
-  const avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
-  const datasets=[{label:'Nuestro precio',data:labels.map(k=>avg(agrupado[k].n)),backgroundColor:'rgba(79,70,229,.8)',borderColor:'#4f46e5',borderWidth:2},{label:'Competencia',data:labels.map(k=>avg(agrupado[k].c)),backgroundColor:'rgba(244,63,94,.7)',borderColor:'#f43f5e',borderWidth:2}];
-  const tc=dark?'#94a3b8':'#4b5563';const gc=dark?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';
-  const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:tc,font:{size:11}}}},scales:{x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:10},callback:v=>`$${v.toFixed(2)}`},grid:{color:gc}}}};
-  if(chartInst)chartInst.destroy();
-  chartInst=new Chart($('chartComparativa').getContext('2d'),{type,data:{labels,datasets},options:opts});
+// ── Gráfico ───────────────────────────────────────────────────────
+function drawChart() {
+  const type = $('chartType').value;
+  const dark  = document.documentElement.classList.contains('dark');
+  const tc    = dark ? '#94a3b8' : '#4b5563';
+  const gc    = dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
+
+  // Agrupar por "NuestroProd → CompProd" — label = "nuestro vs comp"
+  const pares = {};
+  analisisData.forEach(f => {
+    const k = `${f.nuestroProd}`;
+    if (!pares[k]) pares[k] = { n: [], c: [], compNombre: f.compProd };
+    pares[k].n.push(f.nPKg);
+    pares[k].c.push(f.cPKg);
+  });
+
+  const labels = Object.keys(pares);
+  const avg    = arr => arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : 0;
+
+  const datasets = [
+    {
+      label: 'Nuestro precio (USD/kg)',
+      data: labels.map(k => +avg(pares[k].n).toFixed(3)),
+      backgroundColor: 'rgba(79,70,229,.8)',
+      borderColor: '#4f46e5', borderWidth: 2, borderRadius: 4
+    },
+    {
+      label: 'Competidor directo (USD/kg)',
+      data: labels.map(k => +avg(pares[k].c).toFixed(3)),
+      backgroundColor: 'rgba(244,63,94,.7)',
+      borderColor: '#f43f5e', borderWidth: 2, borderRadius: 4
+    }
+  ];
+
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart($('chartComparativa').getContext('2d'), {
+    type,
+    data: { labels: labels.map(l => l.length > 22 ? l.slice(0,20)+'…' : l), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: tc, font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: tc, font: { size: 10 } }, grid: { color: gc } },
+        y: { ticks: { color: tc, font: { size: 10 }, callback: v => `$${v.toFixed(2)}` }, grid: { color: gc } }
+      }
+    }
+  });
 }
 
-function limpiarFiltros(){
-  ['fDesde','fHasta','fComercioSearch'].forEach(id=>{const el=$(id);if(el)el.value='';});
-  ['fEstado','fZona','fPromotor','fNuestraPres','fTipoComercio'].forEach(id=>{const el=$(id);if(el)el.value=el.options[0]?.value||'';});
-  selectedCompPres.clear();selectedComercio='';renderSelectedCompPres();
+// ── Limpiar ───────────────────────────────────────────────────────
+function limpiarFiltros() {
+  ['fDesde','fHasta','fComercioSearch'].forEach(id => { const el=$(id); if(el) el.value=''; });
+  ['fEstado','fZona','fPromotor','fNuestroProducto','fTipoComercio'].forEach(id => {
+    const el=$(id); if(el) el.value = el.options[0]?.value || '';
+  });
+  $('fComercioSelected').value = '';
+  $('avisoSinComp').style.display = 'none';
 }
 
-function setDefaultDates(){const t=new Date(),s=new Date(t);s.setDate(t.getDate()-30);$('fDesde').value=s.toISOString().split('T')[0];$('fHasta').value=t.toISOString().split('T')[0];}
+function setDefaultDates() {
+  const t = new Date(), s = new Date(t);
+  s.setDate(t.getDate() - 30);
+  $('fDesde').value = s.toISOString().split('T')[0];
+  $('fHasta').value = t.toISOString().split('T')[0];
+}
 
-document.addEventListener('DOMContentLoaded',()=>{setDefaultDates();loadCatalogs();});
+window.onLineaChanged = () => fetchDataAnalisis();
+window.addEventListener('capta:db-ready', () => { setDefaultDates(); loadCatalogs(); });
 </script>
 </body>
 </html>

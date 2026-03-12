@@ -151,7 +151,7 @@ function resetForm() {
 }
 
 window.editProduct=editProduct; window.deleteProduct=deleteProduct; window.resetForm=resetForm;
-document.addEventListener('DOMContentLoaded', () => loadProducts());
+window.addEventListener('capta:db-ready', () => loadProducts());
 </script>
 </body>
 </html>

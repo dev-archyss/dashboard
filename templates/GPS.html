@@ -290,7 +290,7 @@ async function init() {
 // Reaccionar al cambio de línea desde el navbar
 window.onLineaChanged = () => filterRecords();
 
-document.addEventListener('DOMContentLoaded', init);
+window.addEventListener('capta:db-ready', init);
 </script>
 </body>
 </html>

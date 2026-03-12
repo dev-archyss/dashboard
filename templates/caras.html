@@ -230,10 +230,7 @@
 <script>
 tailwind.config = { darkMode: 'class' };
 
-const supabaseClient = supabase.createClient(
-  'https://djjylikkocemrlsjxscr.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M'
-);
+const supabaseClient = window.db;
 const empresaId = localStorage.getItem('empresa_id');
 if (!empresaId) window.location.href = '/';
 
@@ -504,7 +501,7 @@ function setDates() {
 // Reaccionar al cambio de línea desde el navbar
 window.onLineaChanged = () => loadData();
 
-document.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('capta:db-ready', async () => {
   setDates();
   await loadCatalogs();
   await loadData();

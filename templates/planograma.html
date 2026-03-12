@@ -71,7 +71,7 @@ document.getElementById('uploadForm').addEventListener('submit',async e=>{
   finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-upload"></i> Subir Planograma';}
 });
 
-document.addEventListener('DOMContentLoaded',()=>loadPlanograma());
+window.addEventListener('capta:db-ready',()=>loadPlanograma());
 </script>
 </body>
 </html>

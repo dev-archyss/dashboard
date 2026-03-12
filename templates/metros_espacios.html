@@ -2,406 +2,505 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Metros y Espacios — CAPTA</title>
+<title>Control de Stock — CAPTA</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-.metro-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff}
-.comercio-dropdown{position:absolute;z-index:200;width:100%;background:var(--card);border:1px solid var(--brd);border-radius:var(--r2);max-height:220px;overflow-y:auto;box-shadow:var(--sh3)}
-.comercio-item{padding:9px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--brd)}
-.comercio-item:hover{background:var(--hov)}
-.tag-real{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:99px;font-size:.68rem;font-weight:700;background:#d1fae5;color:#065f46}
-.tag-est {display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:99px;font-size:.68rem;font-weight:700;background:#fef3c7;color:#92400e}
+/* ── Badges stock ─────────────────────────────────────────────── */
+.st-ok   { display:inline-flex;align-items:center;justify-content:center;min-width:36px;
+           padding:2px 8px;border-radius:99px;font-size:.78rem;font-weight:800;
+           background:#d1fae5;color:#065f46; }
+.st-warn { display:inline-flex;align-items:center;justify-content:center;min-width:36px;
+           padding:2px 8px;border-radius:99px;font-size:.78rem;font-weight:800;
+           background:#fef3c7;color:#92400e; }
+.st-crit { display:inline-flex;align-items:center;justify-content:center;min-width:36px;
+           padding:2px 8px;border-radius:99px;font-size:.78rem;font-weight:800;
+           background:#fee2e2;color:#991b1b; }
+.st-none { display:inline-flex;align-items:center;justify-content:center;min-width:36px;
+           padding:2px 8px;border-radius:99px;font-size:.78rem;font-weight:700;
+           background:var(--inp);color:var(--muted); }
+/* fila con alerta */
+.row-alert-shelf  { background:rgba(245,158,11,.06); }
+.row-alert-bodega { background:rgba(99,102,241,.06); }
+.row-alert-ambos  { background:rgba(239,68,68,.07); }
+/* Dropdown comercio */
+.com-dd { position:absolute;z-index:200;width:100%;background:var(--card);
+          border:1px solid var(--brd);border-radius:var(--r2);
+          max-height:200px;overflow-y:auto;box-shadow:var(--sh3); }
+.com-dd-item { padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--brd); }
+.com-dd-item:hover { background:var(--hov); }
+/* Modal */
+#stockModal { display:none;position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:1rem; }
+#stockModal.open { display:flex; }
+.modal-box { background:var(--card);border:1px solid var(--brd);border-radius:var(--r3);
+  max-width:900px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--sh3);position:relative; }
+/* Card producto en modal */
+.prod-card { background:var(--bg);border:1px solid var(--brd);border-radius:var(--r2);padding:14px; }
+.stock-num { font-size:1.9rem;font-weight:900;line-height:1; }
+/* Leyenda umbrales */
+.umbral-item { display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--muted); }
 </style>
 </head>
 <body>
 {% include 'navbar.html' %}
 
 <main class="sp-page">
+
+  <!-- ── Encabezado ─────────────────────────────────────────────── -->
   <div class="sp-page-hdr">
     <div>
       <h1 class="sp-page-title">
-        <i class="fas fa-ruler-combined" style="color:var(--accent);margin-right:8px"></i>Metros y Espacios
+        <i class="fas fa-boxes-stacked" style="color:var(--amber);margin-right:8px"></i>
+        Control de Stock
       </h1>
-      <p class="sp-page-sub">Análisis de metros lineales de anaquel abordados por visita y establecimiento.</p>
+      <p class="sp-page-sub">Monitoreo de inventario en anaquel y bodega por visita.</p>
+    </div>
+    <!-- Leyenda de umbrales -->
+    <div class="sp-card" style="padding:10px 16px;display:flex;flex-direction:column;gap:5px">
+      <div style="font-size:.7rem;font-weight:700;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em">Umbrales de alerta</div>
+      <div class="umbral-item"><span class="st-crit">≤3</span> Anaquel crítico</div>
+      <div class="umbral-item"><span class="st-warn">≤5</span> Bodega baja</div>
+      <div class="umbral-item"><span class="st-ok">OK</span> Niveles normales</div>
     </div>
   </div>
 
-  <!-- Filtros -->
-  <div class="sp-card" style="margin-bottom:20px">
-    <p class="sp-sec-title">Filtros</p>
-    <div class="sp-grid sp-g3 sp-gap4" style="margin-bottom:12px">
-      <div><label class="sp-label">Desde</label><input type="date" id="dateFrom" class="sp-input"></div>
-      <div><label class="sp-label">Hasta</label><input type="date" id="dateTo" class="sp-input"></div>
-      <div>
-        <label class="sp-label">Promotor</label>
-        <select id="promoter" class="sp-select"><option value="all">Todos</option></select>
-      </div>
-      <div>
-        <label class="sp-label">Estado</label>
-        <select id="state" class="sp-select"><option value="all">Todos</option></select>
-      </div>
-      <div>
-        <label class="sp-label">Zona</label>
-        <select id="zone" class="sp-select" disabled><option value="all">Todas</option></select>
-      </div>
-      <div style="position:relative" id="comercioWrapper">
-        <label class="sp-label">Establecimiento</label>
-        <input type="text" id="comercioSearch" class="sp-input"
-               placeholder="Filtrar por comercio…"
-               oninput="buscarComercio(this.value)" autocomplete="off">
-        <input type="hidden" id="comercioSelected">
-        <div id="comercioDropdown" class="comercio-dropdown" style="display:none"></div>
-      </div>
-    </div>
-    <button onclick="loadData()" class="sp-btn sp-btn-primary">
-      <i class="fas fa-filter"></i> Aplicar
-    </button>
-    <button onclick="clearComercio()" id="btnClearComercio"
-            class="sp-btn sp-btn-sec sp-btn-sm" style="display:none;margin-left:8px">
-      <i class="fas fa-times"></i> Quitar filtro comercio
-    </button>
-  </div>
-
-  <!-- KPIs -->
+  <!-- ── KPIs ───────────────────────────────────────────────────── -->
   <div class="sp-grid sp-g4 sp-gap4" style="margin-bottom:20px">
-    <div class="sp-card sp-kpi indigo">
+
+    <div class="sp-card sp-kpi amber">
       <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-ruler-horizontal"></i></div>
+        <div class="sp-kpi-icon"><i class="fas fa-shelves"></i></div>
         <div style="text-align:right">
-          <div class="sp-kpi-val" id="totalMetros">—</div>
-          <div class="sp-kpi-lbl">Metros totales</div>
+          <div class="sp-kpi-val" id="kpiAnaquelCrit">—</div>
+          <div class="sp-kpi-lbl">Anaquel crítico (≤3)</div>
         </div>
       </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="metrosFill" style="width:0%;background:var(--accent)"></div></div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="bAnaq" style="width:0%;background:var(--amber)"></div></div>
     </div>
-    <div class="sp-card sp-kpi teal">
+
+    <div class="sp-card sp-kpi red">
       <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-store"></i></div>
+        <div class="sp-kpi-icon" style="background:rgba(239,68,68,.12);color:var(--red)"><i class="fas fa-warehouse"></i></div>
         <div style="text-align:right">
-          <div class="sp-kpi-val" id="totalEstablecimientos">—</div>
-          <div class="sp-kpi-lbl">Establecimientos</div>
+          <div class="sp-kpi-val" id="kpiBodegaBaja" style="color:var(--red)">—</div>
+          <div class="sp-kpi-lbl">Bodega baja (≤5)</div>
         </div>
       </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:70%;background:var(--teal)"></div></div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="bBodega" style="width:0%;background:var(--red)"></div></div>
     </div>
-    <div class="sp-card sp-kpi green">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-chart-bar"></i></div>
-        <div style="text-align:right">
-          <div class="sp-kpi-val" id="promMetrosPorVisita">—</div>
-          <div class="sp-kpi-lbl">Metros / visita</div>
-        </div>
-      </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:55%;background:var(--green)"></div></div>
-    </div>
+
     <div class="sp-card sp-kpi purple">
       <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-database"></i></div>
+        <div class="sp-kpi-icon"><i class="fas fa-chart-simple"></i></div>
         <div style="text-align:right">
-          <div class="sp-kpi-val" id="totalVisitas">—</div>
-          <div class="sp-kpi-lbl">Visitas con dato real</div>
+          <div class="sp-kpi-val" id="kpiPromAnaq">—</div>
+          <div class="sp-kpi-lbl">Promedio anaquel</div>
         </div>
       </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="pctRealBar" style="width:0%;background:var(--purple)"></div></div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="bProm" style="width:0%;background:var(--purple)"></div></div>
+    </div>
+
+    <div class="sp-card sp-kpi indigo">
+      <div class="sp-kpi-top">
+        <div class="sp-kpi-icon"><i class="fas fa-cubes"></i></div>
+        <div style="text-align:right">
+          <div class="sp-kpi-val" id="kpiTotal">—</div>
+          <div class="sp-kpi-lbl">Registros de stock</div>
+        </div>
+      </div>
+      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:70%;background:var(--accent)"></div></div>
+    </div>
+
+  </div>
+
+  <!-- ── Filtros ────────────────────────────────────────────────── -->
+  <div class="sp-card" style="margin-bottom:20px">
+    <p class="sp-sec-title">Filtros</p>
+    <div class="sp-grid sp-g3 sp-gap4" style="margin-bottom:14px">
+
+      <!-- Promotor -->
+      <div>
+        <label class="sp-label">Promotor</label>
+        <select id="fPromotor" class="sp-select"><option value="">Todos</option></select>
+      </div>
+
+      <!-- Comercio con buscador -->
+      <div style="position:relative" id="comercioWrap">
+        <label class="sp-label">Comercio</label>
+        <input type="text" id="fComercio" class="sp-input" placeholder="Buscar comercio…"
+          oninput="buscarComercio(this.value)" autocomplete="off">
+        <input type="hidden" id="fComercioVal">
+        <div id="comercioDD" class="com-dd" style="display:none"></div>
+      </div>
+
+      <!-- Producto -->
+      <div>
+        <label class="sp-label">Producto</label>
+        <select id="fProducto" class="sp-select"><option value="">Todos</option></select>
+      </div>
+
+      <!-- Alertas -->
+      <div>
+        <label class="sp-label">Mostrar</label>
+        <select id="fAlerta" class="sp-select">
+          <option value="todos">Todos</option>
+          <option value="anaquel" selected>Anaquel crítico (≤3)</option>
+          <option value="bodega">Bodega baja (≤5)</option>
+          <option value="ambos">Ambas alertas</option>
+          <option value="cualquiera">Cualquier alerta</option>
+        </select>
+      </div>
+
+      <!-- Desde / Hasta -->
+      <div>
+        <label class="sp-label">Desde</label>
+        <input type="date" id="fDesde" class="sp-input">
+      </div>
+      <div>
+        <label class="sp-label">Hasta</label>
+        <input type="date" id="fHasta" class="sp-input">
+      </div>
+
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="aplicarFiltros()" class="sp-btn sp-btn-primary">
+        <i class="fas fa-filter"></i> Aplicar filtros
+      </button>
+      <button onclick="limpiarFiltros()" class="sp-btn sp-btn-sec">
+        <i class="fas fa-undo"></i> Limpiar
+      </button>
     </div>
   </div>
 
-  <!-- Charts -->
-  <div class="sp-grid sp-gap4" style="grid-template-columns:1fr 1fr;margin-bottom:20px;align-items:start">
-    <div class="sp-card">
-      <p class="sp-sec-title">Metros por Producto <span style="font-size:.7rem;font-weight:400;color:var(--muted)">(estimado por caras)</span></p>
-      <div style="position:relative;height:300px"><canvas id="chartProductos"></canvas></div>
-    </div>
-    <div class="sp-card">
-      <p class="sp-sec-title">Metros por Establecimiento — Top 10</p>
-      <div style="position:relative;height:300px"><canvas id="chartEstablecimientos"></canvas></div>
-    </div>
-  </div>
-
-  <!-- Tabla detalle -->
+  <!-- ── Tabla ──────────────────────────────────────────────────── -->
   <div class="sp-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <p class="sp-sec-title" style="margin-bottom:0">Detalle por Visita</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <p class="sp-sec-title" style="margin-bottom:0">Detalle de inventario</p>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <span class="tag-real"><i class="fas fa-check"></i> Real = shelf_meters</span>
-        <span class="tag-est"><i class="fas fa-calculator"></i> Est. = caras × 0.4 m</span>
-        <span id="registrosInfo" class="sp-bdg sp-bdg-accent" style="font-size:.75rem">—</span>
+        <span id="infoRegistros" class="sp-bdg sp-bdg-accent" style="font-size:.75rem">—</span>
       </div>
     </div>
-    <div style="overflow-x:auto;max-height:55vh">
+    <div style="overflow-x:auto;max-height:62vh">
       <table class="sp-tbl">
         <thead><tr>
           <th>Fecha</th>
           <th>Promotor</th>
-          <th>Establecimiento</th>
-          <th>Estado</th>
-          <th style="text-align:center">Metros lineales</th>
-          <th style="text-align:center">Fuente</th>
-          <th style="text-align:center">Caras antes</th>
-          <th style="text-align:center">Caras después</th>
-          <th style="text-align:center">Productos</th>
+          <th>Comercio</th>
+          <th>Producto</th>
+          <th style="text-align:center">
+            <i class="fas fa-shelves" style="margin-right:4px"></i>Anaquel
+            <div style="font-size:.65rem;font-weight:400;color:var(--muted)">Alerta ≤ 3</div>
+          </th>
+          <th style="text-align:center">
+            <i class="fas fa-warehouse" style="margin-right:4px"></i>Bodega
+            <div style="font-size:.65rem;font-weight:400;color:var(--muted)">Alerta ≤ 5</div>
+          </th>
+          <th style="text-align:center">Estado</th>
+          <th style="text-align:center">Detalle</th>
         </tr></thead>
-        <tbody id="metrosTableBody">
-          <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">Aplica filtros para ver datos</td></tr>
+        <tbody id="stockBody">
+          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">
+            <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;margin-bottom:8px;display:block"></i>
+            Cargando…
+          </td></tr>
         </tbody>
       </table>
     </div>
   </div>
+
 </main>
 
+<!-- ── Modal detalle visita ──────────────────────────────────────── -->
+<div id="stockModal">
+  <div class="modal-box p-6">
+    <button onclick="cerrarModal()" class="sp-modal-close">
+      <i class="fas fa-times"></i>
+    </button>
+    <div id="modalHeader" style="margin-bottom:18px"></div>
+    <div id="modalProductos"></div>
+  </div>
+</div>
+
 <script>
-// ── Supabase ───────────────────────────────────────────────────────
-const supabaseClient = supabase.createClient(
-  'https://djjylikkocemrlsjxscr.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M'
-);
+const supabaseClient = window.db;
 const empresaId = localStorage.getItem('empresa_id');
 if (!empresaId) window.location.href = '/';
 
-let chartProd = null, chartEst = null;
-let allZonas = [], comercioSeleccionado = '', comercioTimer = null;
+const $ = id => document.getElementById(id);
 
-// ── Helper: dato real vs estimación ───────────────────────────────
-function getMetrosInfo(r) {
-  if (r.shelf_meters !== null && r.shelf_meters !== undefined && r.shelf_meters !== '') {
-    return { valor: parseFloat(r.shelf_meters) || 0, esReal: true };
-  }
-  // Fallback: cada cara de frente ≈ 0.4 m lineales
-  return { valor: (r.our_faces_after || 0) * 0.4, esReal: false };
+// Umbrales
+const UMBRAL_ANAQUEL = 3;
+const UMBRAL_BODEGA  = 5;
+
+let allData = [];         // visitas crudas
+let filasFlatRaw = [];    // filas aplanadas (visita × item)
+let comercioTimer = null;
+
+// ── Helpers badge ─────────────────────────────────────────────────
+function badgeAnaq(n) {
+  if (n == null || isNaN(n)) return '<span class="st-none">—</span>';
+  if (n <= UMBRAL_ANAQUEL)   return `<span class="st-crit">${n}</span>`;
+  if (n <= 8)                return `<span class="st-warn">${n}</span>`;
+  return `<span class="st-ok">${n}</span>`;
 }
-
-// ── Catálogos ──────────────────────────────────────────────────────
-async function loadCatalogs() {
-  const { data: promos } = await supabaseClient
-    .from('web_promotores').select('promoter_name')
-    .eq('empresa_id', empresaId).order('promoter_name');
-
-  const pSel = document.getElementById('promoter');
-  (promos || []).forEach(p => {
-    const o = document.createElement('option');
-    o.value = p.promoter_name; o.textContent = p.promoter_name;
-    pSel.appendChild(o);
-  });
-
-  const { data: estados } = await supabaseClient.from('web_estados').select('id,nombre').order('nombre');
-  const { data: zonas }   = await supabaseClient.from('web_zonas').select('id,nombre,estado_id').order('nombre');
-  allZonas = zonas || [];
-
-  const sSel = document.getElementById('state');
-  (estados || []).forEach(e => {
-    const o = document.createElement('option');
-    o.value = e.nombre; o.textContent = e.nombre;
-    sSel.appendChild(o);
-  });
-
-  sSel.addEventListener('change', () => {
-    const zSel = document.getElementById('zone');
-    const snm  = sSel.value;
-    zSel.innerHTML = '<option value="all">Todas</option>';
-    zSel.disabled  = snm === 'all';
-    if (snm !== 'all') {
-      const est = (estados || []).find(e => e.nombre === snm);
-      allZonas
-        .filter(z => est && String(z.estado_id) === String(est.id))
-        .forEach(z => {
-          const o = document.createElement('option');
-          o.value = z.nombre; o.textContent = z.nombre;
-          zSel.appendChild(o);
-        });
-    }
-  });
+function badgeBodega(n) {
+  if (n == null || isNaN(n)) return '<span class="st-none">—</span>';
+  if (n <= UMBRAL_BODEGA)    return `<span class="st-crit">${n}</span>`;
+  if (n <= 12)               return `<span class="st-warn">${n}</span>`;
+  return `<span class="st-ok">${n}</span>`;
 }
+function estadoBadge(alertaAnaq, alertaBodega) {
+  if (alertaAnaq && alertaBodega)
+    return '<span class="sp-bdg" style="background:#fee2e2;color:#991b1b">⚠ Ambas alertas</span>';
+  if (alertaAnaq)
+    return '<span class="sp-bdg" style="background:#fef3c7;color:#92400e">Anaquel bajo</span>';
+  if (alertaBodega)
+    return '<span class="sp-bdg" style="background:#ede9fe;color:#6d28d9">Bodega baja</span>';
+  return '<span class="sp-bdg sp-bdg-def">Normal</span>';
+}
+function rowClass(alertaAnaq, alertaBodega) {
+  if (alertaAnaq && alertaBodega) return 'row-alert-ambos';
+  if (alertaAnaq)  return 'row-alert-shelf';
+  if (alertaBodega) return 'row-alert-bodega';
+  return '';
+}
+const fmt = s => new Date(s).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' });
 
-// ── Cargar datos ───────────────────────────────────────────────────
+// ── Cargar datos ──────────────────────────────────────────────────
 async function loadData() {
-  const df      = document.getElementById('dateFrom').value;
-  const dt      = document.getElementById('dateTo').value;
-  const prom    = document.getElementById('promoter').value;
-  const st      = document.getElementById('state').value;
-  const zone    = document.getElementById('zone').value;
   const lineaId = localStorage.getItem('sp-linea') || '';
+  let q = supabaseClient
+    .from('web_precios')
+    .select('id,created_at,trade,state,zone,myitems,web_promotores!inner(promoter_name)')
+    .eq('empresa_id', empresaId)
+    .not('myitems', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(400);
 
-  let q = supabaseClient.from('web_precios')
-    .select('id,created_at,promoter_name,state,zone,trade,our_faces_before_counted,total_faces_before,our_faces_after,total_faces,myitems,shelf_meters')
-    .eq('empresa_id', empresaId);
+  if (lineaId) q = q.eq('linea_id', lineaId);
 
-  if (df)       q = q.gte('created_at', `${df}T00:00:00`);
-  if (dt)       q = q.lte('created_at', `${dt}T23:59:59`);
-  if (prom !== 'all') q = q.eq('promoter_name', prom);
-  if (st   !== 'all') q = q.eq('state', st);
-  if (zone !== 'all') q = q.eq('zone', zone);
-  if (lineaId)  q = q.eq('linea_id', lineaId);
-  if (comercioSeleccionado) q = q.eq('trade', comercioSeleccionado);
+  const { data, error } = await q;
+  if (error) { console.error(error); return; }
 
-  const { data, error } = await q.order('created_at', { ascending: false });
-  if (error) { console.error('loadData:', error.message); return; }
-  processData(data || []);
-}
+  allData = (data || []).map(v => ({ ...v, myitems: v.myitems || [] }));
 
-// ── Procesar datos ─────────────────────────────────────────────────
-function processData(records) {
-  let totalM = 0, visitasReales = 0;
-  const porProducto       = {};
-  const porEstablecimiento = {};
-
-  records.forEach(r => {
-    const { valor: m, esReal } = getMetrosInfo(r);
-    totalM += m;
-    if (esReal) visitasReales++;
-
-    const trade = r.trade || 'Sin nombre';
-    porEstablecimiento[trade] = (porEstablecimiento[trade] || 0) + m;
-
-    // Metros por producto siempre estimado desde caras (más granular)
-    (r.myitems || []).forEach(item => {
-      if (!item.presentation) return;
-      porProducto[item.presentation] = (porProducto[item.presentation] || 0) + ((item.faces_after || 0) * 0.4);
+  // Aplanar visitas × items
+  filasFlatRaw = [];
+  allData.forEach(v => {
+    v.myitems.forEach(item => {
+      const sa = item.stock_shelf     != null ? parseInt(item.stock_shelf)     : null;
+      const sb = item.stock_warehouse != null ? parseInt(item.stock_warehouse) : null;
+      filasFlatRaw.push({
+        visitaId:   v.id,
+        fecha:      v.created_at,
+        promotor:   v.web_promotores?.promoter_name || '—',
+        comercio:   v.trade || '—',
+        producto:   item.presentation || '—',
+        anaquel:    isNaN(sa) ? null : sa,
+        bodega:     isNaN(sb) ? null : sb,
+        alertaAnaq: sa != null && !isNaN(sa) && sa <= UMBRAL_ANAQUEL,
+        alertaBodega: sb != null && !isNaN(sb) && sb <= UMBRAL_BODEGA,
+        rawVisita:  v
+      });
     });
   });
 
-  const establecimientos = Object.keys(porEstablecimiento).length;
-  const pctReal = records.length > 0 ? Math.round((visitasReales / records.length) * 100) : 0;
-
-  document.getElementById('totalMetros').textContent        = totalM.toFixed(1) + ' m';
-  document.getElementById('totalEstablecimientos').textContent = establecimientos;
-  document.getElementById('promMetrosPorVisita').textContent =
-    records.length ? (totalM / records.length).toFixed(1) + ' m' : '—';
-  document.getElementById('totalVisitas').textContent       = `${visitasReales} / ${records.length}`;
-  document.getElementById('pctRealBar').style.width         = `${pctReal}%`;
-  document.getElementById('registrosInfo').textContent      = `${records.length} visitas · ${pctReal}% dato real`;
-
-  renderCharts(porProducto, porEstablecimiento);
-  renderTable(records);
+  poblarSelectores();
+  actualizarKPIs();
+  aplicarFiltros();
 }
 
-// ── Gráficos ───────────────────────────────────────────────────────
-function renderCharts(porProducto, porEstablecimiento) {
-  const dark = document.documentElement.classList.contains('dark');
-  const tc   = dark ? '#94a3b8' : '#4b5563';
-  const gc   = dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
-  const palette = ['#4f46e5','#10b981','#f59e0b','#f43f5e','#8b5cf6',
-                   '#14b8a6','#3b82f6','#ec4899','#6366f1','#84cc16','#22d3ee','#fb923c'];
+// ── Selectores dinámicos ──────────────────────────────────────────
+function poblarSelectores() {
+  const promotores = [...new Set(filasFlatRaw.map(r => r.promotor))].sort();
+  const productos  = [...new Set(filasFlatRaw.map(r => r.producto))].sort();
 
-  const sortProd = Object.entries(porProducto).sort((a,b) => b[1]-a[1]).slice(0,12);
-  const sortEst  = Object.entries(porEstablecimiento).sort((a,b) => b[1]-a[1]).slice(0,10);
+  $('fPromotor').innerHTML = '<option value="">Todos</option>' +
+    promotores.map(p => `<option value="${p}">${p}</option>`).join('');
 
-  const yLabelCb = v => v;
-  const xMetrosCb = v => `${v.toFixed(1)}m`;
-  const baseOpts = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { ticks: { color: tc, font: { size: 10 }, callback: xMetrosCb }, grid: { color: gc } },
-      y: { ticks: { color: tc, font: { size: 10 }, callback: yLabelCb }, grid: { color: gc } }
-    }
-  };
-
-  if (chartProd) chartProd.destroy();
-  if (chartEst)  chartEst.destroy();
-
-  chartProd = new Chart(document.getElementById('chartProductos').getContext('2d'), {
-    type: 'bar', indexAxis: 'y',
-    data: {
-      labels: sortProd.map(([k]) => k.length > 18 ? k.slice(0,16)+'…' : k),
-      datasets: [{ data: sortProd.map(([,v]) => +v.toFixed(2)), backgroundColor: sortProd.map((_,i) => palette[i%palette.length]+'cc'), borderRadius: 4 }]
-    },
-    options: { ...baseOpts, indexAxis: 'y' }
-  });
-
-  chartEst = new Chart(document.getElementById('chartEstablecimientos').getContext('2d'), {
-    type: 'bar', indexAxis: 'y',
-    data: {
-      labels: sortEst.map(([k]) => k.length > 15 ? k.slice(0,13)+'…' : k),
-      datasets: [{ data: sortEst.map(([,v]) => +v.toFixed(2)), backgroundColor: palette.map(c => c+'cc').slice(0,10), borderRadius: 4 }]
-    },
-    options: { ...baseOpts, indexAxis: 'y' }
-  });
+  $('fProducto').innerHTML = '<option value="">Todos</option>' +
+    productos.map(p => `<option value="${p}">${p}</option>`).join('');
 }
 
-// ── Tabla ──────────────────────────────────────────────────────────
-function renderTable(records) {
-  const tbody = document.getElementById('metrosTableBody');
-  if (!records.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:36px">Sin datos para los filtros aplicados</td></tr>';
-    return;
-  }
-  const fmt = s => new Date(s).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' });
-
-  tbody.innerHTML = records.map(r => {
-    const { valor: m, esReal } = getMetrosInfo(r);
-    const mBadge = m > 0
-      ? `<span class="metro-badge"><i class="fas fa-ruler-horizontal"></i> ${m.toFixed(1)} m</span>`
-      : '<span style="color:var(--muted)">—</span>';
-    const fuenteBadge = esReal
-      ? '<span class="tag-real"><i class="fas fa-check"></i> Real</span>'
-      : '<span class="tag-est"><i class="fas fa-calculator"></i> Est.</span>';
-
-    return `<tr>
-      <td class="sp-hi">${fmt(r.created_at)}</td>
-      <td style="color:var(--accent);font-weight:500">${r.promoter_name || '—'}</td>
-      <td>${r.trade || '—'}</td>
-      <td>${r.state || '—'}</td>
-      <td style="text-align:center">${mBadge}</td>
-      <td style="text-align:center">${fuenteBadge}</td>
-      <td style="text-align:center;color:var(--muted)">${r.our_faces_before_counted || 0}</td>
-      <td style="text-align:center;font-weight:600;color:var(--accent)">${r.our_faces_after || 0}</td>
-      <td style="text-align:center">${(r.myitems || []).length}</td>
-    </tr>`;
-  }).join('');
-}
-
-// ── Búsqueda comercio ──────────────────────────────────────────────
+// ── Búsqueda comercio ─────────────────────────────────────────────
 function buscarComercio(term) {
   clearTimeout(comercioTimer);
-  const dd = document.getElementById('comercioDropdown');
-  if (!term.trim()) { dd.style.display = 'none'; return; }
-  comercioTimer = setTimeout(async () => {
-    const { data } = await supabaseClient.from('web_precios')
-      .select('trade').eq('empresa_id', empresaId).ilike('trade', `%${term}%`).limit(20);
-    const trades = [...new Set((data || []).map(r => r.trade).filter(Boolean))].sort();
-    if (!trades.length) { dd.style.display = 'none'; return; }
-    dd.innerHTML = trades.map(t =>
-      `<div class="comercio-item" onmousedown="seleccionarComercio('${t.replace(/'/g,"\\'")}')">
-        <i class="fas fa-store" style="color:var(--accent);margin-right:6px;font-size:.75rem"></i>${t}
+  const dd = $('comercioDD');
+  if (!term.trim()) { dd.style.display = 'none'; $('fComercioVal').value = ''; return; }
+  comercioTimer = setTimeout(() => {
+    const matches = [...new Set(filasFlatRaw.map(r => r.comercio))]
+      .filter(c => c.toLowerCase().includes(term.toLowerCase())).sort().slice(0, 15);
+    if (!matches.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = matches.map(c =>
+      `<div class="com-dd-item" onmousedown="selecComercio('${c.replace(/'/g,"\\'")}')">
+        <i class="fas fa-store" style="color:var(--accent);margin-right:6px;font-size:.75rem"></i>${c}
       </div>`).join('');
     dd.style.display = 'block';
-  }, 300);
+  }, 200);
 }
-
-function seleccionarComercio(trade) {
-  comercioSeleccionado = trade;
-  document.getElementById('comercioSearch').value = trade;
-  document.getElementById('comercioDropdown').style.display = 'none';
-  document.getElementById('btnClearComercio').style.display = '';
+function selecComercio(val) {
+  $('fComercio').value    = val;
+  $('fComercioVal').value = val;
+  $('comercioDD').style.display = 'none';
 }
-
-function clearComercio() {
-  comercioSeleccionado = '';
-  document.getElementById('comercioSearch').value = '';
-  document.getElementById('btnClearComercio').style.display = 'none';
-}
-
 document.addEventListener('click', e => {
-  const w = document.getElementById('comercioWrapper');
-  if (w && !w.contains(e.target)) document.getElementById('comercioDropdown').style.display = 'none';
+  const w = $('comercioWrap');
+  if (w && !w.contains(e.target)) $('comercioDD').style.display = 'none';
 });
 
-// ── Init ───────────────────────────────────────────────────────────
-function setDates() {
-  const t = new Date(), s = new Date(t);
-  s.setDate(t.getDate() - 30);
-  document.getElementById('dateFrom').value = s.toISOString().split('T')[0];
-  document.getElementById('dateTo').value   = t.toISOString().split('T')[0];
+// ── Aplicar filtros ───────────────────────────────────────────────
+function aplicarFiltros() {
+  const promotor = $('fPromotor').value;
+  const comercio = $('fComercioVal').value;
+  const producto = $('fProducto').value;
+  const alerta   = $('fAlerta').value;
+  const desde    = $('fDesde').value;
+  const hasta    = $('fHasta').value;
+
+  let filas = filasFlatRaw;
+
+  if (promotor) filas = filas.filter(r => r.promotor === promotor);
+  if (comercio) filas = filas.filter(r => r.comercio === comercio);
+  if (producto) filas = filas.filter(r => r.producto === producto);
+  if (desde)    filas = filas.filter(r => new Date(r.fecha) >= new Date(desde + 'T00:00:00'));
+  if (hasta)    filas = filas.filter(r => new Date(r.fecha) <= new Date(hasta + 'T23:59:59'));
+
+  if (alerta === 'anaquel')    filas = filas.filter(r => r.alertaAnaq);
+  if (alerta === 'bodega')     filas = filas.filter(r => r.alertaBodega);
+  if (alerta === 'ambos')      filas = filas.filter(r => r.alertaAnaq && r.alertaBodega);
+  if (alerta === 'cualquiera') filas = filas.filter(r => r.alertaAnaq || r.alertaBodega);
+
+  renderTabla(filas);
+}
+
+// ── Render tabla ──────────────────────────────────────────────────
+function renderTabla(filas) {
+  $('infoRegistros').textContent = `${filas.length} registros`;
+
+  const tbody = $('stockBody');
+  if (!filas.length) {
+    tbody.innerHTML = `<tr><td colspan="8"
+      style="text-align:center;padding:40px;color:var(--muted)">
+      Sin datos con los filtros actuales
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filas.map(r => `
+    <tr class="${rowClass(r.alertaAnaq, r.alertaBodega)}">
+      <td class="sp-hi">${fmt(r.fecha)}</td>
+      <td style="color:var(--accent);font-weight:500">${r.promotor}</td>
+      <td>${r.comercio}</td>
+      <td style="font-weight:600">${r.producto}</td>
+      <td style="text-align:center">${badgeAnaq(r.anaquel)}</td>
+      <td style="text-align:center">${badgeBodega(r.bodega)}</td>
+      <td style="text-align:center">${estadoBadge(r.alertaAnaq, r.alertaBodega)}</td>
+      <td style="text-align:center">
+        <button onclick="abrirDetalle('${r.visitaId}')"
+          class="sp-btn sp-btn-sec sp-btn-sm" title="Ver visita completa">
+          <i class="fas fa-eye"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────
+function actualizarKPIs() {
+  let critAnaq = 0, critBodega = 0, totalReg = 0, sumAnaq = 0, cntAnaq = 0;
+  filasFlatRaw.forEach(r => {
+    totalReg++;
+    if (r.alertaAnaq)  critAnaq++;
+    if (r.alertaBodega) critBodega++;
+    if (r.anaquel != null) { sumAnaq += r.anaquel; cntAnaq++; }
+  });
+  const promAnaq = cntAnaq ? (sumAnaq / cntAnaq).toFixed(1) : '—';
+  const maxN = Math.max(totalReg, 1);
+
+  $('kpiAnaquelCrit').textContent = critAnaq;
+  $('kpiBodegaBaja').textContent  = critBodega;
+  $('kpiPromAnaq').textContent    = promAnaq;
+  $('kpiTotal').textContent       = totalReg;
+  $('bAnaq').style.width   = Math.min(100, (critAnaq  / maxN) * 100) + '%';
+  $('bBodega').style.width = Math.min(100, (critBodega / maxN) * 100) + '%';
+  $('bProm').style.width   = promAnaq !== '—' ? Math.min(100, (parseFloat(promAnaq) / 20) * 100) + '%' : '0%';
+}
+
+// ── Modal detalle visita ──────────────────────────────────────────
+function abrirDetalle(visitaId) {
+  const v = allData.find(d => d.id === visitaId);
+  if (!v) return;
+
+  $('modalHeader').innerHTML = `
+    <h2 style="font-weight:800;font-size:1.05rem;margin-bottom:12px">
+      <i class="fas fa-box-open" style="color:var(--accent);margin-right:6px"></i>
+      Detalle de stock — visita
+    </h2>
+    <div class="sp-grid sp-g3 sp-gap4">
+      ${[
+        ['Fecha',    fmt(v.created_at)],
+        ['Promotor', v.web_promotores?.promoter_name || '—'],
+        ['Comercio', v.trade || '—']
+      ].map(([l, val]) => `
+        <div style="background:var(--bg);border:1px solid var(--brd);border-radius:var(--r2);padding:10px">
+          <div style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${l}</div>
+          <div style="font-weight:600;font-size:.88rem">${val}</div>
+        </div>`).join('')}
+    </div>`;
+
+  $('modalProductos').innerHTML = `
+    <p class="sp-sec-title" style="margin:16px 0 10px">Stock por producto</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+      ${v.myitems.map(item => {
+        const sa = item.stock_shelf     != null ? parseInt(item.stock_shelf)     : null;
+        const sb = item.stock_warehouse != null ? parseInt(item.stock_warehouse) : null;
+        const critA = sa != null && sa <= UMBRAL_ANAQUEL;
+        const critB = sb != null && sb <= UMBRAL_BODEGA;
+        const colorA = sa == null ? 'var(--muted)' : critA ? 'var(--red)' : sa <= 8 ? 'var(--amber)' : 'var(--green)';
+        const colorB = sb == null ? 'var(--muted)' : critB ? 'var(--red)' : sb <= 12 ? 'var(--amber)' : 'var(--accent)';
+        return `
+        <div class="prod-card" style="${(critA || critB) ? 'border-color:rgba(239,68,68,.4)' : ''}">
+          <div style="font-weight:700;font-size:.82rem;margin-bottom:10px;color:var(--txt)">${item.presentation || '—'}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="text-align:center">
+              <div style="font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">
+                <i class="fas fa-shelves"></i> Anaquel
+              </div>
+              <div class="stock-num" style="color:${colorA}">${sa ?? '—'}</div>
+              ${critA ? `<div style="font-size:.65rem;color:var(--red);margin-top:3px">⚠ Crítico ≤${UMBRAL_ANAQUEL}</div>` : ''}
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">
+                <i class="fas fa-warehouse"></i> Bodega
+              </div>
+              <div class="stock-num" style="color:${colorB}">${sb ?? '—'}</div>
+              ${critB ? `<div style="font-size:.65rem;color:var(--red);margin-top:3px">⚠ Bajo ≤${UMBRAL_BODEGA}</div>` : ''}
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  $('stockModal').classList.add('open');
+}
+
+function cerrarModal() { $('stockModal').classList.remove('open'); }
+$('stockModal').addEventListener('click', e => { if (e.target === e.currentTarget) cerrarModal(); });
+
+// ── Limpiar filtros ───────────────────────────────────────────────
+function limpiarFiltros() {
+  $('fPromotor').value   = '';
+  $('fComercio').value   = '';
+  $('fComercioVal').value= '';
+  $('fProducto').value   = '';
+  $('fAlerta').value     = 'anaquel';
+  $('fDesde').value      = '';
+  $('fHasta').value      = '';
+  aplicarFiltros();
 }
 
 window.onLineaChanged = () => loadData();
-
-document.addEventListener('DOMContentLoaded', async () => {
-  setDates();
-  await loadCatalogs();
-  await loadData();
-});
+window.addEventListener('capta:db-ready', () => loadData());
 </script>
 </body>
 </html>
