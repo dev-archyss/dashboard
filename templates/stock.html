@@ -3,146 +3,114 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Control de Stock — CAPTA</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
-/* ── Badges stock ─────────────────────────────────────────────── */
-.st-ok   { display:inline-flex;align-items:center;justify-content:center;min-width:36px;
-           padding:2px 8px;border-radius:99px;font-size:.78rem;font-weight:800;
-           background:#d1fae5;color:#065f46; }
-.st-warn { display:inline-flex;align-items:center;justify-content:center;min-width:36px;
-           padding:2px 8px;border-radius:99px;font-size:.78rem;font-weight:800;
-           background:#fef3c7;color:#92400e; }
-.st-crit { display:inline-flex;align-items:center;justify-content:center;min-width:36px;
-           padding:2px 8px;border-radius:99px;font-size:.78rem;font-weight:800;
-           background:#fee2e2;color:#991b1b; }
-.st-none { display:inline-flex;align-items:center;justify-content:center;min-width:36px;
-           padding:2px 8px;border-radius:99px;font-size:.78rem;font-weight:700;
-           background:var(--inp);color:var(--muted); }
-/* fila con alerta */
-.row-alert-shelf  { background:rgba(245,158,11,.06); }
-.row-alert-bodega { background:rgba(99,102,241,.06); }
-.row-alert-ambos  { background:rgba(239,68,68,.07); }
-/* Dropdown comercio */
-.com-dd { position:absolute;z-index:200;width:100%;background:var(--card);
-          border:1px solid var(--brd);border-radius:var(--r2);
-          max-height:200px;overflow-y:auto;box-shadow:var(--sh3); }
-.com-dd-item { padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--brd); }
-.com-dd-item:hover { background:var(--hov); }
-/* Modal */
-#stockModal { display:none;position:fixed;inset:0;z-index:900;
-  background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:1rem; }
-#stockModal.open { display:flex; }
-.modal-box { background:var(--card);border:1px solid var(--brd);border-radius:var(--r3);
-  max-width:900px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--sh3);position:relative; }
-/* Card producto en modal */
-.prod-card { background:var(--bg);border:1px solid var(--brd);border-radius:var(--r2);padding:14px; }
-.stock-num { font-size:1.9rem;font-weight:900;line-height:1; }
-/* Leyenda umbrales */
-.umbral-item { display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--muted); }
+  .table-header-sticky th{position:sticky;top:0;z-index:10;background:#F9FAFB}
+  .dark .table-header-sticky th{background:#334155;color:#e2e8f0}
+  .badge{display:inline-flex;align-items:center;padding:.25rem .65rem;font-size:.7rem;font-weight:700;border-radius:9999px;white-space:nowrap}
+  .badge-ok{background:#D1FAE5;color:#065F46}
+  .badge-warn{background:#FEF3C7;color:#92400E}
+  .badge-crit{background:#FEE2E2;color:#991B1B}
+  .badge-none{background:#F3F4F6;color:#6B7280}
+  .dark .badge-none{background:#334155;color:#94a3b8}
+  .row-anaq{background:rgba(245,158,11,.06)}
+  .row-bod{background:rgba(99,102,241,.06)}
+  .row-ambos{background:rgba(239,68,68,.07)}
+  .modal{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.7);justify-content:center;align-items:center;padding:1rem}
+  .modal.open{display:flex}
+  .modal-content{background:white;border-radius:16px;max-width:95%;max-height:90vh;width:860px;overflow-y:auto;position:relative;box-shadow:0 24px 48px rgba(0,0,0,.3)}
+  .dark .modal-content{background:#1E293B}
+  .com-dd{position:absolute;top:100%;left:0;z-index:200;width:100%;background:white;border:1px solid #e5e7eb;border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+  .dark .com-dd{background:#1e293b;border-color:#475569}
+  .com-dd-item{padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid #f3f4f6}
+  .com-dd-item:hover{background:#f0f4ff}
+  .dark .com-dd-item:hover{background:#334155}
+  select:focus,input:focus{outline:none;box-shadow:0 0 0 3px rgba(79,70,229,.18);border-color:#4F46E5!important}
 </style>
 </head>
-<body>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
+<script>tailwind.config={darkMode:'class'}</script>
 {% include 'navbar.html' %}
 
-<main class="sp-page">
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
 
-  <!-- ── Encabezado ─────────────────────────────────────────────── -->
-  <div class="sp-page-hdr">
+  <!-- Título -->
+  <div class="flex items-start justify-between mb-6 flex-wrap gap-4">
     <div>
-      <h1 class="sp-page-title">
-        <i class="fas fa-boxes-stacked" style="color:var(--amber);margin-right:8px"></i>
-        Control de Stock
+      <h1 class="text-3xl font-extrabold text-gray-800 dark:text-white">
+        <i class="fas fa-boxes-stacked mr-2 text-amber-500"></i>Control de Stock
       </h1>
-      <p class="sp-page-sub">Monitoreo de inventario en anaquel y bodega por visita.</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Inventario en anaquel y bodega por visita. Alerta: anaquel ≤ 3 · bodega ≤ 5 bultos</p>
     </div>
-    <!-- Leyenda de umbrales -->
-    <div class="sp-card" style="padding:10px 16px;display:flex;flex-direction:column;gap:5px">
-      <div style="font-size:.7rem;font-weight:700;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em">Umbrales de alerta</div>
-      <div class="umbral-item"><span class="st-crit">≤3</span> Anaquel crítico</div>
-      <div class="umbral-item"><span class="st-warn">≤5</span> Bodega baja</div>
-      <div class="umbral-item"><span class="st-ok">OK</span> Niveles normales</div>
+    <div class="flex gap-2 flex-wrap">
+      <span class="badge badge-crit"><i class="fas fa-triangle-exclamation mr-1"></i>≤3 Anaquel crítico</span>
+      <span class="badge badge-warn"><i class="fas fa-warehouse mr-1"></i>≤5 Bodega baja</span>
+      <span class="badge badge-ok"><i class="fas fa-check mr-1"></i>Normal</span>
     </div>
   </div>
 
-  <!-- ── KPIs ───────────────────────────────────────────────────── -->
-  <div class="sp-grid sp-g4 sp-gap4" style="margin-bottom:20px">
-
-    <div class="sp-card sp-kpi amber">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-shelves"></i></div>
-        <div style="text-align:right">
-          <div class="sp-kpi-val" id="kpiAnaquelCrit">—</div>
-          <div class="sp-kpi-lbl">Anaquel crítico (≤3)</div>
-        </div>
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+    <div class="bg-amber-50 dark:bg-amber-900/30 p-4 rounded-xl text-center border border-amber-100 dark:border-amber-800">
+      <p class="text-2xl font-extrabold text-amber-600" id="kpiAnaq">—</p>
+      <p class="text-xs text-amber-500 dark:text-amber-300 font-medium mt-1">Anaquel crítico (≤3)</p>
+      <div class="w-full bg-amber-200 dark:bg-amber-900 rounded-full h-1.5 mt-2">
+        <div id="bAnaq" class="bg-amber-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
       </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="bAnaq" style="width:0%;background:var(--amber)"></div></div>
     </div>
-
-    <div class="sp-card sp-kpi red">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon" style="background:rgba(239,68,68,.12);color:var(--red)"><i class="fas fa-warehouse"></i></div>
-        <div style="text-align:right">
-          <div class="sp-kpi-val" id="kpiBodegaBaja" style="color:var(--red)">—</div>
-          <div class="sp-kpi-lbl">Bodega baja (≤5)</div>
-        </div>
+    <div class="bg-red-50 dark:bg-red-900/30 p-4 rounded-xl text-center border border-red-100 dark:border-red-800">
+      <p class="text-2xl font-extrabold text-red-600" id="kpiBodega">—</p>
+      <p class="text-xs text-red-500 dark:text-red-300 font-medium mt-1">Bodega baja (≤5)</p>
+      <div class="w-full bg-red-200 dark:bg-red-900 rounded-full h-1.5 mt-2">
+        <div id="bBodega" class="bg-red-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
       </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="bBodega" style="width:0%;background:var(--red)"></div></div>
     </div>
-
-    <div class="sp-card sp-kpi purple">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-chart-simple"></i></div>
-        <div style="text-align:right">
-          <div class="sp-kpi-val" id="kpiPromAnaq">—</div>
-          <div class="sp-kpi-lbl">Promedio anaquel</div>
-        </div>
+    <div class="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-xl text-center border border-purple-100 dark:border-purple-800">
+      <p class="text-2xl font-extrabold text-purple-600" id="kpiProm">—</p>
+      <p class="text-xs text-purple-500 dark:text-purple-300 font-medium mt-1">Promedio anaquel</p>
+      <div class="w-full bg-purple-200 dark:bg-purple-900 rounded-full h-1.5 mt-2">
+        <div id="bProm" class="bg-purple-600 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div>
       </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="bProm" style="width:0%;background:var(--purple)"></div></div>
     </div>
-
-    <div class="sp-card sp-kpi indigo">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-cubes"></i></div>
-        <div style="text-align:right">
-          <div class="sp-kpi-val" id="kpiTotal">—</div>
-          <div class="sp-kpi-lbl">Registros de stock</div>
-        </div>
+    <div class="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-xl text-center border border-indigo-100 dark:border-indigo-800">
+      <p class="text-2xl font-extrabold text-indigo-600" id="kpiTotal">—</p>
+      <p class="text-xs text-indigo-500 dark:text-indigo-300 font-medium mt-1">Registros totales</p>
+      <div class="w-full bg-indigo-200 dark:bg-indigo-900 rounded-full h-1.5 mt-2">
+        <div class="bg-indigo-600 h-1.5 rounded-full" style="width:70%"></div>
       </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:70%;background:var(--accent)"></div></div>
     </div>
-
   </div>
 
-  <!-- ── Filtros ────────────────────────────────────────────────── -->
-  <div class="sp-card" style="margin-bottom:20px">
-    <p class="sp-sec-title">Filtros</p>
-    <div class="sp-grid sp-g3 sp-gap4" style="margin-bottom:14px">
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 mb-8 border border-gray-100 dark:border-slate-700">
+    <h2 class="text-lg font-bold text-gray-700 dark:text-white mb-4">Filtros</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
 
-      <!-- Promotor -->
       <div>
-        <label class="sp-label">Promotor</label>
-        <select id="fPromotor" class="sp-select"><option value="">Todos</option></select>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Promotor</label>
+        <select id="fPromotor" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+          <option value="">Todos</option>
+        </select>
       </div>
 
-      <!-- Comercio con buscador -->
       <div style="position:relative" id="comercioWrap">
-        <label class="sp-label">Comercio</label>
-        <input type="text" id="fComercio" class="sp-input" placeholder="Buscar comercio…"
-          oninput="buscarComercio(this.value)" autocomplete="off">
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Comercio</label>
+        <input type="text" id="fComercio" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" placeholder="Buscar comercio…" oninput="buscarComercio(this.value)" autocomplete="off">
         <input type="hidden" id="fComercioVal">
         <div id="comercioDD" class="com-dd" style="display:none"></div>
       </div>
 
-      <!-- Producto -->
       <div>
-        <label class="sp-label">Producto</label>
-        <select id="fProducto" class="sp-select"><option value="">Todos</option></select>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Producto</label>
+        <select id="fProducto" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+          <option value="">Todos</option>
+        </select>
       </div>
 
-      <!-- Alertas -->
       <div>
-        <label class="sp-label">Mostrar</label>
-        <select id="fAlerta" class="sp-select">
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Mostrar</label>
+        <select id="fAlerta" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
           <option value="todos">Todos</option>
           <option value="anaquel" selected>Anaquel crítico (≤3)</option>
           <option value="bodega">Bodega baja (≤5)</option>
@@ -151,356 +119,242 @@
         </select>
       </div>
 
-      <!-- Desde / Hasta -->
       <div>
-        <label class="sp-label">Desde</label>
-        <input type="date" id="fDesde" class="sp-input">
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Desde</label>
+        <input type="date" id="fDesde" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
       </div>
+
       <div>
-        <label class="sp-label">Hasta</label>
-        <input type="date" id="fHasta" class="sp-input">
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Hasta</label>
+        <input type="date" id="fHasta" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
       </div>
 
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="aplicarFiltros()" class="sp-btn sp-btn-primary">
+    <div class="flex gap-3 border-t border-gray-100 dark:border-slate-700 pt-4">
+      <button onclick="aplicarFiltros()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition-all flex items-center gap-2">
         <i class="fas fa-filter"></i> Aplicar filtros
       </button>
-      <button onclick="limpiarFiltros()" class="sp-btn sp-btn-sec">
+      <button onclick="limpiarFiltros()" class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2">
         <i class="fas fa-undo"></i> Limpiar
       </button>
     </div>
   </div>
 
-  <!-- ── Tabla ──────────────────────────────────────────────────── -->
-  <div class="sp-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;
-      margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <p class="sp-sec-title" style="margin-bottom:0">Detalle de inventario</p>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <span id="infoRegistros" class="sp-bdg sp-bdg-accent" style="font-size:.75rem">—</span>
-      </div>
+  <!-- Tabla -->
+  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
+      <h2 class="text-base font-bold text-gray-700 dark:text-white">Detalle de inventario</h2>
+      <span id="infoRegistros" class="text-xs font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-300 px-3 py-1 rounded-full">—</span>
     </div>
-    <div style="overflow-x:auto;max-height:62vh">
-      <table class="sp-tbl">
-        <thead><tr>
-          <th>Fecha</th>
-          <th>Promotor</th>
-          <th>Comercio</th>
-          <th>Producto</th>
-          <th style="text-align:center">
-            <i class="fas fa-shelves" style="margin-right:4px"></i>Anaquel
-            <div style="font-size:.65rem;font-weight:400;color:var(--muted)">Alerta ≤ 3</div>
-          </th>
-          <th style="text-align:center">
-            <i class="fas fa-warehouse" style="margin-right:4px"></i>Bodega
-            <div style="font-size:.65rem;font-weight:400;color:var(--muted)">Alerta ≤ 5</div>
-          </th>
-          <th style="text-align:center">Estado</th>
-          <th style="text-align:center">Detalle</th>
-        </tr></thead>
-        <tbody id="stockBody">
-          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">
-            <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;margin-bottom:8px;display:block"></i>
-            Cargando…
+    <div class="overflow-x-auto max-h-[60vh]">
+      <table class="min-w-full divide-y divide-gray-100 dark:divide-slate-700">
+        <thead class="table-header-sticky">
+          <tr>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Promotor</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comercio</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Producto</th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Anaquel<div class="font-normal normal-case text-gray-400">alerta ≤ 3</div></th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bodega<div class="font-normal normal-case text-gray-400">alerta ≤ 5</div></th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ver</th>
+          </tr>
+        </thead>
+        <tbody id="stockBody" class="bg-white dark:bg-slate-800 divide-y divide-gray-50 dark:divide-slate-700">
+          <tr><td colspan="8" class="text-center py-10 text-gray-400 dark:text-gray-500">
+            <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando…
           </td></tr>
         </tbody>
       </table>
     </div>
   </div>
+</div>
 
-</main>
-
-<!-- ── Modal detalle visita ──────────────────────────────────────── -->
-<div id="stockModal">
-  <div class="modal-box p-6">
-    <button onclick="cerrarModal()" class="sp-modal-close">
-      <i class="fas fa-times"></i>
-    </button>
-    <div id="modalHeader" style="margin-bottom:18px"></div>
+<!-- Modal -->
+<div class="modal" id="stockModal">
+  <div class="modal-content p-6 sm:p-8 dark:text-gray-200">
+    <button onclick="cerrarModal()" class="absolute top-4 right-5 text-gray-400 hover:text-red-500 text-2xl font-bold leading-none">×</button>
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6"><i class="fas fa-box-open mr-2 text-indigo-500"></i>Detalle de stock</h2>
+    <div id="modalHeader" class="mb-5"></div>
     <div id="modalProductos"></div>
   </div>
 </div>
 
 <script>
-const supabaseClient = window.db;
+const UMBRAL_ANAQUEL = 3, UMBRAL_BODEGA = 5;
 const empresaId = localStorage.getItem('empresa_id');
 if (!empresaId) window.location.href = '/';
+let allData = [], filas = [], comercioTimer = null;
 
-const $ = id => document.getElementById(id);
-
-// Umbrales
-const UMBRAL_ANAQUEL = 3;
-const UMBRAL_BODEGA  = 5;
-
-let allData = [];         // visitas crudas
-let filasFlatRaw = [];    // filas aplanadas (visita × item)
-let comercioTimer = null;
-
-// ── Helpers badge ─────────────────────────────────────────────────
-function badgeAnaq(n) {
-  if (n == null || isNaN(n)) return '<span class="st-none">—</span>';
-  if (n <= UMBRAL_ANAQUEL)   return `<span class="st-crit">${n}</span>`;
-  if (n <= 8)                return `<span class="st-warn">${n}</span>`;
-  return `<span class="st-ok">${n}</span>`;
+function waitDb(fn) {
+  if (window.db) { fn(); return; }
+  const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
 }
-function badgeBodega(n) {
-  if (n == null || isNaN(n)) return '<span class="st-none">—</span>';
-  if (n <= UMBRAL_BODEGA)    return `<span class="st-crit">${n}</span>`;
-  if (n <= 12)               return `<span class="st-warn">${n}</span>`;
-  return `<span class="st-ok">${n}</span>`;
+const fmt = s => new Date(s).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'});
+function badgeAnaq(n){
+  if(n==null)return'<span class="badge badge-none">—</span>';
+  if(n<=UMBRAL_ANAQUEL)return`<span class="badge badge-crit">${n}</span>`;
+  if(n<=8)return`<span class="badge badge-warn">${n}</span>`;
+  return`<span class="badge badge-ok">${n}</span>`;
 }
-function estadoBadge(alertaAnaq, alertaBodega) {
-  if (alertaAnaq && alertaBodega)
-    return '<span class="sp-bdg" style="background:#fee2e2;color:#991b1b">⚠ Ambas alertas</span>';
-  if (alertaAnaq)
-    return '<span class="sp-bdg" style="background:#fef3c7;color:#92400e">Anaquel bajo</span>';
-  if (alertaBodega)
-    return '<span class="sp-bdg" style="background:#ede9fe;color:#6d28d9">Bodega baja</span>';
-  return '<span class="sp-bdg sp-bdg-def">Normal</span>';
+function badgeBodega(n){
+  if(n==null)return'<span class="badge badge-none">—</span>';
+  if(n<=UMBRAL_BODEGA)return`<span class="badge badge-crit">${n}</span>`;
+  if(n<=12)return`<span class="badge badge-warn">${n}</span>`;
+  return`<span class="badge badge-ok">${n}</span>`;
 }
-function rowClass(alertaAnaq, alertaBodega) {
-  if (alertaAnaq && alertaBodega) return 'row-alert-ambos';
-  if (alertaAnaq)  return 'row-alert-shelf';
-  if (alertaBodega) return 'row-alert-bodega';
-  return '';
+function estadoBadge(a,b){
+  if(a&&b)return'<span class="badge" style="background:#fee2e2;color:#991b1b">⚠ Ambas alertas</span>';
+  if(a)return'<span class="badge badge-warn">Anaquel bajo</span>';
+  if(b)return'<span class="badge" style="background:#ede9fe;color:#6d28d9">Bodega baja</span>';
+  return'<span class="badge badge-none">Normal</span>';
 }
-const fmt = s => new Date(s).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' });
+function rowCls(a,b){if(a&&b)return'row-ambos';if(a)return'row-anaq';if(b)return'row-bod';return'';}
 
-// ── Cargar datos ──────────────────────────────────────────────────
-async function loadData() {
-  const lineaId = localStorage.getItem('sp-linea') || '';
-  let q = supabaseClient
-    .from('web_precios')
-    .select('id,created_at,trade,state,zone,myitems,web_promotores!inner(promoter_name)')
-    .eq('empresa_id', empresaId)
-    .not('myitems', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(400);
-
-  if (lineaId) q = q.eq('linea_id', lineaId);
-
-  const { data, error } = await q;
-  if (error) { console.error(error); return; }
-
-  allData = (data || []).map(v => ({ ...v, myitems: v.myitems || [] }));
-
-  // Aplanar visitas × items
-  filasFlatRaw = [];
-  allData.forEach(v => {
-    v.myitems.forEach(item => {
-      const sa = item.stock_shelf     != null ? parseInt(item.stock_shelf)     : null;
-      const sb = item.stock_warehouse != null ? parseInt(item.stock_warehouse) : null;
-      filasFlatRaw.push({
-        visitaId:   v.id,
-        fecha:      v.created_at,
-        promotor:   v.web_promotores?.promoter_name || '—',
-        comercio:   v.trade || '—',
-        producto:   item.presentation || '—',
-        anaquel:    isNaN(sa) ? null : sa,
-        bodega:     isNaN(sb) ? null : sb,
-        alertaAnaq: sa != null && !isNaN(sa) && sa <= UMBRAL_ANAQUEL,
-        alertaBodega: sb != null && !isNaN(sb) && sb <= UMBRAL_BODEGA,
-        rawVisita:  v
-      });
-    });
-  });
-
-  poblarSelectores();
-  actualizarKPIs();
-  aplicarFiltros();
+async function loadData(){
+  const lineaId=localStorage.getItem('sp-linea')||'';
+  let q=window.db.from('web_precios')
+    .select('id,created_at,trade,myitems,web_promotores!inner(promoter_name)')
+    .eq('empresa_id',empresaId).not('myitems','is',null)
+    .order('created_at',{ascending:false}).limit(400);
+  if(lineaId)q=q.eq('linea_id',lineaId);
+  const{data,error}=await q;
+  if(error){console.error(error);return;}
+  allData=(data||[]).map(v=>({...v,myitems:v.myitems||[]}));
+  filas=[];
+  allData.forEach(v=>v.myitems.forEach(item=>{
+    const sa=item.stock_shelf!=null?parseInt(item.stock_shelf):null;
+    const sb=item.stock_warehouse!=null?parseInt(item.stock_warehouse):null;
+    filas.push({visitaId:v.id,fecha:v.created_at,
+      promotor:v.web_promotores?.promoter_name||'—',
+      comercio:v.trade||'—',producto:item.presentation||'—',
+      anaquel:isNaN(sa)?null:sa,bodega:isNaN(sb)?null:sb,
+      alertaA:sa!=null&&!isNaN(sa)&&sa<=UMBRAL_ANAQUEL,
+      alertaB:sb!=null&&!isNaN(sb)&&sb<=UMBRAL_BODEGA});
+  }));
+  poblarSelectores();actualizarKPIs();aplicarFiltros();
 }
 
-// ── Selectores dinámicos ──────────────────────────────────────────
-function poblarSelectores() {
-  const promotores = [...new Set(filasFlatRaw.map(r => r.promotor))].sort();
-  const productos  = [...new Set(filasFlatRaw.map(r => r.producto))].sort();
-
-  $('fPromotor').innerHTML = '<option value="">Todos</option>' +
-    promotores.map(p => `<option value="${p}">${p}</option>`).join('');
-
-  $('fProducto').innerHTML = '<option value="">Todos</option>' +
-    productos.map(p => `<option value="${p}">${p}</option>`).join('');
+function poblarSelectores(){
+  const proms=[...new Set(filas.map(r=>r.promotor))].sort();
+  const prods=[...new Set(filas.map(r=>r.producto))].sort();
+  document.getElementById('fPromotor').innerHTML='<option value="">Todos</option>'+proms.map(p=>`<option>${p}</option>`).join('');
+  document.getElementById('fProducto').innerHTML='<option value="">Todos</option>'+prods.map(p=>`<option>${p}</option>`).join('');
 }
 
-// ── Búsqueda comercio ─────────────────────────────────────────────
-function buscarComercio(term) {
+function buscarComercio(term){
   clearTimeout(comercioTimer);
-  const dd = $('comercioDD');
-  if (!term.trim()) { dd.style.display = 'none'; $('fComercioVal').value = ''; return; }
-  comercioTimer = setTimeout(() => {
-    const matches = [...new Set(filasFlatRaw.map(r => r.comercio))]
-      .filter(c => c.toLowerCase().includes(term.toLowerCase())).sort().slice(0, 15);
-    if (!matches.length) { dd.style.display = 'none'; return; }
-    dd.innerHTML = matches.map(c =>
-      `<div class="com-dd-item" onmousedown="selecComercio('${c.replace(/'/g,"\\'")}')">
-        <i class="fas fa-store" style="color:var(--accent);margin-right:6px;font-size:.75rem"></i>${c}
-      </div>`).join('');
-    dd.style.display = 'block';
-  }, 200);
+  const dd=document.getElementById('comercioDD');
+  if(!term.trim()){dd.style.display='none';document.getElementById('fComercioVal').value='';return;}
+  comercioTimer=setTimeout(()=>{
+    const m=[...new Set(filas.map(r=>r.comercio))].filter(c=>c.toLowerCase().includes(term.toLowerCase())).sort().slice(0,15);
+    if(!m.length){dd.style.display='none';return;}
+    dd.innerHTML=m.map(c=>`<div class="com-dd-item" onmousedown="selecComercio('${c.replace(/'/g,"\\'")}')"><i class="fas fa-store mr-2 text-indigo-400 text-xs"></i>${c}</div>`).join('');
+    dd.style.display='block';
+  },200);
 }
-function selecComercio(val) {
-  $('fComercio').value    = val;
-  $('fComercioVal').value = val;
-  $('comercioDD').style.display = 'none';
-}
-document.addEventListener('click', e => {
-  const w = $('comercioWrap');
-  if (w && !w.contains(e.target)) $('comercioDD').style.display = 'none';
-});
+function selecComercio(val){document.getElementById('fComercio').value=val;document.getElementById('fComercioVal').value=val;document.getElementById('comercioDD').style.display='none';}
+document.addEventListener('click',e=>{const w=document.getElementById('comercioWrap');if(w&&!w.contains(e.target))document.getElementById('comercioDD').style.display='none';});
 
-// ── Aplicar filtros ───────────────────────────────────────────────
-function aplicarFiltros() {
-  const promotor = $('fPromotor').value;
-  const comercio = $('fComercioVal').value;
-  const producto = $('fProducto').value;
-  const alerta   = $('fAlerta').value;
-  const desde    = $('fDesde').value;
-  const hasta    = $('fHasta').value;
-
-  let filas = filasFlatRaw;
-
-  if (promotor) filas = filas.filter(r => r.promotor === promotor);
-  if (comercio) filas = filas.filter(r => r.comercio === comercio);
-  if (producto) filas = filas.filter(r => r.producto === producto);
-  if (desde)    filas = filas.filter(r => new Date(r.fecha) >= new Date(desde + 'T00:00:00'));
-  if (hasta)    filas = filas.filter(r => new Date(r.fecha) <= new Date(hasta + 'T23:59:59'));
-
-  if (alerta === 'anaquel')    filas = filas.filter(r => r.alertaAnaq);
-  if (alerta === 'bodega')     filas = filas.filter(r => r.alertaBodega);
-  if (alerta === 'ambos')      filas = filas.filter(r => r.alertaAnaq && r.alertaBodega);
-  if (alerta === 'cualquiera') filas = filas.filter(r => r.alertaAnaq || r.alertaBodega);
-
-  renderTabla(filas);
+function aplicarFiltros(){
+  const promotor=document.getElementById('fPromotor').value;
+  const comercio=document.getElementById('fComercioVal').value;
+  const producto=document.getElementById('fProducto').value;
+  const alerta=document.getElementById('fAlerta').value;
+  const desde=document.getElementById('fDesde').value;
+  const hasta=document.getElementById('fHasta').value;
+  let f=filas;
+  if(promotor)f=f.filter(r=>r.promotor===promotor);
+  if(comercio)f=f.filter(r=>r.comercio===comercio);
+  if(producto)f=f.filter(r=>r.producto===producto);
+  if(desde)f=f.filter(r=>new Date(r.fecha)>=new Date(desde+'T00:00:00'));
+  if(hasta)f=f.filter(r=>new Date(r.fecha)<=new Date(hasta+'T23:59:59'));
+  if(alerta==='anaquel')f=f.filter(r=>r.alertaA);
+  if(alerta==='bodega')f=f.filter(r=>r.alertaB);
+  if(alerta==='ambos')f=f.filter(r=>r.alertaA&&r.alertaB);
+  if(alerta==='cualquiera')f=f.filter(r=>r.alertaA||r.alertaB);
+  renderTabla(f);
 }
 
-// ── Render tabla ──────────────────────────────────────────────────
-function renderTabla(filas) {
-  $('infoRegistros').textContent = `${filas.length} registros`;
-
-  const tbody = $('stockBody');
-  if (!filas.length) {
-    tbody.innerHTML = `<tr><td colspan="8"
-      style="text-align:center;padding:40px;color:var(--muted)">
-      Sin datos con los filtros actuales
-    </td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = filas.map(r => `
-    <tr class="${rowClass(r.alertaAnaq, r.alertaBodega)}">
-      <td class="sp-hi">${fmt(r.fecha)}</td>
-      <td style="color:var(--accent);font-weight:500">${r.promotor}</td>
-      <td>${r.comercio}</td>
-      <td style="font-weight:600">${r.producto}</td>
-      <td style="text-align:center">${badgeAnaq(r.anaquel)}</td>
-      <td style="text-align:center">${badgeBodega(r.bodega)}</td>
-      <td style="text-align:center">${estadoBadge(r.alertaAnaq, r.alertaBodega)}</td>
-      <td style="text-align:center">
-        <button onclick="abrirDetalle('${r.visitaId}')"
-          class="sp-btn sp-btn-sec sp-btn-sm" title="Ver visita completa">
-          <i class="fas fa-eye"></i>
-        </button>
-      </td>
+function renderTabla(f){
+  document.getElementById('infoRegistros').textContent=`${f.length} registros`;
+  const tbody=document.getElementById('stockBody');
+  if(!f.length){tbody.innerHTML='<tr><td colspan="8" class="text-center py-10 text-gray-400">Sin datos con los filtros actuales</td></tr>';return;}
+  tbody.innerHTML=f.map(r=>`
+    <tr class="hover:bg-indigo-50/40 dark:hover:bg-slate-700 transition-colors ${rowCls(r.alertaA,r.alertaB)}">
+      <td class="py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">${fmt(r.fecha)}</td>
+      <td class="py-3 px-4 text-sm text-indigo-600 dark:text-indigo-400 font-medium">${r.promotor}</td>
+      <td class="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">${r.comercio}</td>
+      <td class="py-3 px-4 text-sm font-semibold text-gray-800 dark:text-gray-200">${r.producto}</td>
+      <td class="py-3 px-4 text-center">${badgeAnaq(r.anaquel)}</td>
+      <td class="py-3 px-4 text-center">${badgeBodega(r.bodega)}</td>
+      <td class="py-3 px-4 text-center">${estadoBadge(r.alertaA,r.alertaB)}</td>
+      <td class="py-3 px-4 text-center"><button onclick="abrirDetalle('${r.visitaId}')" class="text-indigo-500 hover:text-indigo-700 transition-colors"><i class="fas fa-eye text-lg"></i></button></td>
     </tr>`).join('');
 }
 
-// ── KPIs ──────────────────────────────────────────────────────────
-function actualizarKPIs() {
-  let critAnaq = 0, critBodega = 0, totalReg = 0, sumAnaq = 0, cntAnaq = 0;
-  filasFlatRaw.forEach(r => {
-    totalReg++;
-    if (r.alertaAnaq)  critAnaq++;
-    if (r.alertaBodega) critBodega++;
-    if (r.anaquel != null) { sumAnaq += r.anaquel; cntAnaq++; }
-  });
-  const promAnaq = cntAnaq ? (sumAnaq / cntAnaq).toFixed(1) : '—';
-  const maxN = Math.max(totalReg, 1);
-
-  $('kpiAnaquelCrit').textContent = critAnaq;
-  $('kpiBodegaBaja').textContent  = critBodega;
-  $('kpiPromAnaq').textContent    = promAnaq;
-  $('kpiTotal').textContent       = totalReg;
-  $('bAnaq').style.width   = Math.min(100, (critAnaq  / maxN) * 100) + '%';
-  $('bBodega').style.width = Math.min(100, (critBodega / maxN) * 100) + '%';
-  $('bProm').style.width   = promAnaq !== '—' ? Math.min(100, (parseFloat(promAnaq) / 20) * 100) + '%' : '0%';
+function actualizarKPIs(){
+  let cA=0,cB=0,total=0,sumA=0,cntA=0;
+  filas.forEach(r=>{total++;if(r.alertaA)cA++;if(r.alertaB)cB++;if(r.anaquel!=null){sumA+=r.anaquel;cntA++;}});
+  const prom=cntA?(sumA/cntA).toFixed(1):'—';
+  document.getElementById('kpiAnaq').textContent=cA;
+  document.getElementById('kpiBodega').textContent=cB;
+  document.getElementById('kpiProm').textContent=prom;
+  document.getElementById('kpiTotal').textContent=total;
+  const mx=Math.max(total,1);
+  document.getElementById('bAnaq').style.width=Math.min(100,(cA/mx)*100)+'%';
+  document.getElementById('bBodega').style.width=Math.min(100,(cB/mx)*100)+'%';
+  document.getElementById('bProm').style.width=prom!=='—'?Math.min(100,(parseFloat(prom)/20)*100)+'%':'0%';
 }
 
-// ── Modal detalle visita ──────────────────────────────────────────
-function abrirDetalle(visitaId) {
-  const v = allData.find(d => d.id === visitaId);
-  if (!v) return;
-
-  $('modalHeader').innerHTML = `
-    <h2 style="font-weight:800;font-size:1.05rem;margin-bottom:12px">
-      <i class="fas fa-box-open" style="color:var(--accent);margin-right:6px"></i>
-      Detalle de stock — visita
-    </h2>
-    <div class="sp-grid sp-g3 sp-gap4">
-      ${[
-        ['Fecha',    fmt(v.created_at)],
-        ['Promotor', v.web_promotores?.promoter_name || '—'],
-        ['Comercio', v.trade || '—']
-      ].map(([l, val]) => `
-        <div style="background:var(--bg);border:1px solid var(--brd);border-radius:var(--r2);padding:10px">
-          <div style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${l}</div>
-          <div style="font-weight:600;font-size:.88rem">${val}</div>
-        </div>`).join('')}
+function abrirDetalle(vid){
+  const v=allData.find(d=>d.id===vid);if(!v)return;
+  document.getElementById('modalHeader').innerHTML=`
+    <div class="grid grid-cols-3 gap-3">
+      ${[['Fecha',fmt(v.created_at)],['Promotor',v.web_promotores?.promoter_name||'—'],['Comercio',v.trade||'—']]
+        .map(([l,val])=>`<div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-gray-100 dark:border-slate-600">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">${l}</p>
+          <p class="text-sm font-semibold text-gray-800 dark:text-white">${val}</p></div>`).join('')}
     </div>`;
-
-  $('modalProductos').innerHTML = `
-    <p class="sp-sec-title" style="margin:16px 0 10px">Stock por producto</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
-      ${v.myitems.map(item => {
-        const sa = item.stock_shelf     != null ? parseInt(item.stock_shelf)     : null;
-        const sb = item.stock_warehouse != null ? parseInt(item.stock_warehouse) : null;
-        const critA = sa != null && sa <= UMBRAL_ANAQUEL;
-        const critB = sb != null && sb <= UMBRAL_BODEGA;
-        const colorA = sa == null ? 'var(--muted)' : critA ? 'var(--red)' : sa <= 8 ? 'var(--amber)' : 'var(--green)';
-        const colorB = sb == null ? 'var(--muted)' : critB ? 'var(--red)' : sb <= 12 ? 'var(--amber)' : 'var(--accent)';
-        return `
-        <div class="prod-card" style="${(critA || critB) ? 'border-color:rgba(239,68,68,.4)' : ''}">
-          <div style="font-weight:700;font-size:.82rem;margin-bottom:10px;color:var(--txt)">${item.presentation || '—'}</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div style="text-align:center">
-              <div style="font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">
-                <i class="fas fa-shelves"></i> Anaquel
-              </div>
-              <div class="stock-num" style="color:${colorA}">${sa ?? '—'}</div>
-              ${critA ? `<div style="font-size:.65rem;color:var(--red);margin-top:3px">⚠ Crítico ≤${UMBRAL_ANAQUEL}</div>` : ''}
+  document.getElementById('modalProductos').innerHTML=`
+    <h3 class="text-base font-bold text-gray-700 dark:text-white mb-3">Stock por producto</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      ${(v.myitems||[]).map(item=>{
+        const sa=item.stock_shelf!=null?parseInt(item.stock_shelf):null;
+        const sb=item.stock_warehouse!=null?parseInt(item.stock_warehouse):null;
+        const cA=sa!=null&&sa<=UMBRAL_ANAQUEL,cB=sb!=null&&sb<=UMBRAL_BODEGA;
+        return`<div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 border ${cA||cB?'border-red-300 dark:border-red-800':'border-gray-100 dark:border-slate-600'}">
+          <p class="font-bold text-sm text-gray-800 dark:text-white mb-3">${item.presentation||'—'}</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white dark:bg-slate-800 rounded-lg p-3 text-center">
+              <p class="text-xs text-gray-400 uppercase mb-1">Anaquel</p>
+              <p class="text-2xl font-extrabold ${sa==null?'text-gray-400':cA?'text-red-600':sa<=8?'text-amber-500':'text-green-600'}">${sa??'—'}</p>
+              ${cA?'<p class="text-xs text-red-500 mt-1">⚠ Crítico</p>':''}
             </div>
-            <div style="text-align:center">
-              <div style="font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">
-                <i class="fas fa-warehouse"></i> Bodega
-              </div>
-              <div class="stock-num" style="color:${colorB}">${sb ?? '—'}</div>
-              ${critB ? `<div style="font-size:.65rem;color:var(--red);margin-top:3px">⚠ Bajo ≤${UMBRAL_BODEGA}</div>` : ''}
+            <div class="bg-white dark:bg-slate-800 rounded-lg p-3 text-center">
+              <p class="text-xs text-gray-400 uppercase mb-1">Bodega</p>
+              <p class="text-2xl font-extrabold ${sb==null?'text-gray-400':cB?'text-red-600':sb<=12?'text-amber-500':'text-indigo-600'}">${sb??'—'}</p>
+              ${cB?'<p class="text-xs text-red-500 mt-1">⚠ Bajo</p>':''}
             </div>
-          </div>
-        </div>`;
+          </div></div>`;
       }).join('')}
     </div>`;
-
-  $('stockModal').classList.add('open');
+  document.getElementById('stockModal').classList.add('open');
 }
-
-function cerrarModal() { $('stockModal').classList.remove('open'); }
-$('stockModal').addEventListener('click', e => { if (e.target === e.currentTarget) cerrarModal(); });
-
-// ── Limpiar filtros ───────────────────────────────────────────────
-function limpiarFiltros() {
-  $('fPromotor').value   = '';
-  $('fComercio').value   = '';
-  $('fComercioVal').value= '';
-  $('fProducto').value   = '';
-  $('fAlerta').value     = 'anaquel';
-  $('fDesde').value      = '';
-  $('fHasta').value      = '';
+function cerrarModal(){document.getElementById('stockModal').classList.remove('open');}
+document.getElementById('stockModal').addEventListener('click',e=>{if(e.target.id==='stockModal')cerrarModal();});
+function limpiarFiltros(){
+  document.getElementById('fPromotor').value='';
+  document.getElementById('fProducto').value='';
+  document.getElementById('fAlerta').value='anaquel';
+  document.getElementById('fComercio').value='';
+  document.getElementById('fComercioVal').value='';
+  document.getElementById('fDesde').value='';
+  document.getElementById('fHasta').value='';
   aplicarFiltros();
 }
-
-window.onLineaChanged = () => loadData();
-window.captaReady(() => loadData());
+window.onLineaChanged=()=>waitDb(loadData);
+waitDb(loadData);
 </script>
 </body>
 </html>

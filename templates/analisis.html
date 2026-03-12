@@ -3,167 +3,168 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Análisis de Precios — CAPTA</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
-.badge-sin-comp {
-  display:inline-flex;align-items:center;gap:4px;
-  padding:2px 8px;border-radius:99px;font-size:.68rem;font-weight:700;
-  background:#f3f4f6;color:#6b7280;border:1px dashed #d1d5db;
-}
-.dark .badge-sin-comp { background:#1e293b;color:#64748b;border-color:#475569; }
+  .table-header-sticky th{position:sticky;top:0;z-index:10;background:#F9FAFB}
+  .dark .table-header-sticky th{background:#334155;color:#e2e8f0}
+  .badge{display:inline-flex;align-items:center;padding:.25rem .65rem;font-size:.7rem;font-weight:700;border-radius:9999px;white-space:nowrap}
+  .badge-green{background:#D1FAE5;color:#065F46}
+  .badge-red{background:#FEE2E2;color:#991B1B}
+  .badge-gray{background:#F3F4F6;color:#6B7280}
+  .dark .badge-gray{background:#334155;color:#94a3b8}
+  .comp-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:.68rem;font-weight:700;background:#f3f4f6;color:#6b7280;border:1px dashed #d1d5db;cursor:pointer;transition:all .15s}
+  .comp-tag:hover{background:#e0e7ff;color:#4338ca;border-color:#818cf8}
+  .dark .comp-tag{background:#1e293b;color:#64748b;border-color:#475569}
+  .com-dd{position:absolute;top:100%;left:0;z-index:200;width:100%;background:white;border:1px solid #e5e7eb;border-radius:8px;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+  .dark .com-dd{background:#1e293b;border-color:#475569}
+  .com-dd-item{padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid #f3f4f6}
+  .com-dd-item:hover{background:#f0f4ff}
+  .dark .com-dd-item:hover{background:#334155}
+  select:focus,input:focus{outline:none;box-shadow:0 0 0 3px rgba(79,70,229,.18);border-color:#4F46E5!important}
 </style>
 </head>
-<body>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
+<script>tailwind.config={darkMode:'class'}</script>
 {% include 'navbar.html' %}
 
-<main class="sp-page">
-  <div class="sp-page-hdr">
-    <div>
-      <h1 class="sp-page-title">Análisis de Precios</h1>
-      <p class="sp-page-sub">Comparativa de precios nuestros vs competencia directa asignada (USD/kg).</p>
-    </div>
+<div class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+  <!-- Título -->
+  <div class="mb-6">
+    <h1 class="text-3xl font-extrabold text-gray-800 dark:text-white">
+      <i class="fas fa-chart-bar mr-2 text-indigo-500"></i>Análisis de Precios
+    </h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Comparativa de precios nuestros vs competencia directa asignada (USD/kg).</p>
   </div>
 
   <!-- Filtros -->
-  <div class="sp-card" style="margin-bottom:20px">
-    <p class="sp-sec-title">Filtros</p>
-    <div class="sp-grid sp-g3 sp-gap4" style="margin-bottom:12px">
-      <div><label class="sp-label">Desde</label><input type="date" id="fDesde" class="sp-input"></div>
-      <div><label class="sp-label">Hasta</label><input type="date" id="fHasta" class="sp-input"></div>
-      <div><label class="sp-label">Estado</label><select id="fEstado" class="sp-select"><option value="">Todos</option></select></div>
-      <div><label class="sp-label">Zona</label><select id="fZona" class="sp-select"><option value="">Todas</option></select></div>
-      <div><label class="sp-label">Promotor</label><select id="fPromotor" class="sp-select"><option value="">Todos</option></select></div>
-      <div><label class="sp-label">Tipo de comercio</label>
-        <select id="fTipoComercio" class="sp-select">
-          <option>Todos</option><option>Detal</option><option>Mayorista</option>
-        </select>
-      </div>
-      <div><label class="sp-label">Nuestro producto</label>
-        <select id="fNuestroProducto" class="sp-select"><option value="">Todos</option></select>
-      </div>
-      <div style="position:relative">
-        <label class="sp-label">Comercio</label>
-        <input type="text" id="fComercioSearch" class="sp-input" placeholder="Buscar comercio…" oninput="buscarComercio(this.value)">
-        <div id="comercioDropdown" style="display:none;position:absolute;z-index:200;width:100%;background:var(--card);border:1px solid var(--brd);border-radius:var(--r2);box-shadow:var(--sh3);max-height:180px;overflow-y:auto"></div>
+  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 mb-6 border border-gray-100 dark:border-slate-700">
+    <h2 class="text-lg font-bold text-gray-700 dark:text-white mb-4">Filtros</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
+      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Desde</label>
+        <input type="date" id="fDesde" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"></div>
+      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Hasta</label>
+        <input type="date" id="fHasta" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"></div>
+      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estado</label>
+        <select id="fEstado" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"><option value="">Todos</option></select></div>
+      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Zona</label>
+        <select id="fZona" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"><option value="">Todas</option></select></div>
+      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Promotor</label>
+        <select id="fPromotor" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"><option value="">Todos</option></select></div>
+      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Tipo de comercio</label>
+        <select id="fTipoComercio" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+          <option>Todos</option><option>Detal</option><option>Mayorista</option></select></div>
+      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Nuestro producto</label>
+        <select id="fNuestroProducto" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"><option value="">Todos</option></select></div>
+      <div style="position:relative" id="comercioWrapA">
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Comercio (búsqueda)</label>
+        <input type="text" id="fComercioSearch" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" placeholder="Escribe para buscar…" oninput="buscarComercio(this.value)" autocomplete="off">
+        <div id="comercioDropdown" class="com-dd" style="display:none"></div>
         <input type="hidden" id="fComercioSelected">
       </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Presentaciones competencia</label>
+        <div id="compTagsWrap" onclick="toggleCompDropdown()" class="w-full min-h-[40px] border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-1.5 text-sm cursor-pointer flex flex-wrap gap-1 items-center relative">
+          <span id="compTagsPlaceholder" class="text-gray-400 text-sm">Haz clic para seleccionar</span>
+          <div id="compDropdown" style="display:none" class="com-dd" onclick="event.stopPropagation()"></div>
+        </div>
+      </div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button id="btnFiltrar" onclick="fetchDataAnalisis()" class="sp-btn sp-btn-primary">
+    <div class="flex gap-3 border-t border-gray-100 dark:border-slate-700 pt-4 flex-wrap">
+      <button id="btnFiltrar" onclick="fetchDataAnalisis()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition-all flex items-center gap-2">
         <i class="fas fa-filter"></i> Aplicar filtros
       </button>
-      <button onclick="limpiarFiltros()" class="sp-btn sp-btn-sec">
+      <button onclick="limpiarFiltros()" class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2">
         <i class="fas fa-undo"></i> Limpiar
       </button>
     </div>
   </div>
 
   <!-- Aviso sin competencia -->
-  <div id="avisoSinComp" style="display:none" class="sp-card" style="margin-bottom:16px">
-    <div style="display:flex;align-items:flex-start;gap:12px">
-      <i class="fas fa-triangle-exclamation" style="color:var(--amber);font-size:1.1rem;margin-top:2px"></i>
+  <div id="avisoSinComp" style="display:none" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 mb-6">
+    <div class="flex items-start gap-3">
+      <i class="fas fa-triangle-exclamation text-amber-500 text-lg mt-0.5 flex-shrink-0"></i>
       <div>
-        <div style="font-weight:700;font-size:.85rem;margin-bottom:4px">Productos sin competencia directa asignada</div>
-        <div id="listaSinComp" style="font-size:.78rem;color:var(--muted)"></div>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:6px">
-          Ve a <a href="/productos" style="color:var(--accent);text-decoration:underline">Productos</a>
-          y usa el botón <i class="fas fa-chess-board"></i> para vincular competidores directos a cada producto.
-        </div>
+        <p class="font-bold text-amber-800 dark:text-amber-300 mb-1">Productos sin competencia directa asignada</p>
+        <div id="listaSinComp" class="text-sm text-amber-700 dark:text-amber-400"></div>
+        <p class="text-xs text-amber-600 dark:text-amber-500 mt-2">Ve a <a href="/productos" class="underline font-semibold">Productos</a> y usa el botón <i class="fas fa-chess-board"></i> para vincular competidores directos a cada producto.</p>
       </div>
     </div>
   </div>
 
-  <!-- KPIs resumen -->
-  <div class="sp-grid sp-g4 sp-gap4" style="margin-bottom:20px">
-    <div class="sp-card sp-kpi indigo">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-scale-balanced"></i></div>
-        <div style="text-align:right">
-          <div class="sp-kpi-val" id="kpiTotalComp">—</div>
-          <div class="sp-kpi-lbl">Comparaciones</div>
-        </div>
-      </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:80%;background:var(--accent)"></div></div>
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div class="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-xl text-center border border-indigo-100 dark:border-indigo-800">
+      <p class="text-2xl font-extrabold text-indigo-600" id="kpiTotalComp">—</p>
+      <p class="text-xs text-indigo-500 dark:text-indigo-300 font-medium mt-1">Comparaciones</p>
+      <div class="w-full bg-indigo-200 dark:bg-indigo-900 rounded-full h-1.5 mt-2"><div class="bg-indigo-600 h-1.5 rounded-full" style="width:80%"></div></div>
     </div>
-    <div class="sp-card sp-kpi green">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-arrow-trend-down"></i></div>
-        <div style="text-align:right">
-          <div class="sp-kpi-val" id="kpiMasBaratos">—</div>
-          <div class="sp-kpi-lbl">Somos más baratos</div>
-        </div>
-      </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="barMasBaratos" style="width:0%;background:var(--green)"></div></div>
+    <div class="bg-green-50 dark:bg-green-900/30 p-4 rounded-xl text-center border border-green-100 dark:border-green-800">
+      <p class="text-2xl font-extrabold text-green-600" id="kpiMasBaratos">—</p>
+      <p class="text-xs text-green-500 dark:text-green-300 font-medium mt-1">Somos más baratos</p>
+      <div class="w-full bg-green-200 dark:bg-green-900 rounded-full h-1.5 mt-2"><div id="barMasBaratos" class="bg-green-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div></div>
     </div>
-    <div class="sp-card sp-kpi red" style="--kpi-color:var(--red)">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon" style="background:rgba(239,68,68,.12);color:var(--red)"><i class="fas fa-arrow-trend-up"></i></div>
-        <div style="text-align:right">
-          <div class="sp-kpi-val" id="kpiMasCaros" style="color:var(--red)">—</div>
-          <div class="sp-kpi-lbl">Somos más caros</div>
-        </div>
-      </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" id="barMasCaros" style="width:0%;background:var(--red)"></div></div>
+    <div class="bg-red-50 dark:bg-red-900/30 p-4 rounded-xl text-center border border-red-100 dark:border-red-800">
+      <p class="text-2xl font-extrabold text-red-600" id="kpiMasCaros">—</p>
+      <p class="text-xs text-red-500 dark:text-red-300 font-medium mt-1">Somos más caros</p>
+      <div class="w-full bg-red-200 dark:bg-red-900 rounded-full h-1.5 mt-2"><div id="barMasCaros" class="bg-red-500 h-1.5 rounded-full transition-all duration-500" style="width:0%"></div></div>
     </div>
-    <div class="sp-card sp-kpi amber">
-      <div class="sp-kpi-top">
-        <div class="sp-kpi-icon"><i class="fas fa-chart-line"></i></div>
-        <div style="text-align:right">
-          <div class="sp-kpi-val" id="kpiDifPromedio">—</div>
-          <div class="sp-kpi-lbl">Diferencia promedio</div>
-        </div>
-      </div>
-      <div class="sp-kpi-bar"><div class="sp-kpi-fill" style="width:60%;background:var(--amber)"></div></div>
+    <div class="bg-amber-50 dark:bg-amber-900/30 p-4 rounded-xl text-center border border-amber-100 dark:border-amber-800">
+      <p class="text-2xl font-extrabold text-amber-600" id="kpiDifPromedio">—</p>
+      <p class="text-xs text-amber-500 dark:text-amber-300 font-medium mt-1">Diferencia promedio</p>
+      <div class="w-full bg-amber-200 dark:bg-amber-900 rounded-full h-1.5 mt-2"><div class="bg-amber-500 h-1.5 rounded-full" style="width:60%"></div></div>
     </div>
   </div>
 
   <!-- Gráfico -->
-  <div class="sp-card" style="margin-bottom:20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-      <p class="sp-sec-title" style="margin-bottom:0">Comparativa de precios (USD/kg) — por par producto↔competidor</p>
-      <select id="chartType" class="sp-select" style="width:auto" onchange="drawChart()">
-        <option value="bar">Barras</option>
-        <option value="line">Línea (Tendencia)</option>
+  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 mb-6 border border-gray-100 dark:border-slate-700">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+      <h2 class="text-base font-bold text-gray-700 dark:text-white">Comparativa de precios (USD/kg) — por par producto↔competidor</h2>
+      <select id="chartType" class="h-9 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" onchange="drawChart()">
+        <option value="bar">Barras</option><option value="line">Línea (Tendencia)</option>
       </select>
     </div>
-    <div style="position:relative;height:340px;width:100%">
-      <canvas id="chartComparativa"></canvas>
-    </div>
-    <p style="font-size:.72rem;color:var(--muted);margin-top:8px;text-align:center">
-      Solo se grafican pares con competencia directa vinculada. Precio promedio por presentación.
-    </p>
+    <div style="position:relative;height:340px"><canvas id="chartComparativa"></canvas></div>
+    <p class="text-xs text-gray-400 mt-2 text-center">Solo se grafican pares con competencia directa vinculada. Precio promedio por presentación.</p>
   </div>
 
-  <!-- Tabla detalle -->
-  <div class="sp-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <p class="sp-sec-title" style="margin-bottom:0">Detalle de comparaciones</p>
-      <span id="analisisInfo" class="sp-bdg sp-bdg-accent" style="font-size:.75rem">—</span>
+  <!-- Tabla -->
+  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
+      <h2 class="text-base font-bold text-gray-700 dark:text-white">Detalle de comparaciones</h2>
+      <span id="analisisInfo" class="text-xs font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-300 px-3 py-1 rounded-full">—</span>
     </div>
-    <div style="overflow-x:auto;max-height:65vh">
-      <table class="sp-tbl">
-        <thead><tr>
-          <th>Fecha</th>
-          <th>Comercio</th>
-          <th>Estado / Zona</th>
-          <th>Tipo</th>
-          <th>Nuestro producto</th>
-          <th style="text-align:center">Precio nuestro<br><small style="font-weight:400;color:var(--muted)">(USD/kg)</small></th>
-          <th>Competidor directo</th>
-          <th style="text-align:center">Precio competidor<br><small style="font-weight:400;color:var(--muted)">(USD/kg)</small></th>
-          <th style="text-align:center">Diferencia %</th>
-        </tr></thead>
-        <tbody id="tbodyAnalisis">
-          <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">Aplica los filtros para ver datos</td></tr>
+    <div class="overflow-x-auto max-h-[65vh]">
+      <table class="min-w-full divide-y divide-gray-100 dark:divide-slate-700">
+        <thead class="table-header-sticky">
+          <tr>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comercio</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado / Zona</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nuestro producto</th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Precio nuestro<div class="font-normal normal-case text-gray-400">(USD/kg)</div></th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Competidor directo</th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Precio competidor<div class="font-normal normal-case text-gray-400">(USD/kg)</div></th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Diferencia %</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyAnalisis" class="bg-white dark:bg-slate-800 divide-y divide-gray-50 dark:divide-slate-700">
+          <tr><td colspan="9" class="text-center py-10 text-gray-400 dark:text-gray-500">Aplica los filtros para ver datos</td></tr>
         </tbody>
       </table>
     </div>
   </div>
-</main>
+</div>
 
 <script>
-const supabaseClient = window.db;
+function waitDb(fn) {
+  if (window.db) { fn(); return; }
+  const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
+}
+const supabaseClient = { from: (...a) => window.db.from(...a) };
 const empresaId = localStorage.getItem('empresa_id');
 if (!empresaId) window.location.href = '/';
 const $ = id => document.getElementById(id);
@@ -303,9 +304,9 @@ function buscarComercio(term) {
     const trades = [...new Set((data || []).map(r => r.trade).filter(Boolean))].sort();
     if (!trades.length) { dd.style.display = 'none'; return; }
     dd.innerHTML = trades.map(t =>
-      `<div style="padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--brd)"
+      `<div style="padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid #e5e7eb"
         onmousedown="selecComercio('${t.replace(/'/g,"\\'")}')">
-        <i class="fas fa-store" style="color:var(--accent);margin-right:6px;font-size:.75rem"></i>${t}
+        <i class="fas fa-store" style="color:#4f46e5;margin-right:6px;font-size:.75rem"></i>${t}
        </div>`).join('');
     dd.style.display = 'block';
   }, 300);
@@ -457,7 +458,7 @@ function actualizarKPIs(filas) {
   $('kpiDifPromedio').textContent= (difProm > 0 ? '+' : '') + difProm.toFixed(1) + '%';
   $('barMasBaratos').style.width = `${pctBarat}%`;
   $('barMasCaros').style.width   = `${pctCaro}%`;
-  $('kpiDifPromedio').style.color= difProm > 0 ? 'var(--red)' : difProm < 0 ? 'var(--green)' : 'var(--muted)';
+  $('kpiDifPromedio').style.color= difProm > 0 ? '#dc2626' : difProm < 0 ? '#16a34a' : '#9ca3af';
 }
 
 // ── Tabla ─────────────────────────────────────────────────────────
@@ -466,7 +467,7 @@ function renderAnalisis(filas) {
   const tbody = $('tbodyAnalisis');
 
   if (!filas.length) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#9ca3af">
       Sin datos con los filtros actuales${sinCompAsignada.size ? ' — revisa los vínculos de competencia directa' : ''}
     </td></tr>`;
     return;
@@ -476,7 +477,7 @@ function renderAnalisis(filas) {
   const fmtDt = s => new Date(s).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' });
   const fmtD  = d => {
     const s = d > 0 ? '+' : '';
-    const c = d > 0 ? 'var(--red)' : d < 0 ? 'var(--green)' : 'var(--muted)';
+    const c = d > 0 ? '#dc2626' : d < 0 ? '#16a34a' : '#9ca3af';
     const ico = d > 0 ? 'fa-arrow-trend-up' : d < 0 ? 'fa-arrow-trend-down' : 'fa-minus';
     return `<span style="color:${c};font-weight:700"><i class="fas ${ico}" style="font-size:.75rem"></i> ${s}${d.toFixed(1)}%</span>`;
   };
@@ -484,13 +485,13 @@ function renderAnalisis(filas) {
   tbody.innerHTML = filas.map(f => `<tr>
     <td class="sp-hi">${fmtDt(f.fecha)}</td>
     <td>${f.trade || '—'}</td>
-    <td style="font-size:.78rem;color:var(--muted)">${f.state || '—'}${f.zone ? ' / ' + f.zone : ''}</td>
+    <td style="font-size:.78rem;color:#9ca3af">${f.state || '—'}${f.zone ? ' / ' + f.zone : ''}</td>
     <td>${f.p_mayorista === 'Si'
       ? '<span class="sp-bdg sp-bdg-accent">Mayor</span>'
       : '<span class="sp-bdg sp-bdg-def">Detal</span>'}</td>
-    <td style="font-weight:600;color:var(--accent)">${f.nuestroProd}</td>
+    <td style="font-weight:600;color:#4f46e5">${f.nuestroProd}</td>
     <td style="text-align:center;font-weight:700">${fmt(f.nPKg)}</td>
-    <td style="color:var(--txt2)">${f.compProd}</td>
+    <td style="color:#6b7280">${f.compProd}</td>
     <td style="text-align:center">${fmt(f.cPKg)}</td>
     <td style="text-align:center">${fmtD(f.diferencia)}</td>
   </tr>`).join('');
@@ -563,7 +564,7 @@ function setDefaultDates() {
 }
 
 window.onLineaChanged = () => fetchDataAnalisis();
-window.captaReady(() => { setDefaultDates(); loadCatalogs(); });
+waitDb(() => { setDefaultDates(); loadCatalogs(); });
 </script>
 </body>
 </html>
