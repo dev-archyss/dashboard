@@ -268,9 +268,14 @@ def build_records_params(empresa_id, date_from=None, date_to=None,
 
 
 # ─── Rutas de vistas ──────────────────────────────────────────────────────────
-@app.route('/')
+
+@app.route('/', methods=['GET', 'POST'])
 def login():
-    return render_template('login.html')
+    if request.method == 'POST':
+        empresa = request.form.get('empresa')
+        clave   = request.form.get('clave')
+      
+    return render_template('login.html', now=datetime.now())
 
 
 @app.route('/logout')
