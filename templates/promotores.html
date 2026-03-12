@@ -138,7 +138,8 @@
 </div>
 
 <script>
-const db = window.db;
+function waitDb(fn){if(window.db){fn();return;}const t=setInterval(()=>{if(window.db){clearInterval(t);fn();}},50);}
+const db={from:(...a)=>window.db.from(...a)};
 const empresaId=localStorage.getItem('empresa_id');
 if(!empresaId)window.location.href='/';
 
@@ -146,7 +147,7 @@ let allPromoters=[],allEstados=[],allZonas=[],allLineas=[],allClientes=[];
 let currentPage=1;const perPage=10;let searchTerm='';
 let cm_promoter_id=null,cm_promoter_name='',cm_search_timer=null;
 
-window.onload=async()=>{await Promise.all([loadEstados(),loadLineas(),loadAllClientes(),loadPromoters()]);};
+waitDb(async()=>{await Promise.all([loadEstados(),loadLineas(),loadAllClientes(),loadPromoters()]);});
 
 async function loadEstados(sid='estado_id'){
   const{data}=await db.from('web_estados').select('*').order('nombre');
