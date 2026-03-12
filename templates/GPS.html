@@ -154,6 +154,8 @@ async function fetchRecordsFromAPI(filters) {
   if (filters.dateTo)   p.append('date_to',   filters.dateTo);
   if (filters.promoterId && filters.promoterId !== 'all') p.append('promoter_id', filters.promoterId);
   p.append('empresa_id', empresaId);
+  const lineaId = localStorage.getItem('sp-linea') || '';
+  if (lineaId) p.append('linea_id', lineaId);
   try {
     const r = await fetch(`/api/records?${p.toString()}`);
     const d = await r.json();
@@ -284,6 +286,9 @@ async function init() {
   ['dateFrom','dateTo','promoter','state','confirmation'].forEach(id =>
     document.getElementById(id).addEventListener('change', filterRecords));
 }
+
+// Reaccionar al cambio de línea desde el navbar
+window.onLineaChanged = () => filterRecords();
 
 document.addEventListener('DOMContentLoaded', init);
 </script>

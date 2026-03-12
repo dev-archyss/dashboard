@@ -905,6 +905,19 @@ async function init() {
     detailsModal.addEventListener('click', e => {
         if (e.target === detailsModal) detailsModal.style.display = 'none';
     });
+
+    // Sincronizar con el selector de línea del navbar
+    window.onLineaChanged = (lineaId) => {
+        const sel = document.getElementById('linea_filter');
+        if (sel) sel.value = lineaId || 'all';
+        filterRecords();
+    };
+    // Aplicar línea guardada al cargar
+    const savedLinea = localStorage.getItem('sp-linea') || '';
+    if (savedLinea) {
+        const sel = document.getElementById('linea_filter');
+        if (sel) sel.value = savedLinea;
+    }
 }
 
 if (empresaId) init();

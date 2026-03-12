@@ -172,7 +172,8 @@ function stockBadge(s) {
 
 // ── Cargar datos ───────────────────────────────────────────────────
 async function loadStockData() {
-  const { data, error } = await supabaseClient
+  const lineaId = localStorage.getItem('sp-linea') || '';
+  let q = supabaseClient
     .from('web_precios')
     .select('id,created_at,promoter_id,trade,state,zone,myitems,web_promotores!inner(promoter_name)')
     .eq('empresa_id', empresaId)
@@ -180,6 +181,9 @@ async function loadStockData() {
     .order('created_at', { ascending: false })
     .limit(300);
 
+  if (lineaId) q = q.eq('linea_id', lineaId);
+
+  const { data, error } = await q;
   if (error) { console.error(error); return; }
   allStockData = (data || []).map(v => ({ ...v, myitems: v.myitems || [] }));
   poblarProductSelect();
@@ -316,6 +320,7 @@ function clearFilters() {
 
 function closeModal() { document.getElementById('stockModal').classList.remove('open'); }
 document.getElementById('stockModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+window.onLineaChanged = () => loadStockData();
 document.addEventListener('DOMContentLoaded', () => loadStockData());
 </script>
 </body>

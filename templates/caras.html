@@ -278,21 +278,23 @@ async function loadCatalogs() {
 
 // ── Cargar datos ───────────────────────────────────────────────────
 async function loadData() {
-  const df   = document.getElementById('dateFrom').value;
-  const dt   = document.getElementById('dateTo').value;
-  const prom = document.getElementById('promoter').value;
-  const st   = document.getElementById('state').value;
-  const zone = document.getElementById('zone').value;
+  const df      = document.getElementById('dateFrom').value;
+  const dt      = document.getElementById('dateTo').value;
+  const prom    = document.getElementById('promoter').value;
+  const st      = document.getElementById('state').value;
+  const zone    = document.getElementById('zone').value;
+  const lineaId = localStorage.getItem('sp-linea') || '';
 
   let q = supabaseClient.from('web_precios')
     .select('id,created_at,promoter_name,state,zone,trade,total_faces_before,our_faces_before_manual,our_faces_before_counted,total_faces,our_faces_after,myitems')
     .eq('empresa_id', empresaId);
 
-  if (df)   q = q.gte('created_at', `${df}T00:00:00`);
-  if (dt)   q = q.lte('created_at', `${dt}T23:59:59`);
+  if (df)       q = q.gte('created_at', `${df}T00:00:00`);
+  if (dt)       q = q.lte('created_at', `${dt}T23:59:59`);
   if (prom !== 'all') q = q.eq('promoter_name', prom);
   if (st   !== 'all') q = q.eq('state', st);
   if (zone !== 'all') q = q.eq('zone', zone);
+  if (lineaId)  q = q.eq('linea_id', lineaId);
   if (comercioSeleccionado) q = q.eq('trade', comercioSeleccionado);
 
   const { data, error } = await q.order('created_at', { ascending: false });
@@ -498,6 +500,9 @@ function setDates() {
   document.getElementById('dateFrom').value = mon.toISOString().split('T')[0];
   document.getElementById('dateTo').value   = t.toISOString().split('T')[0];
 }
+
+// Reaccionar al cambio de línea desde el navbar
+window.onLineaChanged = () => loadData();
 
 document.addEventListener('DOMContentLoaded', async () => {
   setDates();
