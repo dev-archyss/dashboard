@@ -614,13 +614,21 @@ def get_records():
             print(f"Error procesando registro {record.get('id', 'sin-id')}: {e}")
             continue
 
+    seen = set()
+    promotores_unicos = []
+    for p in promotores:
+        pid = p.get("promoter_id")
+        if pid and pid not in seen:
+            seen.add(pid)
+            promotores_unicos.append(p)
+ 
     return jsonify({
         "records":   formatted_records,
-        "promoters": promotores,
+        "promoters": promotores_unicos,   # ← deduplicado
         "estados":   estados,
         "zonas":     zonas,
-        "lineas":    lineas,           # ← para poblar filtro de línea en Dashboard
-        "clientes":  clientes_todos,   # ← para poblar filtro de comercio en Dashboard
+        "lineas":    lineas,
+        "clientes":  clientes_todos,
     })
 
 
