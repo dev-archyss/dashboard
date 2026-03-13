@@ -269,44 +269,6 @@ def build_records_params(empresa_id, date_from=None, date_to=None,
 
 # ─── Rutas de vistas ──────────────────────────────────────────────────────────
 
-@app.route('/', methods=['GET', 'POST'])
-def login():
-    if 'empresa_id' in session:
-        return redirect(url_for('dashboard'))
-
-    if request.method == 'POST':
-        empresa_nombre = request.form.get('empresa', '').strip()
-        clave          = request.form.get('clave', '').strip()
-
-        if not empresa_nombre or not clave:
-            flash('Completa todos los campos.', 'error')
-            return render_template('login.html', now=datetime.now())
-
-        try:
-            # Buscar empresa por nombre y clave_acceso
-            result = fetch_table('empresas', params=[
-                ('nombre',        f'ilike.{empresa_nombre}'),
-                ('clave_acceso',  f'eq.{clave}'),
-                ('select',        'id,nombre'),
-            ])
-
-            if not result:
-                flash('Empresa o clave incorrecta.', 'error')
-                return render_template('login.html', now=datetime.now())
-
-            empresa = result[0]
-            session['empresa_id']     = empresa['id']
-            session['empresa_nombre'] = empresa['nombre']
-            return redirect(url_for('dashboard'))
-
-        except Exception as e:
-            app.logger.error(f'Login error: {e}')
-            flash('Error interno. Intenta de nuevo.', 'error')
-            return render_template('login.html', now=datetime.now())
-
-    return render_template('login.html', now=datetime.now())
-
-
 @app.route('/logout')
 def logout():
     session.clear()
@@ -391,35 +353,64 @@ def metros_espacios():
 
 
 # ─── Login / Logout ───────────────────────────────────────────────────────────
-@app.route('/login', methods=['POST'])
-def do_login():
-    data = request.get_json()
-    nombre = (data.get('nombre') or '').strip()
-    clave = (data.get('clave') or '').strip()
 
-    if not nombre or not clave:
-        return jsonify({"success": False, "error": "Completa ambos campos"}), 400
 
-    url = f"{SUPABASE_URL}/rest/v1/empresas?nombre=eq.{nombre}&clave_acceso=eq.{clave}&select=id,nombre"
-    resp = requests.get(url, headers=headers, timeout=5)
-    if resp.status_code == 200 and resp.json():
-        empresa = resp.json()[0]
-        session['empresa_id'] = empresa['id']
-        session['empresa_nombre'] = empresa['nombre']
-        return jsonify({"success": True, "empresa_id": empresa['id'], "empresa_nombre": empresa['nombre']})
-    return jsonify({"success": False, "error": "Credenciales incorrectas"}), 401
-
-@app.route('/api/lineas', methods=['GET'])
-def get_lineas():
-    empresa_id = request.args.get('empresa_id') or session.get('empresa_id')
-    if not empresa_id:
-        return jsonify({"error": "empresa_id requerido"}), 400
-    lineas = fetch_table(
-        "web_lineas",
-        params=[("activa", "eq.true"), ("order", "nombre.asc")],
-        empresa_id=empresa_id
-    )
-    return jsonify({"lineas": lineas})
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    # Si ya hay sesión activa, ir directo al dashboard
+    if session.get('empresa_id'):
+        return redirect(url_for('dashboard'))
+ 
+    if request.method == 'POST':
+        # Leer del form HTML (no JSON)
+        nombre = request.form.get('empresa', '').strip().upper()
+        clave  = request.form.get('clave',   '').strip()
+ 
+        if not nombre or not clave:
+            return render_template('login.html', error='Completa ambos campos')
+ 
+        # Buscar empresa por nombre exacto (ilike = case-insensitive en Supabase)
+        url = (f"{SUPABASE_URL}/rest/v1/empresas"
+               f"?nombre=ilike.{nombre}"
+               f"&select=id,nombre,clave_acceso,estatus,fecha_vencimiento"
+               f"&limit=10")
+ 
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code != 200:
+                return render_template('login.html', error='Error de conexión con la base de datos')
+ 
+            empresas = response.json()
+ 
+            # Buscar coincidencia EXACTA de nombre + clave
+            empresa = None
+            for e in empresas:
+                if e.get('nombre', '').upper() == nombre and e.get('clave_acceso') == clave:
+                    empresa = e
+                    break
+ 
+            if not empresa:
+                nombres = [e.get('nombre', '').upper() for e in empresas]
+                if nombre in nombres:
+                    return render_template('login.html', error='Clave incorrecta')
+                return render_template('login.html', error='Empresa no encontrada')
+ 
+            if empresa.get('estatus') != 'activa':
+                return render_template('login.html', error='La cuenta no está activa')
+ 
+            # Limpiar sesión anterior y guardar la nueva
+            session.clear()
+            session['empresa_id']     = empresa['id']
+            session['empresa_nombre'] = empresa['nombre']
+ 
+            return redirect(url_for('dashboard'))
+ 
+        except Exception as e:
+            print(f"[LOGIN ERROR] {str(e)}")
+            return render_template('login.html', error='Error interno del servidor')
+ 
+    # GET — mostrar formulario
+    return render_template('login.html')
 
 
 # ─── API: Configuración pública del dashboard (sin exponer SUPABASE_KEY) ──────
