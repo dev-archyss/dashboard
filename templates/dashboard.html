@@ -325,10 +325,19 @@ const apiCache      = new Map();
 
 // Fusiona nuevos promotores en la lista maestra sin duplicar
 function mergePromoters(incoming) {
+    if (!incoming || !incoming.length) return;
     const map = new Map(promoters.map(p => [p.promoter_id, p]));
-    (incoming || []).forEach(p => { if (!map.has(p.promoter_id)) map.set(p.promoter_id, p); });
-    promoters = [...map.values()];
-    document.getElementById('totalPromoters').textContent = promoters.length;
+    let changed = false;
+    (incoming || []).forEach(p => {
+        if (p.promoter_id && !map.has(p.promoter_id)) {
+            map.set(p.promoter_id, p);
+            changed = true;
+        }
+    });
+    if (changed) {
+        promoters = [...map.values()];
+        document.getElementById('totalPromoters').textContent = promoters.length;
+    }
 }
 
 const loadingEl     = document.getElementById('loadingMessage');
@@ -473,16 +482,37 @@ async function fetchRecordsFromAPI(filters) {
 }
 
 async function fetchWeeklyRecords(week = null, year = null) {
-    const f = { promoterId: 'all' };
-    if (week && year) { f.week = week; f.year = year; }
-    else {
+    const p = new URLSearchParams();
+    p.append('empresa_id', empresaId);
+    p.append('promoter_id', 'all');
+
+    if (week && year) {
+        p.append('week', week);
+        p.append('year', year);
+    } else {
         const today = new Date(), dow = today.getDay();
         const mon = new Date(today); mon.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
         const sun = new Date(mon);   sun.setDate(mon.getDate() + 6);
-        f.dateFrom = mon.toISOString().split('T')[0];
-        f.dateTo   = sun.toISOString().split('T')[0];
+        p.append('date_from', mon.toISOString().split('T')[0]);
+        p.append('date_to',   sun.toISOString().split('T')[0]);
     }
-    return fetchRecordsFromAPI(f);
+
+    // Clave de cache propia para no pisar la cache principal
+    const cacheKey = `_weekly_${p.toString()}`;
+    if (apiCache.has(cacheKey)) return apiCache.get(cacheKey);
+
+    try {
+        const res  = await fetch(`/api/records?${p.toString()}`);
+        const data = await res.json();
+        // Solo mergear promotores SI la lista maestra está vacía (primer carga)
+        if (promoters.length === 0) mergePromoters(data.promoters);
+        const records = data.records || [];
+        apiCache.set(cacheKey, records);
+        return records;
+    } catch(err) {
+        console.error('fetchWeeklyRecords:', err);
+        return [];
+    }
 }
 
 // ── Poblar selects ─────────────────────────────────────────────────
@@ -894,11 +924,14 @@ async function init() {
     document.getElementById('yearSelect').value = year;
     await populateWeeks(year);  // ya auto-selecciona la semana actual
 
+    // Primer fetch — puebla promoters, estados, zonas, lineas
     allRecords = await fetchRecordsFromAPI({ dateFrom: today, dateTo: today, promoterId: 'all' });
+    filteredRecords = [...allRecords];  // sin filtros adicionales al arrancar
     populateSelects();
-    filterRecords();
+    currentPage = 1;
+    updateDashboard();
 
-    // Cargar progreso semanal con la semana ya seleccionada
+    // Progreso semanal — fetchWeeklyRecords ya NO toca promoters si la lista no está vacía
     await updateWeeklyProgress('all');
 
     // ── Listeners ─────────────────────────────────────────────────
