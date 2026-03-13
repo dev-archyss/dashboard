@@ -232,7 +232,10 @@ body{
 }
 .hero-tagline span{
   background:linear-gradient(90deg,#818cf8,#38bdf8);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  -webkit-background-clip: text;
+background-clip: text;          /* ← estándar agregado */
+-webkit-text-fill-color: transparent;
+color: transparent; 
 }
 .hero-desc{
   font-size:.875rem;font-weight:300;line-height:1.7;
@@ -409,7 +412,10 @@ footer{
 }
 .footer-brand span{
   background:linear-gradient(90deg,#818cf8,#38bdf8);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  -webkit-background-clip: text;
+background-clip: text;          /* ← estándar agregado */
+-webkit-text-fill-color: transparent;
+color: transparent; 
   font-weight:900;
 }
 .footer-copy{color:rgba(255,255,255,.18);letter-spacing:.03em}
