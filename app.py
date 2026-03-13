@@ -357,8 +357,7 @@ def metros_espacios():
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
-    # Si ya hay sesión activa, ir directo al dashboard
-    if session.get('empresa_id'):
+    if request.method == 'GET' and session.get('empresa_id'):
         return redirect(url_for('dashboard'))
  
     if request.method == 'POST':
@@ -1017,7 +1016,18 @@ def delete_producto_competencia(relacion_id):
         return jsonify({"success": True}), 204
     return jsonify({"error": "No se pudo eliminar"}), res.status_code
 
-
+@app.route('/api/lineas', methods=['GET'])
+def api_lineas():
+    empresa_id = request.args.get('empresa_id') or session.get('empresa_id')
+    if not empresa_id:
+        return jsonify({"error": "empresa_id requerido"}), 400
+ 
+    lineas = fetch_table(
+        "web_lineas",
+        empresa_id=empresa_id,
+        params=[("order", "nombre.asc")]
+    )
+    return jsonify({"lineas": lineas})
 
 # ─── Entrypoint ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
