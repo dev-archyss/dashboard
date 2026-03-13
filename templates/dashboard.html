@@ -397,12 +397,15 @@ async function populateWeeks(year) {
 
         sel.disabled = false;
 
-        // Auto-seleccionar semana actual si es el año en curso
+        // Auto-seleccionar semana actual — sin disparar el change event
+        window._skipWeekChange = true;
         if (parseInt(year) === currentYear) {
             sel.value = currentWeek;
         } else if (weeks.length > 0) {
-            sel.value = weeks[weeks.length - 1]; // última semana del año seleccionado
+            sel.value = weeks[weeks.length - 1];
         }
+        // Micro-delay para que el browser procese el value antes de quitar el flag
+        setTimeout(() => { window._skipWeekChange = false; }, 0);
     } catch(e) { console.error('populateWeeks:', e); }
 }
 
@@ -633,16 +636,30 @@ function updateConfirmationRate() {
 
 // ── Weekly progress ────────────────────────────────────────────────
 async function updateWeeklyProgress(pName = 'all') {
-    const week    = document.getElementById('weekSelect').value;
-    const year    = document.getElementById('yearSelect').value;
-    const hide    = document.getElementById('hideNoVisits').checked;
-    const cont    = document.getElementById('promoterProgressContainer');
-    cont.innerHTML = '';
+    // Token: si se llama N veces en paralelo, solo el ultimo render gana
+    const myToken = (window._weeklyToken = (window._weeklyToken || 0) + 1);
+
+    const week = document.getElementById('weekSelect').value;
+    const year = document.getElementById('yearSelect').value;
+    const hide = document.getElementById('hideNoVisits').checked;
+    const cont = document.getElementById('promoterProgressContainer');
 
     const weekRec = await fetchWeeklyRecords(week || null, year || null);
+
+    // Cancelar si ya hay una llamada mas reciente
+    if (myToken !== window._weeklyToken) return;
+
+    cont.innerHTML = '';
+
+    // Deduplicar promotores — defensa contra cualquier fuente duplicada
+    const seen = new Map();
+    promoters.forEach(p => { if (p.promoter_id && !seen.has(p.promoter_id)) seen.set(p.promoter_id, p); });
+    const listaFinal = [...seen.values()];
+    if (!listaFinal.length) return;
+
     let totalGoal = 0, totalConf = 0;
 
-    promoters
+    listaFinal
         .filter(p => pName === 'all' || p.promoter_name === pName)
         .forEach(p => {
             const visits = weekRec.filter(r => r.promoter_id === p.promoter_id);
@@ -922,16 +939,25 @@ async function init() {
     populateYears();
     const year = getCurrentYear();
     document.getElementById('yearSelect').value = year;
-    await populateWeeks(year);  // ya auto-selecciona la semana actual
 
-    // Primer fetch — puebla promoters, estados, zonas, lineas
+    // Limpiar listas maestras antes de cargar (evita duplicación en recargas)
+    promoters     = [];
+    estados       = [];
+    zonas         = [];
+    lineas        = [];
+    clientes_list = [];
+    apiCache.clear();
+
+    await populateWeeks(year);  // auto-selecciona semana actual, _skipWeekChange activo
+
+    // Único fetch inicial — puebla promoters, estados, zonas, lineas
     allRecords = await fetchRecordsFromAPI({ dateFrom: today, dateTo: today, promoterId: 'all' });
-    filteredRecords = [...allRecords];  // sin filtros adicionales al arrancar
+    filteredRecords = [...allRecords];
     populateSelects();
     currentPage = 1;
     updateDashboard();
 
-    // Progreso semanal — fetchWeeklyRecords ya NO toca promoters si la lista no está vacía
+    // Progreso semanal — una sola llamada, _skipWeekChange ya es false
     await updateWeeklyProgress('all');
 
     // ── Listeners ─────────────────────────────────────────────────
@@ -952,8 +978,10 @@ async function init() {
         await populateWeeks(e.target.value);
         updateWeeklyProgress(document.getElementById('promoter').value);
     });
-    document.getElementById('weekSelect').addEventListener('change', () =>
-        updateWeeklyProgress(document.getElementById('promoter').value));
+    document.getElementById('weekSelect').addEventListener('change', () => {
+        if (window._skipWeekChange) return;  // ignorar durante init
+        updateWeeklyProgress(document.getElementById('promoter').value);
+    });
 
     document.getElementById('selectAll').addEventListener('change', e => {
         document.querySelectorAll('.selectRecord').forEach(cb => cb.checked = e.target.checked);
