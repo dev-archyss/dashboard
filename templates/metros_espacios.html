@@ -247,8 +247,8 @@ function waitDb(fn) {
   const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
 }
 const supabaseClient = { from: (...a) => window.db.from(...a) };
-const empresaId = localStorage.getItem('empresa_id');
-if (!empresaId) window.location.href = '/';
+const empresaId = localStorage.getItem('empresa_id') || await (async()=>{try{const r=await fetch('/api/dashboard/config');if(r.ok){const d=await r.json();localStorage.setItem('empresa_id',d.empresa_id);localStorage.setItem('empresa_nombre',d.empresa_nombre);return d.empresa_id;}return null;}catch{return null;}})();
+if (!empresaId) { window.location.replace('/'); throw new Error('no session'); }
 
 let chartProd = null, chartEst = null;
 let allZonas = [], comercioSeleccionado = '', comercioTimer = null;

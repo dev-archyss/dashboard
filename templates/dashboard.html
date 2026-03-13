@@ -301,15 +301,30 @@
 tailwind.config = { darkMode: 'class' };
 
 // ── Constantes ─────────────────────────────────────────────────────
-const empresaId   = localStorage.getItem('empresa_id');
 const SUPABASE_URL  = 'https://djjylikkocemrlsjxscr.supabase.co';
 const STORAGE_BASE  = `${SUPABASE_URL}/storage/v1/object/public/visits_photos/`;
 const RECORDS_PER_PAGE = 25;
 
-if (!empresaId) {
-    alert('Sesión no encontrada. Redirigiendo al login...');
-    window.location.href = '/';
-}
+// Obtener empresa_id — primero localStorage, si no desde el servidor
+let empresaId = localStorage.getItem('empresa_id');
+
+(async () => {
+    if (!empresaId) {
+        try {
+            const r = await fetch('/api/dashboard/config');
+            if (r.ok) {
+                const cfg = await r.json();
+                empresaId = cfg.empresa_id;
+                localStorage.setItem('empresa_id', cfg.empresa_id);
+                localStorage.setItem('empresa_nombre', cfg.empresa_nombre);
+            } else {
+                window.location.replace('/');
+            }
+        } catch(e) {
+            window.location.replace('/');
+        }
+    }
+})();
 
 // ── Estado global ──────────────────────────────────────────────────
 let allRecords      = [];

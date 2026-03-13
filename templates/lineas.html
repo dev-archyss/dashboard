@@ -94,9 +94,9 @@
 <script>
 function waitDb(fn){if(window.db){fn();return;}const t=setInterval(()=>{if(window.db){clearInterval(t);fn();}},50);}
 const db={from:(...a)=>window.db.from(...a)};
-const empresaId=localStorage.getItem('empresa_id');
+const empresaId=localStorage.getItem('empresa_id')||await(async()=>{try{const r=await fetch('/api/dashboard/config');if(r.ok){const d=await r.json();localStorage.setItem('empresa_id',d.empresa_id);localStorage.setItem('empresa_nombre',d.empresa_nombre);return d.empresa_id;}return null;}catch{return null;}})();
 const STORAGE_BASE='https://djjylikkocemrlsjxscr.supabase.co/storage/v1/object/public/planogramas/';
-if(!empresaId) window.location.href='/';
+if(!empresaId){window.location.replace('/');throw new Error('no session');}
 
 function previewCreate(input){const img=document.getElementById('planogram_preview_create');if(input.files[0]){const r=new FileReader();r.onload=e=>{img.src=e.target.result;img.style.display='block';};r.readAsDataURL(input.files[0]);}else img.style.display='none';}
 function previewEdit(input){const img=document.getElementById('edit_planogram_preview');if(input.files[0]){const r=new FileReader();r.onload=e=>{img.src=e.target.result;img.style.display='block';};r.readAsDataURL(input.files[0]);}else img.style.display='none';}

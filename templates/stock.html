@@ -225,8 +225,8 @@
 
 <script>
 const DEFAULT_ANAQUEL = 3, DEFAULT_BODEGA = 5;
-const empresaId = localStorage.getItem('empresa_id');
-if (!empresaId) window.location.href = '/';
+const empresaId = localStorage.getItem('empresa_id') || await (async()=>{try{const r=await fetch('/api/dashboard/config');if(r.ok){const d=await r.json();localStorage.setItem('empresa_id',d.empresa_id);localStorage.setItem('empresa_nombre',d.empresa_nombre);return d.empresa_id;}return null;}catch{return null;}})();
+if (!empresaId) { window.location.replace('/'); throw new Error('no session'); }
 
 let allData = [], filas = [], umbrales = {}, comercioTimer = null;
 // umbrales = { 'PRODUCTO A': { anaquel: 5, bodega: 10 }, ... }
