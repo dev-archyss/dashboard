@@ -81,7 +81,7 @@
       <button class="sp-icon-btn sp-hamburger" onclick="openDrawer()" style="display:none">
         <i class="fas fa-bars"></i>
       </button>
-      <a href="/logout" class="sp-icon-btn sp-danger" title="Cerrar sesión">
+      <a href="#" onclick="captaLogout(event)" class="sp-icon-btn sp-danger" title="Cerrar sesión">
         <i class="fas fa-sign-out-alt"></i>
       </a>
     </div>
@@ -130,7 +130,7 @@
         <span id="drawerThemeLbl">—</span>
       </button>
     </div>
-    <a href="/logout" class="sp-drawer-link" style="color:var(--red);margin-top:4px">
+    <a href="#" onclick="captaLogout(event)" class="sp-drawer-link" style="color:var(--red);margin-top:4px">
       <i class="fas fa-sign-out-alt" style="color:var(--red)"></i> Cerrar sesión
     </a>
   </div>
@@ -306,4 +306,13 @@ window.addEventListener('load', () => {
 });
 window.addEventListener('resize', () => { _checkNavOverflow(); _updateHamburger(); });
 new ResizeObserver(() => { _checkNavOverflow(); _updateHamburger(); }).observe(document.body);
+
+// ── Logout limpio — borra localStorage antes de redirigir ──────────
+window.captaLogout = function(e) {
+    if (e) e.preventDefault();
+    localStorage.removeItem('empresa_id');
+    localStorage.removeItem('empresa_nombre');
+    localStorage.removeItem('sp-linea');
+    window.location.href = '/logout';
+};
 </script>
