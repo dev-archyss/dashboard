@@ -1073,11 +1073,6 @@ def api_lineas():
     )
     return jsonify({"lineas": lineas})
 
-@app.route('/admin')
-def admin():
-    # No requiere sesión de empresa — tiene su propio login interno
-    return render_template('admin.html')
-
 # ─── Entrypoint ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
