@@ -17,6 +17,9 @@
 .sp-nav-dropdown a i{width:16px;text-align:center;color:var(--accent);opacity:.8}
 .sp-nav-dropdown-sep{height:1px;background:var(--brd);margin:4px 6px}
 .sp-nav-link.has-dropdown::after{content:'▾';font-size:.55rem;margin-left:3px;opacity:.6}
+.sp-nav-links.loading-mods > *:not([data-nav-core]) {
+  visibility: hidden;
+}
 </style>
 
 <nav class="sp-nav" id="mainNav">
@@ -171,6 +174,8 @@ const _MOD_LINKS = {
 };
 
 async function _applyModules(empresaId) {
+  const navLinks = document.getElementById('navLinks');
+  if (navLinks) navLinks.classList.add('loading-mods');
   try {
     const res = await fetch(
       `${window._SUPA_URL}/rest/v1/empresas?id=eq.${empresaId}&select=modulos_activos`,
@@ -183,13 +188,22 @@ async function _applyModules(empresaId) {
     if (!raw || Object.keys(raw).length === 0) return;
     const mods = typeof raw === 'string' ? JSON.parse(raw) : raw;
 
-    // Ocultar links no permitidos
+    // Ocultar links no permitidos en navbar y drawer
     Object.entries(_MOD_LINKS).forEach(([key, selectors]) => {
       const allowed = mods[key] === true;
       selectors.forEach(sel => {
         document.querySelectorAll(sel).forEach(el => {
-          // Ocultar el elemento y su contenedor padre si es drawer-link
-          el.style.display = allowed ? '' : 'none';
+          el.style.display      = allowed ? '' : 'none';
+          el.dataset.modBlocked = allowed ? '' : '1';
+          // Si el link está dentro del dropdown de análisis,
+          // también marcar el <div> padre en navLinks
+          const navParent = el.parentElement?.closest('#navLinks > div, #navLinks > a');
+          if (navParent && !allowed) {
+            // Solo ocultar el padre si TODOS sus hijos están bloqueados
+            const siblings = navParent.querySelectorAll('a[href]');
+            const allBlocked = Array.from(siblings).every(s => s.dataset.modBlocked === '1');
+            if (allBlocked) { navParent.style.display = 'none'; navParent.dataset.modBlocked = '1'; }
+          }
         });
       });
     });
@@ -203,8 +217,14 @@ async function _applyModules(empresaId) {
     // Guardar en window para que las rutas Flask también puedan verificar
     window._captaModulos = mods;
 
+    // Recalcular overflow DESPUÉS de ocultar módulos
+    if (navLinks) navLinks.classList.remove('loading-mods');
+    _checkNavOverflow();
+
   } catch(e) {
     console.warn('CAPTA: no se pudieron cargar módulos', e);
+    if (document.getElementById('navLinks'))
+      document.getElementById('navLinks').classList.remove('loading-mods');
   }
 }
 
@@ -322,7 +342,12 @@ function _checkNavOverflow() {
   const nav = document.getElementById('navLinks');
   const more = document.getElementById('navMore'); if (!nav || !more) return;
   const dd = document.getElementById('navDropdown'); dd.innerHTML = '';
-  Array.from(nav.children).forEach(el => el.style.display = '');
+  // Restaurar solo los que NO están bloqueados por módulo
+  Array.from(nav.children).forEach(el => {
+    const href = el.getAttribute('href') || el.querySelector('a')?.getAttribute('href') || '';
+    const blocked = el.dataset.modBlocked === '1';
+    if (!blocked) el.style.display = '';
+  });
   let overflow = false;
   Array.from(nav.children).forEach(el => {
     if (nav.scrollWidth > nav.offsetWidth + 4 || overflow) {
