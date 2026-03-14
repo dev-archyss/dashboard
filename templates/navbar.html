@@ -155,6 +155,59 @@ window.captaReady = function(fn) {
   else { window.addEventListener('capta:db-ready', fn, { once: true }); }
 };
 
+// Mapa: módulo → selector CSS del link en navbar y drawer
+const _MOD_LINKS = {
+  analisis_precios:  ['[href="/analisis"]'],
+  caras:             ['[href="/caras"]'],
+  metros_espacios:   ['[href="/metros_espacios"]'],
+  clientes:          ['[href="/clientes"]'],
+  promotores:        ['[href="/promotores"]'],
+  lineas:            ['[href="/lineas"]'],
+  productos:         ['[href="/productos"]'],
+  competencia:       ['[href="/competencia"]'],
+  stock:             ['[href="/stock"]'],
+  planograma:        ['[href="/planograma"]'],
+  gps_verificacion:  ['[href="/gps"]'],
+};
+
+async function _applyModules(empresaId) {
+  try {
+    const res = await fetch(
+      `${window._SUPA_URL}/rest/v1/empresas?id=eq.${empresaId}&select=modulos_activos`,
+      { headers: { 'apikey': window._SUPA_KEY, 'Authorization': 'Bearer ' + window._SUPA_KEY } }
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    const raw  = data[0]?.modulos_activos;
+    // Si no hay modulos_activos definidos => empresa legacy => mostrar todo
+    if (!raw || Object.keys(raw).length === 0) return;
+    const mods = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+    // Ocultar links no permitidos
+    Object.entries(_MOD_LINKS).forEach(([key, selectors]) => {
+      const allowed = mods[key] === true;
+      selectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => {
+          // Ocultar el elemento y su contenedor padre si es drawer-link
+          el.style.display = allowed ? '' : 'none';
+        });
+      });
+    });
+
+    // Si todos los módulos de análisis están ocultos, ocultar el dropdown completo
+    const analisisKeys = ['analisis_precios','caras','metros_espacios'];
+    const anyAnalisis = analisisKeys.some(k => mods[k] === true);
+    const wrap = document.getElementById('analisisDropdownWrap');
+    if (wrap) wrap.style.display = anyAnalisis ? '' : 'none';
+
+    // Guardar en window para que las rutas Flask también puedan verificar
+    window._captaModulos = mods;
+
+  } catch(e) {
+    console.warn('CAPTA: no se pudieron cargar módulos', e);
+  }
+}
+
 async function _initSupabase() {
   try {
     const res = await fetch('/api/config');
@@ -164,7 +217,11 @@ async function _initSupabase() {
     window._SUPA_KEY = cfg.supabase_key;
     window.db = supabase.createClient(cfg.supabase_url, cfg.supabase_key);
     await _loadLineas();
-    // Marcar como listo y disparar evento
+
+    // Aplicar restricciones de módulos según el plan de la empresa
+    const eid = localStorage.getItem('empresa_id');
+    if (eid) await _applyModules(eid);
+
     window._captaDbReady = true;
     window.dispatchEvent(new Event('capta:db-ready'));
   } catch(e) {

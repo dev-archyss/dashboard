@@ -177,6 +177,44 @@ def get_current_empresa():
     if resp.status_code == 200 and resp.json():
         return resp.json()[0]
     return None
+def get_empresa_modulos():
+    """Retorna el dict de modulos_activos de la empresa en sesión."""
+    empresa_id = session.get('empresa_id')
+    if not empresa_id:
+        return None
+    url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{empresa_id}&select=modulos_activos"
+    try:
+        resp = requests.get(url, headers=headers, timeout=5)
+        if resp.ok and resp.json():
+            raw = resp.json()[0].get('modulos_activos') or {}
+            if isinstance(raw, str):
+                import json as _json
+                raw = _json.loads(raw)
+            return raw
+    except Exception:
+        pass
+    return {}
+ 
+def modulo_activo(key):
+    """True si el módulo está activo para la empresa en sesión (o si no hay restricciones)."""
+    mods = get_empresa_modulos()
+    if not mods:  # sin restricciones => acceso total (empresa legacy)
+        return True
+    return mods.get(key, False) is True
+ 
+def require_modulo(key):
+    """Decorador que bloquea una ruta si el módulo no está activo."""
+    from functools import wraps
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if 'empresa_id' not in session:
+                return redirect(url_for('login'))
+            if not modulo_activo(key):
+                return render_template('modulo_bloqueado.html', modulo=key), 403
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def process_record(record: dict, clientes_by_trade: dict) -> dict:
@@ -285,64 +323,44 @@ def logout():
     response.headers['Expires'] = '0'
     return response
  
- 
-
-
-@app.route('/dashboard')
-@require_session
-def dashboard():
-    return render_template('dashboard.html')
-
-
-@app.route('/gps')
-@require_session
-def gps():
-    return render_template('GPS.html')
-
-
-@app.route('/lineas')
-@require_session
-def lineas():
-    return render_template('lineas.html')
-
-
-@app.route('/clientes')
-@require_session
-def clientes():
-    return render_template('clientes.html')
-
 
 @app.route('/analisis')
-@require_session
+@require_modulo('analisis_precios')
 def analisis():
     return render_template('analisis.html')
-
-
-@app.route('/promotores')
-@require_session
-def promotores():
-    return render_template('promotores.html')
-
-
-@app.route('/competencia')
-@require_session
-def productos_competencia():
-    return render_template('competencia.html')
-
-
-@app.route('/productos')
-@require_session
-def productos():
-    return render_template('productos.html')
-
-
+ 
+@app.route('/caras')
+@require_modulo('caras')
+def caras():
+    return render_template('caras.html')
+ 
+@app.route('/metros_espacios')
+@require_modulo('metros_espacios')
+def metros_espacios():
+    return render_template('metros_espacios.html')
+ 
 @app.route('/stock')
-@require_session
+@require_modulo('stock')
 def stock():
     return render_template('stock.html')
-
-
+ 
+@app.route('/gps')
+@require_modulo('gps_verificacion')
+def gps():
+    return render_template('GPS.html')
+ 
+@app.route('/productos')
+@require_modulo('productos')
+def productos():
+    return render_template('productos.html')
+ 
+@app.route('/competencia')
+@require_modulo('competencia')
+def productos_competencia():
+    return render_template('competencia.html')
+ 
 @app.route('/planograma')
+@require_modulo('planograma')
 def planograma():
     empresa = get_current_empresa()
     if not empresa:
@@ -350,19 +368,32 @@ def planograma():
     return render_template('planograma.html',
                            empresa_nombre=empresa['nombre'],
                            empresa_id=empresa['id'])
-
-
-@app.route('/caras')
+ 
+@app.route('/lineas')
+@require_modulo('lineas')
+def lineas():
+    return render_template('lineas.html')
+ 
+@app.route('/clientes')
+@require_modulo('clientes')
+def clientes():
+    return render_template('clientes.html')
+ 
+@app.route('/promotores')
+@require_modulo('promotores')
+def promotores():
+    return render_template('promotores.html')
+ 
+# Dashboard y admin no tienen restricción de módulo
+@app.route('/dashboard')
 @require_session
-def caras():
-    return render_template('caras.html')
-
-
-@app.route('/metros_espacios')
-def metros_espacios():
-    if 'empresa_id' not in session:
-        return redirect(url_for('login'))
-    return render_template('metros_espacios.html')
+def dashboard():
+    return render_template('dashboard.html')
+ 
+@app.route('/admin')
+def admin():
+    return render_template('admin.html')
+ 
 
 
 # ─── Login / Logout ───────────────────────────────────────────────────────────
