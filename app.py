@@ -271,8 +271,20 @@ def build_records_params(empresa_id, date_from=None, date_to=None,
 
 @app.route('/logout')
 def logout():
+    empresa_id = session.get('empresa_id')
+    # Limpiar caché de esta empresa antes de cerrar sesión
+    if empresa_id:
+        cache_invalidate_prefix(f"records:{empresa_id}")
+        cache_invalidate_prefix(f"stats:{empresa_id}")
+        cache_invalidate_prefix(f"weeks:{empresa_id}")
     session.clear()
-    return redirect(url_for('login'))
+    response = redirect(url_for('login'))
+    # Forzar que el navegador no cachee esta respuesta
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+ 
 
 
 @app.route('/dashboard')

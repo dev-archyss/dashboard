@@ -215,9 +215,7 @@ body{
   font-weight:900;font-size:1.5rem;letter-spacing:.05em;
   color:#fff;line-height:1;
   background:linear-gradient(135deg,#fff 30%,rgba(255,255,255,.7));
-  background-clip:text;
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
 }
 .hero-logo-sub{
   font-size:.7rem;font-weight:500;letter-spacing:.15em;
@@ -232,10 +230,7 @@ body{
 }
 .hero-tagline span{
   background:linear-gradient(90deg,#818cf8,#38bdf8);
-  -webkit-background-clip: text;
-background-clip: text;          /* ← estándar agregado */
--webkit-text-fill-color: transparent;
-color: transparent; 
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
 }
 .hero-desc{
   font-size:.875rem;font-weight:300;line-height:1.7;
@@ -412,10 +407,7 @@ footer{
 }
 .footer-brand span{
   background:linear-gradient(90deg,#818cf8,#38bdf8);
-  -webkit-background-clip: text;
-background-clip: text;          /* ← estándar agregado */
--webkit-text-fill-color: transparent;
-color: transparent; 
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
   font-weight:900;
 }
 .footer-copy{color:rgba(255,255,255,.18);letter-spacing:.03em}
@@ -607,6 +599,11 @@ color: transparent;
 </footer>
 
 <script>
+
+    // Limpiar sesión anterior al llegar al login
+    localStorage.removeItem('empresa_id');
+    localStorage.removeItem('empresa_nombre');
+    localStorage.removeItem('sp-linea');
 /* ── Partículas ─────────────────────────────────────────────────── */
 (function spawnParticles() {
   const container = document.getElementById('particles');
