@@ -1,0 +1,288 @@
+{% include 'navbar.html' %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Espacios Adicionales — CAPTA</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'}</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<main class="sp-page">
+  <div class="sp-page-hdr">
+    <div>
+      <h1 class="sp-page-title">🏪 Espacios Adicionales</h1>
+      <p class="sp-page-sub">Torres, Cabezales y Paletas capturados en punto de venta</p>
+    </div>
+    <span id="badgeTotal" class="sp-bdg sp-bdg-accent" style="font-size:.8rem;padding:4px 14px">— registros</span>
+  </div>
+
+  <!-- Filtros -->
+  <div class="sp-card" style="margin-bottom:18px">
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+      <div style="flex:0 1 150px">
+        <label class="sp-label">Desde</label>
+        <input type="date" class="sp-input" id="fDesde">
+      </div>
+      <div style="flex:0 1 150px">
+        <label class="sp-label">Hasta</label>
+        <input type="date" class="sp-input" id="fHasta">
+      </div>
+      <div style="flex:1;min-width:140px">
+        <label class="sp-label">Tipo de espacio</label>
+        <select class="sp-select" id="fTipo">
+          <option value="">Todos</option>
+          <option value="Torre">🗼 Torre</option>
+          <option value="Cabezal">🏷️ Cabezal</option>
+          <option value="Paleta">🪵 Paleta</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:140px">
+        <label class="sp-label">Promotor</label>
+        <select class="sp-select" id="fPromotor"><option value="">Todos</option></select>
+      </div>
+      <div style="flex:1;min-width:140px">
+        <label class="sp-label">Estado</label>
+        <select class="sp-select" id="fEstado"><option value="">Todos</option></select>
+      </div>
+      <div>
+        <button onclick="cargar()" class="sp-btn sp-btn-primary">
+          <i class="fas fa-filter"></i> Filtrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:22px">
+    <div class="sp-card" style="text-align:center;padding:16px">
+      <p class="sp-sec-title" style="font-size:1.6rem;margin-bottom:4px" id="kTorres">—</p>
+      <p style="font-size:.75rem;color:var(--muted)">🗼 Torres</p>
+    </div>
+    <div class="sp-card" style="text-align:center;padding:16px">
+      <p class="sp-sec-title" style="font-size:1.6rem;margin-bottom:4px" id="kCabezales">—</p>
+      <p style="font-size:.75rem;color:var(--muted)">🏷️ Cabezales</p>
+    </div>
+    <div class="sp-card" style="text-align:center;padding:16px">
+      <p class="sp-sec-title" style="font-size:1.6rem;margin-bottom:4px" id="kPaletas">—</p>
+      <p style="font-size:.75rem;color:var(--muted)">🪵 Paletas</p>
+    </div>
+    <div class="sp-card" style="text-align:center;padding:16px">
+      <p class="sp-sec-title" style="font-size:1.6rem;margin-bottom:4px" id="kTotal">—</p>
+      <p style="font-size:.75rem;color:var(--muted)">Total unidades</p>
+    </div>
+    <div class="sp-card" style="text-align:center;padding:16px">
+      <p class="sp-sec-title" style="font-size:1.6rem;margin-bottom:4px" id="kVisitas">—</p>
+      <p style="font-size:.75rem;color:var(--muted)">Visitas con espacios</p>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px">
+    <div class="sp-card">
+      <p class="sp-sec-title" style="margin-bottom:14px">Distribución por tipo</p>
+      <canvas id="chartDonut" height="200"></canvas>
+    </div>
+    <div class="sp-card">
+      <p class="sp-sec-title" style="margin-bottom:14px">Top 10 comercios por unidades</p>
+      <canvas id="chartTop" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Tabla detalle -->
+  <div class="sp-card">
+    <p class="sp-sec-title" style="margin-bottom:14px">Detalle de visitas</p>
+    <div style="overflow-x:auto;max-height:60vh">
+      <table class="sp-tbl" id="tblDetalle">
+        <thead><tr>
+          <th>Fecha</th><th>Promotor</th><th>Comercio</th><th>Estado</th>
+          <th style="text-align:center">🗼 Torres</th>
+          <th style="text-align:center">🏷️ Cabezales</th>
+          <th style="text-align:center">🪵 Paletas</th>
+          <th style="text-align:center">Total und.</th>
+        </tr></thead>
+        <tbody id="tbody">
+          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">
+            <i class="fas fa-spinner fa-spin" style="font-size:1.3rem;display:block;margin-bottom:8px"></i>Cargando...
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const empresaId = localStorage.getItem('empresa_id');
+if (!empresaId) window.location.replace('/');
+
+let chartDonut = null, chartTop = null;
+const COLORES = { Torre:'#8b5cf6', Cabezal:'#06b6d4', Paleta:'#f59e0b' };
+
+function fmtDate(d){ return d ? new Date(d).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'2-digit'}) : '—'; }
+
+function setDefaultDates(){
+  const hoy = new Date();
+  const d30 = new Date(hoy); d30.setDate(hoy.getDate()-30);
+  document.getElementById('fHasta').value = hoy.toISOString().split('T')[0];
+  document.getElementById('fDesde').value = d30.toISOString().split('T')[0];
+}
+
+async function loadCatalogs(){
+  waitDb(async()=>{
+    const db = window.db;
+    const eid = empresaId;
+    const [{data:prom},{data:est}] = await Promise.all([
+      db.from('web_promotores').select('promoter_name').eq('empresa_id',eid).order('promoter_name'),
+      db.from('web_estados').select('nombre').order('nombre')
+    ]);
+    const ps = document.getElementById('fPromotor');
+    (prom||[]).forEach(p=>ps.innerHTML+=`<option value="${p.promoter_name}">${p.promoter_name}</option>`);
+    const es = document.getElementById('fEstado');
+    (est||[]).forEach(e=>es.innerHTML+=`<option value="${e.nombre}">${e.nombre}</option>`);
+  });
+}
+
+function waitDb(fn){
+  if(window.db){fn();return;}
+  const t=setInterval(()=>{if(window.db){clearInterval(t);fn();}},50);
+}
+
+async function cargar(){
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
+
+  const desde  = document.getElementById('fDesde').value;
+  const hasta  = document.getElementById('fHasta').value;
+  const tipo   = document.getElementById('fTipo').value;
+  const prom   = document.getElementById('fPromotor').value;
+  const estado = document.getElementById('fEstado').value;
+
+  try {
+    let q = window.db.from('web_precios')
+      .select('id,created_at,promoter_name,trade,state,zone,espacios_adicionales')
+      .eq('empresa_id', empresaId)
+      .not('espacios_adicionales', 'is', null);
+
+    if (desde) q = q.gte('created_at', desde + 'T00:00:00+00:00');
+    if (hasta) q = q.lte('created_at', hasta + 'T23:59:59+00:00');
+    if (prom)  q = q.eq('promoter_name', prom);
+    if (estado)q = q.eq('state', estado);
+    q = q.order('created_at', { ascending: false });
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    // Parsear y filtrar
+    let rows = (data || []).map(r => {
+      let esp = r.espacios_adicionales;
+      if (typeof esp === 'string') try { esp = JSON.parse(esp); } catch { esp = []; }
+      if (!Array.isArray(esp) || esp.length === 0) return null;
+      if (tipo) esp = esp.filter(e => e.tipo === tipo);
+      if (esp.length === 0) return null;
+      return { ...r, espacios: esp };
+    }).filter(Boolean);
+
+    // KPIs
+    let kT=0, kC=0, kP=0;
+    rows.forEach(r => r.espacios.forEach(e => {
+      const u = parseInt(e.unidades) || 0;
+      if (e.tipo==='Torre')   kT += u;
+      if (e.tipo==='Cabezal') kC += u;
+      if (e.tipo==='Paleta')  kP += u;
+    }));
+    document.getElementById('kTorres').textContent    = kT;
+    document.getElementById('kCabezales').textContent = kC;
+    document.getElementById('kPaletas').textContent   = kP;
+    document.getElementById('kTotal').textContent     = kT+kC+kP;
+    document.getElementById('kVisitas').textContent   = rows.length;
+    document.getElementById('badgeTotal').textContent = rows.length + ' registros';
+
+    // Gráfico donut
+    renderDonut(kT, kC, kP);
+
+    // Gráfico top comercios
+    const porComercio = {};
+    rows.forEach(r => {
+      if (!porComercio[r.trade]) porComercio[r.trade] = 0;
+      r.espacios.forEach(e => porComercio[r.trade] += parseInt(e.unidades)||0);
+    });
+    const sorted = Object.entries(porComercio).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    renderTop(sorted);
+
+    // Tabla
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Sin datos para los filtros seleccionados</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => {
+      const torres   = r.espacios.filter(e=>e.tipo==='Torre').reduce((s,e)=>s+(parseInt(e.unidades)||0),0);
+      const cabezales= r.espacios.filter(e=>e.tipo==='Cabezal').reduce((s,e)=>s+(parseInt(e.unidades)||0),0);
+      const paletas  = r.espacios.filter(e=>e.tipo==='Paleta').reduce((s,e)=>s+(parseInt(e.unidades)||0),0);
+      const total    = torres+cabezales+paletas;
+      const badge = n => n > 0
+        ? `<span style="display:inline-block;min-width:28px;text-align:center;background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:2px 8px;font-weight:700;font-size:.8rem">${n}</span>`
+        : `<span style="color:var(--muted)">—</span>`;
+      return `<tr>
+        <td style="font-size:.78rem">${fmtDate(r.created_at)}</td>
+        <td class="sp-hi" style="font-size:.8rem">${r.promoter_name||'—'}</td>
+        <td style="font-size:.8rem">${r.trade||'—'}</td>
+        <td><span class="sp-bdg sp-bdg-def" style="font-size:.68rem">${r.state||'—'}</span></td>
+        <td style="text-align:center">${badge(torres)}</td>
+        <td style="text-align:center">${badge(cabezales)}</td>
+        <td style="text-align:center">${badge(paletas)}</td>
+        <td style="text-align:center"><strong style="color:var(--accent)">${total}</strong></td>
+      </tr>`;
+    }).join('');
+
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:24px">Error: ${e.message}</td></tr>`;
+  }
+}
+
+function renderDonut(t, c, p){
+  if(chartDonut) chartDonut.destroy();
+  const ctx = document.getElementById('chartDonut').getContext('2d');
+  chartDonut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Torres','Cabezales','Paletas'],
+      datasets: [{ data:[t,c,p], backgroundColor:['#8b5cf6','#06b6d4','#f59e0b'], borderWidth:0 }]
+    },
+    options: {
+      plugins: { legend:{ position:'bottom', labels:{ color: document.documentElement.classList.contains('dark')?'#cbd5e1':'#374151', padding:12, font:{size:12} } } },
+      cutout:'65%'
+    }
+  });
+}
+
+function renderTop(sorted){
+  if(chartTop) chartTop.destroy();
+  if(!sorted.length) return;
+  const ctx = document.getElementById('chartTop').getContext('2d');
+  const isDark = document.documentElement.classList.contains('dark');
+  chartTop = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([k])=>k.length>20?k.slice(0,18)+'…':k),
+      datasets: [{ data: sorted.map(([,v])=>v), backgroundColor:'#8b5cf6', borderRadius:6 }]
+    },
+    options: {
+      indexAxis:'y',
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ ticks:{color:isDark?'#94a3b8':'#6b7280',font:{size:11}}, grid:{color:isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)'} },
+        y:{ ticks:{color:isDark?'#cbd5e1':'#374151',font:{size:11}}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+setDefaultDates();
+loadCatalogs();
+window.captaReady(()=>cargar());
+</script>
+</body>
+</html>

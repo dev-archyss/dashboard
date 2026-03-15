@@ -383,6 +383,11 @@ def clientes():
 @require_modulo('promotores')
 def promotores():
     return render_template('promotores.html')
+
+@app.route('/espacios_adicionales')
+@require_modulo('espacios_adicionales')
+def espacios_adicionales():
+     return render_template('espacios_adicionales.html')
  
 # Dashboard y admin no tienen restricción de módulo
 @app.route('/dashboard')
@@ -469,6 +474,8 @@ def dashboard_config():
         "empresa_nombre": session.get('empresa_nombre', ''),
     
     })
+
+
 @app.route('/api/config')
 def get_config():
     """
@@ -642,6 +649,7 @@ def get_records():
                 "before_photos":    safe_json_parse(record.get("before_photos")),
                 "after_photos":     safe_json_parse(record.get("after_photos")),
                 "comments":         record.get("comments"),
+                "espacios_adicionales": safe_json_parse(record.get("espacios_adicionales")),
             })
 
         except Exception as e:
@@ -1072,6 +1080,8 @@ def api_lineas():
         params=[("order", "nombre.asc")]
     )
     return jsonify({"lineas": lineas})
+
+
 
 # ─── Entrypoint ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
