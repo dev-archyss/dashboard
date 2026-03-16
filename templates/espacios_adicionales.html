@@ -37,6 +37,7 @@
           <option value="Torre">🗼 Torre</option>
           <option value="Cabezal">🏷️ Cabezal</option>
           <option value="Paleta">🪵 Paleta</option>
+          <option value="Exhibición">🛍️ Exhibición</option>
         </select>
       </div>
       <div style="flex:1;min-width:140px">
@@ -74,6 +75,10 @@
       <p style="font-size:.75rem;color:var(--muted)">Total unidades</p>
     </div>
     <div class="sp-card" style="text-align:center;padding:16px">
+      <p class="sp-sec-title" style="font-size:1.6rem;margin-bottom:4px" id="kExhibiciones">—</p>
+      <p style="font-size:.75rem;color:var(--muted)">🛍️ Exhibiciones</p>
+    </div>
+    <div class="sp-card" style="text-align:center;padding:16px">
       <p class="sp-sec-title" style="font-size:1.6rem;margin-bottom:4px" id="kVisitas">—</p>
       <p style="font-size:.75rem;color:var(--muted)">Visitas con espacios</p>
     </div>
@@ -101,10 +106,11 @@
           <th style="text-align:center">🗼 Torres</th>
           <th style="text-align:center">🏷️ Cabezales</th>
           <th style="text-align:center">🪵 Paletas</th>
+          <th style="text-align:center">🛍️ Exhibiciones</th>
           <th style="text-align:center">Total und.</th>
         </tr></thead>
         <tbody id="tbody">
-          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">
+          <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">
             <i class="fas fa-spinner fa-spin" style="font-size:1.3rem;display:block;margin-bottom:8px"></i>Cargando...
           </td></tr>
         </tbody>
@@ -151,7 +157,7 @@ function waitDb(fn){
 
 async function cargar(){
   const tbody = document.getElementById('tbody');
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
 
   const desde  = document.getElementById('fDesde').value;
   const hasta  = document.getElementById('fHasta').value;
@@ -185,22 +191,24 @@ async function cargar(){
     }).filter(Boolean);
 
     // KPIs
-    let kT=0, kC=0, kP=0;
+    let kT=0, kC=0, kP=0, kE=0;
     rows.forEach(r => r.espacios.forEach(e => {
       const u = parseInt(e.unidades) || 0;
-      if (e.tipo==='Torre')   kT += u;
-      if (e.tipo==='Cabezal') kC += u;
-      if (e.tipo==='Paleta')  kP += u;
+      if (e.tipo==='Torre')      kT += u;
+      if (e.tipo==='Cabezal')    kC += u;
+      if (e.tipo==='Paleta')     kP += u;
+      if (e.tipo==='Exhibición') kE += u;
     }));
-    document.getElementById('kTorres').textContent    = kT;
-    document.getElementById('kCabezales').textContent = kC;
-    document.getElementById('kPaletas').textContent   = kP;
-    document.getElementById('kTotal').textContent     = kT+kC+kP;
+    document.getElementById('kTorres').textContent      = kT;
+    document.getElementById('kCabezales').textContent   = kC;
+    document.getElementById('kPaletas').textContent     = kP;
+    document.getElementById('kExhibiciones').textContent= kE;
+    document.getElementById('kTotal').textContent       = kT+kC+kP+kE;
     document.getElementById('kVisitas').textContent   = rows.length;
     document.getElementById('badgeTotal').textContent = rows.length + ' registros';
 
     // Gráfico donut
-    renderDonut(kT, kC, kP);
+    renderDonut(kT, kC, kP, kE);
 
     // Gráfico top comercios
     const porComercio = {};
@@ -213,15 +221,16 @@ async function cargar(){
 
     // Tabla
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Sin datos para los filtros seleccionados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">Sin datos para los filtros seleccionados</td></tr>';
       return;
     }
 
     tbody.innerHTML = rows.map(r => {
-      const torres   = r.espacios.filter(e=>e.tipo==='Torre').reduce((s,e)=>s+(parseInt(e.unidades)||0),0);
-      const cabezales= r.espacios.filter(e=>e.tipo==='Cabezal').reduce((s,e)=>s+(parseInt(e.unidades)||0),0);
-      const paletas  = r.espacios.filter(e=>e.tipo==='Paleta').reduce((s,e)=>s+(parseInt(e.unidades)||0),0);
-      const total    = torres+cabezales+paletas;
+      const torres      = r.espacios.filter(e=>e.tipo==='Torre').reduce((s,e)=>s+(parseInt(e.unidades)||0),0);
+      const cabezales   = r.espacios.filter(e=>e.tipo==='Cabezal').reduce((s,e)=>s+(parseInt(e.unidades)||0),0);
+      const paletas     = r.espacios.filter(e=>e.tipo==='Paleta').reduce((s,e)=>s+(parseInt(e.unidades)||0),0);
+      const exhibiciones= r.espacios.filter(e=>e.tipo==='Exhibición').reduce((s,e)=>s+(parseInt(e.unidades)||0),0);
+      const total       = torres+cabezales+paletas+exhibiciones;
       const badge = n => n > 0
         ? `<span style="display:inline-block;min-width:28px;text-align:center;background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:2px 8px;font-weight:700;font-size:.8rem">${n}</span>`
         : `<span style="color:var(--muted)">—</span>`;
@@ -233,23 +242,24 @@ async function cargar(){
         <td style="text-align:center">${badge(torres)}</td>
         <td style="text-align:center">${badge(cabezales)}</td>
         <td style="text-align:center">${badge(paletas)}</td>
+        <td style="text-align:center">${badge(exhibiciones)}</td>
         <td style="text-align:center"><strong style="color:var(--accent)">${total}</strong></td>
       </tr>`;
     }).join('');
 
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:24px">Error: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:24px">Error: ${e.message}</td></tr>`;
   }
 }
 
-function renderDonut(t, c, p){
+function renderDonut(t, c, p, e=0){
   if(chartDonut) chartDonut.destroy();
   const ctx = document.getElementById('chartDonut').getContext('2d');
   chartDonut = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Torres','Cabezales','Paletas'],
-      datasets: [{ data:[t,c,p], backgroundColor:['#8b5cf6','#06b6d4','#f59e0b'], borderWidth:0 }]
+      labels: ['Torres','Cabezales','Paletas','Exhibiciones'],
+      datasets: [{ data:[t,c,p,e], backgroundColor:['#8b5cf6','#06b6d4','#f59e0b','#10b981'], borderWidth:0 }]
     },
     options: {
       plugins: { legend:{ position:'bottom', labels:{ color: document.documentElement.classList.contains('dark')?'#cbd5e1':'#374151', padding:12, font:{size:12} } } },
