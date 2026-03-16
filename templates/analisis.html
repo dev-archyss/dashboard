@@ -36,7 +36,7 @@
     <h1 class="text-3xl font-extrabold text-gray-800 dark:text-white">
       <i class="fas fa-chart-bar mr-2 text-indigo-500"></i>Análisis de Precios
     </h1>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Comparativa de precios nuestros vs competencia directa asignada (USD/kg).</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Precio en USD directo por presentación vs competencia directa vinculada.</p>
   </div>
 
   <!-- Filtros -->
@@ -121,13 +121,13 @@
   <!-- Gráfico -->
   <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 mb-6 border border-gray-100 dark:border-slate-700">
     <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-      <h2 class="text-base font-bold text-gray-700 dark:text-white">Comparativa de precios (USD/kg) — por par producto↔competidor</h2>
+      <h2 class="text-base font-bold text-gray-700 dark:text-white">Comparativa de precios (USD) — producto vs competidor directo</h2>
       <select id="chartType" class="h-9 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" onchange="drawChart()">
         <option value="bar">Barras</option><option value="line">Línea (Tendencia)</option>
       </select>
     </div>
     <div style="position:relative;height:340px"><canvas id="chartComparativa"></canvas></div>
-    <p class="text-xs text-gray-400 mt-2 text-center">Solo se grafican pares con competencia directa vinculada. Precio promedio por presentación.</p>
+    <p class="text-xs text-gray-400 mt-2 text-center">Precio promedio en USD por presentación. Solo se grafican productos con competencia directa vinculada.</p>
   </div>
 
   <!-- Tabla -->
@@ -136,19 +136,19 @@
       <h2 class="text-base font-bold text-gray-700 dark:text-white">Detalle de comparaciones</h2>
       <span id="analisisInfo" class="text-xs font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-300 px-3 py-1 rounded-full">—</span>
     </div>
-    <div class="overflow-x-auto max-h-[65vh]">
+    <div class="overflow-x-auto" style="max-height:72vh;overflow-y:auto">
       <table class="min-w-full divide-y divide-gray-100 dark:divide-slate-700">
         <thead class="table-header-sticky">
           <tr>
-            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
-            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comercio</th>
-            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado / Zona</th>
-            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
-            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nuestro producto</th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Precio nuestro<div class="font-normal normal-case text-gray-400">(USD/kg)</div></th>
-            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Competidor directo</th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Precio competidor<div class="font-normal normal-case text-gray-400">(USD/kg)</div></th>
-            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Diferencia %</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap" style="min-width:110px">Fecha</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:200px">Comercio</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap" style="min-width:130px">Estado / Zona</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap" style="min-width:70px">Tipo</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:200px">Nuestro producto</th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap" style="min-width:120px">Precio nuestro<div class="font-normal normal-case text-gray-400">(USD)</div></th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:200px">Competidor directo</th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap" style="min-width:120px">Precio competidor<div class="font-normal normal-case text-gray-400">(USD)</div></th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap" style="min-width:100px">Diferencia %</th>
           </tr>
         </thead>
         <tbody id="tbodyAnalisis" class="bg-white dark:bg-slate-800 divide-y divide-gray-50 dark:divide-slate-700">
@@ -377,36 +377,37 @@ async function fetchDataAnalisis() {
         }
 
         const nUSD = convertirAPrecioUSD(m.price, m.currency, row.created_at);
-        const nKg  = normalizarPesoEnKg(keyN);
-        const nPKg = nUSD && nKg ? nUSD / nKg : null;
+        if (!nUSD) { sinCompAsignada.add(keyN); return; } // sin precio válido
 
         // Solo cruzar con los competidores vinculados
         competidoresVinculados.forEach(keyC => {
           const cItem = ciIdx[keyC];
           if (!cItem) return; // el competidor vinculado no fue capturado en esta visita
+          if (cItem.sin_stock) return; // competidor sin stock — no comparar precio
 
           const cUSD = convertirAPrecioUSD(cItem.price, cItem.currency, row.created_at);
-          const cKg  = normalizarPesoEnKg(keyC);
-          const cPKg = cUSD && cKg ? cUSD / cKg : null;
+          if (!cUSD) return;
 
-          if (nPKg && cPKg) {
-            filas.push({
-              fecha:              row.created_at,
-              state:              row.state,
-              zone:               row.zone,
-              trade:              row.trade,
-              p_mayorista:        row.p_mayorista,
-              nuestroProd:        keyN,
-              nPKg,
-              nPrecioOrig:        m.price,
-              nMoneda:            m.currency,
-              compProd:           keyC,
-              cPKg,
-              cPrecioOrig:        cItem.price,
-              cMoneda:            cItem.currency,
-              diferencia:         ((nPKg - cPKg) / nPKg) * 100
-            });
-          }
+          // Diferencia: positivo = somos más caros, negativo = somos más baratos
+          const diferencia = ((nUSD - cUSD) / cUSD) * 100;
+
+          filas.push({
+            fecha:        row.created_at,
+            promotor:     row.promoter_name,
+            state:        row.state,
+            zone:         row.zone,
+            trade:        row.trade,
+            p_mayorista:  row.p_mayorista,
+            nuestroProd:  keyN,
+            nUSD,
+            nPrecioOrig:  m.price,
+            nMoneda:      m.currency,
+            compProd:     keyC,
+            cUSD,
+            cPrecioOrig:  cItem.price,
+            cMoneda:      cItem.currency,
+            diferencia,
+          });
         });
       });
     });
@@ -446,8 +447,8 @@ function mostrarAvisoSinComp() {
 // ── KPIs ──────────────────────────────────────────────────────────
 function actualizarKPIs(filas) {
   const total     = filas.length;
-  const masBarato = filas.filter(f => f.diferencia < 0).length;
-  const masCaro   = filas.filter(f => f.diferencia > 0).length;
+  const masBarato = filas.filter(f => f.diferencia < 0).length;  // nuestro precio < competidor
+  const masCaro   = filas.filter(f => f.diferencia > 0).length;  // nuestro precio > competidor
   const difProm   = total > 0 ? filas.reduce((s,f) => s + f.diferencia, 0) / total : 0;
   const pctBarat  = total > 0 ? Math.round((masBarato / total) * 100) : 0;
   const pctCaro   = total > 0 ? Math.round((masCaro   / total) * 100) : 0;
@@ -473,27 +474,57 @@ function renderAnalisis(filas) {
     return;
   }
 
-  const fmt   = n => n != null ? `$${n.toFixed(2)}` : '—';
-  const fmtDt = s => new Date(s).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' });
+  const fmt   = n => n != null ? `$${n.toFixed(3)}` : '—';
+  const fmtDt = s => {
+    const d = new Date(s);
+    return d.toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' })
+      + ' ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+  };
   const fmtD  = d => {
     const s = d > 0 ? '+' : '';
-    const c = d > 0 ? '#dc2626' : d < 0 ? '#16a34a' : '#9ca3af';
+    const col = d > 5 ? '#dc2626' : d < -5 ? '#16a34a' : d > 0 ? '#f97316' : d < 0 ? '#22c55e' : '#9ca3af';
     const ico = d > 0 ? 'fa-arrow-trend-up' : d < 0 ? 'fa-arrow-trend-down' : 'fa-minus';
-    return `<span style="color:${c};font-weight:700"><i class="fas ${ico}" style="font-size:.75rem"></i> ${s}${d.toFixed(1)}%</span>`;
+    const bg  = d > 5 ? 'rgba(220,38,38,.08)' : d < -5 ? 'rgba(22,163,74,.08)' : 'transparent';
+    return `<span style="color:${col};font-weight:700;background:${bg};padding:3px 8px;border-radius:6px;display:inline-block">
+      <i class="fas ${ico}" style="font-size:.7rem"></i> ${s}${d.toFixed(1)}%</span>`;
+  };
+  const fmtOrig = (precio, moneda) => {
+    if (!precio) return '—';
+    return `<span style="font-size:.7rem;color:#9ca3af">${moneda||''} ${parseFloat(precio).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>`;
   };
 
-  tbody.innerHTML = filas.map(f => `<tr>
-    <td class="sp-hi">${fmtDt(f.fecha)}</td>
-    <td>${f.trade || '—'}</td>
-    <td style="font-size:.78rem;color:#9ca3af">${f.state || '—'}${f.zone ? ' / ' + f.zone : ''}</td>
-    <td>${f.p_mayorista === 'Si'
+  tbody.innerHTML = filas.map(f => `<tr style="transition:background .1s" onmouseover="this.style.background='var(--hover-row,#f8faff)'" onmouseout="this.style.background=''">
+    <td style="white-space:nowrap;padding:10px 14px">
+      <div style="font-weight:600;font-size:.82rem;color:var(--txt,#1e293b)">${new Date(f.fecha).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'})}</div>
+      <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">${new Date(f.fecha).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</div>
+      <div style="font-size:.7rem;color:#a78bfa;margin-top:1px">${f.promotor||''}</div>
+    </td>
+    <td style="padding:10px 14px">
+      <div style="font-weight:600;font-size:.85rem;color:var(--txt,#1e293b);max-width:220px">${f.trade||'—'}</div>
+      <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">${f.state||'—'}${f.zone?' · '+f.zone:''}</div>
+    </td>
+    <td style="padding:10px 14px;white-space:nowrap">
+      <div style="font-size:.78rem;color:#64748b">${f.state||'—'}</div>
+      ${f.zone?`<div style="font-size:.7rem;color:#94a3b8;margin-top:1px">${f.zone}</div>`:''}
+    </td>
+    <td style="padding:10px 14px">${f.p_mayorista==='Si'
       ? '<span class="sp-bdg sp-bdg-accent">Mayor</span>'
       : '<span class="sp-bdg sp-bdg-def">Detal</span>'}</td>
-    <td style="font-weight:600;color:#4f46e5">${f.nuestroProd}</td>
-    <td style="text-align:center;font-weight:700">${fmt(f.nPKg)}</td>
-    <td style="color:#6b7280">${f.compProd}</td>
-    <td style="text-align:center">${fmt(f.cPKg)}</td>
-    <td style="text-align:center">${fmtD(f.diferencia)}</td>
+    <td style="padding:10px 14px">
+      <div style="font-weight:700;color:#4f46e5;font-size:.85rem">${f.nuestroProd}</div>
+      <div style="margin-top:2px">${fmtOrig(f.nPrecioOrig, f.nMoneda)}</div>
+    </td>
+    <td style="text-align:center;padding:10px 14px">
+      <div style="font-size:1rem;font-weight:800;color:#4f46e5">${fmt(f.nUSD)}</div>
+    </td>
+    <td style="padding:10px 14px">
+      <div style="font-weight:600;color:#374151;font-size:.85rem">${f.compProd}</div>
+      <div style="margin-top:2px">${fmtOrig(f.cPrecioOrig, f.cMoneda)}</div>
+    </td>
+    <td style="text-align:center;padding:10px 14px">
+      <div style="font-size:1rem;font-weight:800;color:#374151">${fmt(f.cUSD)}</div>
+    </td>
+    <td style="text-align:center;padding:10px 14px">${fmtD(f.diferencia)}</td>
   </tr>`).join('');
 }
 
@@ -504,13 +535,13 @@ function drawChart() {
   const tc    = dark ? '#94a3b8' : '#4b5563';
   const gc    = dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
 
-  // Agrupar por "NuestroProd → CompProd" — label = "nuestro vs comp"
+  // Agrupar por par nuestro producto → competidor
   const pares = {};
   analisisData.forEach(f => {
-    const k = `${f.nuestroProd}`;
-    if (!pares[k]) pares[k] = { n: [], c: [], compNombre: f.compProd };
-    pares[k].n.push(f.nPKg);
-    pares[k].c.push(f.cPKg);
+    const k = `${f.nuestroProd} vs ${f.compProd}`;
+    if (!pares[k]) pares[k] = { n: [], c: [] };
+    pares[k].n.push(f.nUSD);
+    pares[k].c.push(f.cUSD);
   });
 
   const labels = Object.keys(pares);
@@ -518,13 +549,13 @@ function drawChart() {
 
   const datasets = [
     {
-      label: 'Nuestro precio (USD/kg)',
+      label: 'Nuestro precio (USD)',
       data: labels.map(k => +avg(pares[k].n).toFixed(3)),
       backgroundColor: 'rgba(79,70,229,.8)',
       borderColor: '#4f46e5', borderWidth: 2, borderRadius: 4
     },
     {
-      label: 'Competidor directo (USD/kg)',
+      label: 'Competidor directo (USD)',
       data: labels.map(k => +avg(pares[k].c).toFixed(3)),
       backgroundColor: 'rgba(244,63,94,.7)',
       borderColor: '#f43f5e', borderWidth: 2, borderRadius: 4
@@ -540,7 +571,7 @@ function drawChart() {
       plugins: { legend: { labels: { color: tc, font: { size: 11 } } } },
       scales: {
         x: { ticks: { color: tc, font: { size: 10 } }, grid: { color: gc } },
-        y: { ticks: { color: tc, font: { size: 10 }, callback: v => `$${v.toFixed(2)}` }, grid: { color: gc } }
+        y: { ticks: { color: tc, font: { size: 10 }, callback: v => `$${v.toFixed(3)}` }, grid: { color: gc } }
       }
     }
   });
