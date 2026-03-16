@@ -23,6 +23,10 @@
   .com-dd-item:hover{background:#f0f4ff}
   .dark .com-dd-item:hover{background:#334155}
   select:focus,input:focus{outline:none;box-shadow:0 0 0 3px rgba(79,70,229,.18);border-color:#4F46E5!important}
+
+.tbl-row { transition: background .12s; }
+.tbl-row:hover { background: rgba(79,70,229,.07) !important; }
+.dark .tbl-row:hover { background: rgba(139,92,246,.12) !important; }
 </style>
 </head>
 <body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
@@ -199,15 +203,39 @@ function normalizarMoneda(m) {
   const map = { BS:'Bs','B$':'Bs','BS.':'Bs',VES:'Bs',VEF:'Bs',COP:'COP',COL:'COP',USD:'USD','US$':'USD' };
   return map[raw] || (/^COP$/i.test(raw)?'COP':/^BS/i.test(raw)?'Bs':/^USD$/i.test(raw)?'USD':raw);
 }
+// Parsear número limpiando símbolo de moneda — respeta el punto como decimal
+function parsePrecio(precio) {
+  if (!precio && precio !== 0) return NaN;
+  // Quitar todo excepto dígitos, punto y coma
+  let s = String(precio).replace(/[^0-9.,]/g, '').trim();
+  if (!s) return NaN;
+  // Si tiene coma Y punto: el que está más a la derecha es el decimal
+  if (s.includes(',') && s.includes('.')) {
+    const lc = s.lastIndexOf(','), ld = s.lastIndexOf('.');
+    s = lc > ld
+      ? s.replace(/\./g,'').replace(',','.')   // 1.500,50 europeo
+      : s.replace(/,/g,'');                    // 1,500.50 anglosajón
+  } else if (s.includes(',')) {
+    // Solo coma: decimal si parte derecha tiene ≤2 dígitos, miles si no
+    const partes = s.split(',');
+    s = partes[1] && partes[1].length <= 2 ? s.replace(',','.') : s.replace(/,/g,'');
+  }
+  // Solo punto: se respeta como decimal (1.50 = 1.50, NO 150)
+  return parseFloat(s);
+}
+
+// Convierte el precio a USD usando la tasa del día
+// Si ya viene en $, lo devuelve tal cual sin tocar
 function convertirAPrecioUSD(precio, moneda, fecha) {
-  if (!precio) return null;
-  const aNum = v => parseFloat(String(v).replace(/[A-Za-z$€¥£₽]|COP|COL|VES|VEF|Bs\.?|B\$|US\$|USD/gi,'').replace(/\s/g,'').replace(/\./g,'').replace(',','.')) || NaN;
-  const n = aNum(precio); if (isNaN(n)) return null;
-  const mn = normalizarMoneda(moneda), t = obtenerTasa(fecha);
-  if (mn === 'USD') return n;
-  if (mn === 'Bs')  return n / parseFloat(t.tasa_bs_usd || 1);
-  if (mn === 'COP') return n / parseFloat(t.tasa_cop_usd || 1);
-  return n;
+  if (!precio && precio !== 0) return null;
+  const n = parsePrecio(precio);
+  if (isNaN(n) || n <= 0) return null;
+  const mn = normalizarMoneda(moneda);
+  const t  = obtenerTasa(fecha);
+  if (mn === 'USD') return n;                                          // ya es $
+  if (mn === 'Bs')  return n / parseFloat(t.tasa_bs_usd  || 36.5);   // Bs → $
+  if (mn === 'COP') return n / parseFloat(t.tasa_cop_usd || 4200);   // COP → $
+  return n; // moneda desconocida → asumir USD
 }
 function normalizarPesoEnKg(p) {
   if (!p) return null;
@@ -489,11 +517,15 @@ function renderAnalisis(filas) {
       <i class="fas ${ico}" style="font-size:.7rem"></i> ${s}${d.toFixed(1)}%</span>`;
   };
   const fmtOrig = (precio, moneda) => {
-    if (!precio) return '—';
-    return `<span style="font-size:.7rem;color:#9ca3af">${moneda||''} ${parseFloat(precio).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>`;
+    if (!precio) return '';
+    const mn = (moneda||'').toUpperCase();
+    const isUSD = mn === '$' || mn === 'USD';
+    const color = isUSD ? '#6366f1' : '#f59e0b';
+    const sym   = mn === 'BS' || mn === 'B$' ? 'Bs' : mn === 'PESOS' || mn === 'COP' ? 'COP' : mn;
+    return `<span style="font-size:.7rem;color:${color};font-weight:600">${sym} ${parseFloat(precio).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>`;
   };
 
-  tbody.innerHTML = filas.map(f => `<tr style="transition:background .1s" onmouseover="this.style.background='var(--hover-row,#f8faff)'" onmouseout="this.style.background=''">
+  tbody.innerHTML = filas.map(f => `<tr class="tbl-row">
     <td style="white-space:nowrap;padding:10px 14px">
       <div style="font-weight:600;font-size:.82rem;color:var(--txt,#1e293b)">${new Date(f.fecha).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'})}</div>
       <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">${new Date(f.fecha).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</div>
