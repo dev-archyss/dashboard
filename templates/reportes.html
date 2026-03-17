@@ -1,0 +1,710 @@
+{% include 'navbar.html' %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reportes — CAPTA</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0f172a;--ink2:#334155;--ink3:#64748b;--ink4:#94a3b8;
+  --bg:#f8fafc;--card:#ffffff;--brd:#e2e8f0;--brd2:#cbd5e1;
+  --acc:#4f46e5;--acc2:#6366f1;--acc3:#818cf8;
+  --grn:#059669;--red:#dc2626;--amb:#d97706;--cyn:#0891b2;
+  --r:14px;--r2:10px;--r3:7px;
+  --sh:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+  --sh2:0 4px 24px rgba(79,70,229,.12);
+}
+.dark-mode{
+  --ink:#f1f5f9;--ink2:#cbd5e1;--ink3:#94a3b8;--ink4:#64748b;
+  --bg:#0f172a;--card:#1e293b;--brd:#334155;--brd2:#475569;
+}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+
+/* ── PAGE ── */
+.rp-page{max-width:1340px;margin:0 auto;padding:28px 24px 60px}
+
+/* ── HEADER ── */
+.rp-hdr{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:32px}
+.rp-title{font-size:1.75rem;font-weight:700;color:var(--ink);letter-spacing:-.02em}
+.rp-sub{font-size:.85rem;color:var(--ink3);margin-top:3px}
+.rp-period{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.rp-period input,.rp-period select{
+  height:38px;border:1px solid var(--brd2);border-radius:var(--r3);
+  background:var(--card);color:var(--ink);padding:0 12px;font-size:.83rem;
+  font-family:'Outfit',sans-serif;outline:none;transition:border .15s;
+}
+.rp-period input:focus,.rp-period select:focus{border-color:var(--acc)}
+
+/* ── KPI STRIP ── */
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:32px}
+.kpi{background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--acc-c,var(--acc));border-radius:var(--r) var(--r) 0 0}
+.kpi-val{font-size:1.7rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--ink);line-height:1}
+.kpi-lbl{font-size:.72rem;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-top:5px}
+.kpi-delta{font-size:.72rem;font-weight:600;margin-top:6px}
+.up{color:var(--grn)}.dn{color:var(--red)}.neu{color:var(--ink3)}
+
+/* ── REPORT GRID ── */
+.rp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:22px}
+.rp-card{background:var(--card);border:1px solid var(--brd);border-radius:var(--r);overflow:hidden;transition:box-shadow .2s,transform .2s}
+.rp-card:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
+.rp-card-hdr{padding:20px 22px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.rp-badge{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:3px 9px;border-radius:99px}
+.badge-mgmt{background:#ede9fe;color:#5b21b6}
+.badge-ops{background:#dcfce7;color:#15803d}
+.badge-intel{background:#fef3c7;color:#92400e}
+.badge-price{background:#fce7f3;color:#9d174d}
+.badge-proj{background:#e0f2fe;color:#0369a1}
+.badge-field{background:#f0fdf4;color:#166534}
+.rp-name{font-size:1rem;font-weight:600;color:var(--ink);margin-top:8px}
+.rp-desc{font-size:.78rem;color:var(--ink3);margin-top:4px;line-height:1.5}
+.rp-chart-wrap{padding:16px 22px;height:170px;position:relative}
+.rp-actions{padding:14px 22px;border-top:1px solid var(--brd);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-dl{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;padding:7px 14px;border-radius:var(--r3);border:none;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif}
+.btn-pdf{background:var(--acc);color:#fff}.btn-pdf:hover{background:#4338ca}
+.btn-xl{background:#059669;color:#fff}.btn-xl:hover{background:#047857}
+.btn-prev{background:var(--bg);color:var(--ink3);border:1px solid var(--brd)}.btn-prev:hover{border-color:var(--acc);color:var(--acc)}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── PREVIEW MODAL ── */
+.overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);overflow-y:auto;padding:40px 20px}
+.overlay.open{display:block}
+.prev-modal{background:var(--card);border-radius:var(--r);max-width:900px;margin:0 auto;box-shadow:0 24px 80px rgba(0,0,0,.3)}
+.prev-hdr{display:flex;align-items:center;justify-content:space-between;padding:20px 28px;border-bottom:1px solid var(--brd)}
+.prev-title{font-size:1.1rem;font-weight:700;color:var(--ink)}
+.prev-close{background:none;border:none;cursor:pointer;font-size:1.3rem;color:var(--ink3);padding:4px 8px;border-radius:6px;transition:background .15s}
+.prev-close:hover{background:var(--brd)}
+.prev-body{padding:28px;max-height:70vh;overflow-y:auto}
+
+/* ── PDF CANVAS (oculto) ── */
+#pdfCanvas{position:fixed;left:-9999px;top:0;width:900px;background:white;padding:40px;font-family:'Outfit',sans-serif;z-index:-1}
+
+/* ── LOADING ── */
+.ld-wrap{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--ink3);font-size:.9rem}
+.ld-dots span{width:6px;height:6px;background:var(--acc);border-radius:50%;display:inline-block;animation:bounce .8s infinite;margin:0 2px}
+.ld-dots span:nth-child(2){animation-delay:.15s}
+.ld-dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+
+/* RESPONSIVE */
+@media(max-width:640px){.rp-grid{grid-template-columns:1fr}.kpi-strip{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="rp-page">
+
+  <!-- HEADER -->
+  <div class="rp-hdr">
+    <div>
+      <h1 class="rp-title">📊 Centro de Reportes</h1>
+      <p class="rp-sub">Descarga tus reportes en PDF o Excel con data en tiempo real</p>
+    </div>
+    <div class="rp-period">
+      <input type="date" id="rFDesde" title="Desde">
+      <input type="date" id="rFHasta" title="Hasta">
+      <select id="rFPromotor"><option value="">Todos los promotores</option></select>
+      <select id="rFLinea"><option value="">Todas las líneas</option></select>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-strip" id="kpiStrip">
+    <div class="ld-wrap"><div class="ld-dots"><span></span><span></span><span></span></div></div>
+  </div>
+
+  <!-- REPORTES -->
+  <div class="rp-grid" id="rpGrid">
+    <div class="ld-wrap" style="grid-column:1/-1">
+      <div class="ld-dots"><span></span><span></span><span></span></div>
+      <span>Cargando reportes...</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- PREVIEW MODAL -->
+<div class="overlay" id="prevOverlay">
+  <div class="prev-modal">
+    <div class="prev-hdr">
+      <span class="prev-title" id="prevTitle">Vista previa</span>
+      <button class="prev-close" onclick="closePrev()">✕</button>
+    </div>
+    <div class="prev-body" id="prevBody"></div>
+  </div>
+</div>
+
+<!-- PDF CANVAS OCULTO -->
+<div id="pdfCanvas"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════════════
+function waitDb(fn){ if(window.db){fn();return;} const t=setInterval(()=>{if(window.db){clearInterval(t);fn();}},50); }
+const db2 = { from: (...a) => window.db.from(...a) };
+const empresaId = localStorage.getItem('empresa_id') || '';
+const empNombre = localStorage.getItem('empresa_nombre') || 'CAPTA';
+if(!empresaId) window.location.replace('/');
+
+// ── Estado global ──
+let allData = [], promotoresList = [], lineasList = [], tasas = [];
+let chartInstances = {};
+
+// ── Fechas por defecto (último mes) ──
+const hoy = new Date(), d30 = new Date(hoy); d30.setDate(hoy.getDate()-30);
+document.getElementById('rFDesde').value = d30.toISOString().split('T')[0];
+document.getElementById('rFHasta').value = hoy.toISOString().split('T')[0];
+
+// ════════════════════════════════════════════════════════
+// CARGA DE DATOS
+// ════════════════════════════════════════════════════════
+async function cargarTodo(){
+  try {
+    const [{ data: pr }, { data: ln }, { data: ts }] = await Promise.all([
+      db2.from('web_promotores').select('promoter_id,promoter_name,dias_trabajo').eq('empresa_id', empresaId).order('promoter_name'),
+      db2.from('web_lineas').select('id,nombre').eq('empresa_id', empresaId).eq('activa', true).order('nombre'),
+      db2.from('web_tasa').select('fecha,tasa_bs_usd,tasa_cop_usd').order('fecha', {ascending:false}).limit(90),
+    ]);
+    promotoresList = pr || [];
+    lineasList     = ln || [];
+    tasas          = ts || [];
+
+    const ps = document.getElementById('rFPromotor');
+    promotoresList.forEach(p => ps.innerHTML += `<option value="${p.promoter_name}">${p.promoter_name}</option>`);
+    const ls = document.getElementById('rFLinea');
+    lineasList.forEach(l => ls.innerHTML += `<option value="${l.id}">${l.nombre}</option>`);
+
+    await recargar();
+  } catch(e){ console.error(e); }
+}
+
+async function recargar(){
+  const desde = document.getElementById('rFDesde').value;
+  const hasta = document.getElementById('rFHasta').value;
+  const prom  = document.getElementById('rFPromotor').value;
+  const linea = document.getElementById('rFLinea').value;
+
+  document.getElementById('kpiStrip').innerHTML = '<div class="ld-wrap"><div class="ld-dots"><span></span><span></span><span></span></div></div>';
+  document.getElementById('rpGrid').innerHTML   = '<div class="ld-wrap" style="grid-column:1/-1"><div class="ld-dots"><span></span><span></span><span></span></div><span>Procesando datos...</span></div>';
+
+  let q = db2.from('web_precios').select('*').eq('empresa_id', empresaId);
+  if(desde) q = q.gte('created_at', desde+'T00:00:00+00:00');
+  if(hasta) q = q.lte('created_at', hasta+'T23:59:59+00:00');
+  if(prom)  q = q.eq('promoter_name', prom);
+  if(linea) q = q.eq('linea_id', linea);
+  q = q.order('created_at', {ascending:false});
+
+  const { data, error } = await q;
+  if(error){ console.error(error); return; }
+  allData = data || [];
+
+  renderKPIs();
+  renderReportes();
+}
+
+// ── Conversión a USD ──
+function toUSD(precio, moneda, fecha){
+  if(!precio) return 0;
+  let n = parseFloat(String(precio).replace(/[^0-9.,]/g,'').replace(',','.'));
+  if(isNaN(n)) return 0;
+  const mn = (moneda||'').toUpperCase();
+  const t  = tasas.find(x => new Date(x.fecha) <= new Date(fecha)) || tasas[0] || {tasa_bs_usd:36.5,tasa_cop_usd:4200};
+  if(mn==='BS'||mn==='B$'||mn==='VES') return n/parseFloat(t.tasa_bs_usd||36.5);
+  if(mn==='COP'||mn==='PESOS') return n/parseFloat(t.tasa_cop_usd||4200);
+  return n;
+}
+
+function parseItems(v){ if(Array.isArray(v)) return v; try{return JSON.parse(v)||[];}catch{return[];} }
+function fmtDate(s){ return new Date(s).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtUSD(n){ return '$'+Number(n).toFixed(2).replace('.',','); }
+
+// ════════════════════════════════════════════════════════
+// KPIs GLOBALES
+// ════════════════════════════════════════════════════════
+function renderKPIs(){
+  const total = allData.length;
+  const promSet = new Set(allData.map(r=>r.promoter_name).filter(Boolean));
+  const comercios = new Set(allData.map(r=>r.trade).filter(Boolean));
+  const conf = allData.filter(r=>r.verified==='Confirmado'||checkGPS(r)).length;
+  const pctConf = total>0?Math.round(conf/total*100):0;
+
+  // Precio promedio nuestro en USD
+  let sumUSD=0, cntUSD=0;
+  allData.forEach(r=>{ parseItems(r.myitems).forEach(i=>{ if(i.price&&i.currency&&i.presentation!=='SIN STOCK'){sumUSD+=toUSD(i.price,i.currency,r.created_at);cntUSD++;} }); });
+  const avgUSD = cntUSD>0?(sumUSD/cntUSD):0;
+
+  // Metros totales
+  const metros = allData.reduce((s,r)=>s+(parseFloat(r.shelf_meters)||0),0);
+
+  document.getElementById('kpiStrip').innerHTML = `
+    <div class="kpi" style="--acc-c:var(--acc)">
+      <div class="kpi-val">${total}</div>
+      <div class="kpi-lbl">Total visitas</div>
+    </div>
+    <div class="kpi" style="--acc-c:var(--grn)">
+      <div class="kpi-val">${promSet.size}</div>
+      <div class="kpi-lbl">Promotores activos</div>
+    </div>
+    <div class="kpi" style="--acc-c:var(--cyn)">
+      <div class="kpi-val">${comercios.size}</div>
+      <div class="kpi-lbl">Comercios visitados</div>
+    </div>
+    <div class="kpi" style="--acc-c:${pctConf>=70?'var(--grn)':'var(--amb)'}">
+      <div class="kpi-val">${pctConf}%</div>
+      <div class="kpi-lbl">Confirmación GPS</div>
+    </div>
+    <div class="kpi" style="--acc-c:var(--acc2)">
+      <div class="kpi-val">${fmtUSD(avgUSD)}</div>
+      <div class="kpi-lbl">Precio prom. USD</div>
+    </div>
+    <div class="kpi" style="--acc-c:var(--amb)">
+      <div class="kpi-val">${metros.toFixed(1)}m</div>
+      <div class="kpi-lbl">Metros anaquel total</div>
+    </div>`;
+}
+
+function checkGPS(r){ return r.verified==='Confirmado'||(r.latitude&&r.longitude); }
+
+// ════════════════════════════════════════════════════════
+// DEFINICIÓN DE REPORTES
+// ════════════════════════════════════════════════════════
+const REPORTES = [
+  {
+    id:'gerencial', badge:'badge-mgmt', badgeLabel:'Resumen Gerencial',
+    icon:'📋', name:'Resumen Ejecutivo',
+    desc:'Visitas, cumplimiento, GPS, metas semanales y rendimiento por promotor en el período seleccionado.',
+    color:'#4f46e5',
+    chartFn: buildChartGerencial,
+    xlsFn:   dataXlsGerencial,
+    previewFn: previewGerencial,
+  },
+  {
+    id:'precios', badge:'badge-price', badgeLabel:'Precios',
+    icon:'💰', name:'Análisis de Precios',
+    desc:'Precios propios vs competencia directa en USD, diferencial por producto y evolución temporal.',
+    color:'#db2777',
+    chartFn: buildChartPrecios,
+    xlsFn:   dataXlsPrecios,
+    previewFn: previewPrecios,
+  },
+  {
+    id:'anaquel', badge:'badge-ops', badgeLabel:'Operaciones',
+    icon:'📐', name:'Metros de Anaquel',
+    desc:'Share of Shelf por establecimiento, metros propios vs competencia y ranking por zona.',
+    color:'#059669',
+    chartFn: buildChartAnaquel,
+    xlsFn:   dataXlsAnaquel,
+    previewFn: previewAnaquel,
+  },
+  {
+    id:'caras', badge:'badge-intel', badgeLabel:'Inteligencia',
+    icon:'👁', name:'Caras y SOS',
+    desc:'Share of Shelf en número de caras, antes y después de la visita, por producto y zona.',
+    color:'#d97706',
+    chartFn: buildChartCaras,
+    xlsFn:   dataXlsCaras,
+    previewFn: previewCaras,
+  },
+  {
+    id:'stock', badge:'badge-field', badgeLabel:'Campo',
+    icon:'📦', name:'Control de Stock',
+    desc:'Productos con quiebre de stock reportados en campo, frecuencia por comercio y promotor.',
+    color:'#166534',
+    chartFn: buildChartStock,
+    xlsFn:   dataXlsStock,
+    previewFn: previewStock,
+  },
+  {
+    id:'proyeccion', badge:'badge-proj', badgeLabel:'Proyecciones',
+    icon:'📈', name:'Proyecciones y Tendencias',
+    desc:'Tendencia de visitas, precios y cumplimiento. Proyección a 30 días basada en el período.',
+    color:'#0369a1',
+    chartFn: buildChartProyeccion,
+    xlsFn:   dataXlsProyeccion,
+    previewFn: previewProyeccion,
+  },
+];
+
+// ════════════════════════════════════════════════════════
+// RENDER TARJETAS
+// ════════════════════════════════════════════════════════
+function renderReportes(){
+  const grid = document.getElementById('rpGrid');
+  grid.innerHTML = REPORTES.map(r=>`
+    <div class="rp-card" id="rcard-${r.id}">
+      <div class="rp-card-hdr">
+        <div>
+          <span class="rp-badge ${r.badge}"><span>${r.badgeLabel}</span></span>
+          <div class="rp-name">${r.icon} ${r.name}</div>
+          <div class="rp-desc">${r.desc}</div>
+        </div>
+      </div>
+      <div class="rp-chart-wrap"><canvas id="chart-${r.id}"></canvas></div>
+      <div class="rp-actions">
+        <button class="btn-dl btn-pdf" onclick="dlPDF('${r.id}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          PDF
+          <span class="spin" id="spin-pdf-${r.id}"></span>
+        </button>
+        <button class="btn-dl btn-xl" onclick="dlXLS('${r.id}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          Excel
+          <span class="spin" id="spin-xl-${r.id}"></span>
+        </button>
+        <button class="btn-dl btn-prev" onclick="openPrev('${r.id}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Vista previa
+        </button>
+      </div>
+    </div>`).join('');
+
+  // Construir mini-charts con delay
+  REPORTES.forEach((r,i)=>setTimeout(()=>buildMiniChart(r), i*80));
+}
+
+function buildMiniChart(r){
+  const canvas = document.getElementById('chart-'+r.id);
+  if(!canvas) return;
+  if(chartInstances[r.id]) chartInstances[r.id].destroy();
+  chartInstances[r.id] = r.chartFn(canvas);
+}
+
+// ════════════════════════════════════════════════════════
+// MINI CHARTS
+// ════════════════════════════════════════════════════════
+const isDark = ()=>document.documentElement.classList.contains('dark');
+const tc = ()=>isDark()?'#94a3b8':'#64748b';
+const gc = ()=>isDark()?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';
+
+function miniOpts(color){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{enabled:true}},
+    scales:{
+      x:{ticks:{color:tc(),font:{size:9},maxRotation:30,autoSkip:true,maxTicksLimit:6},grid:{color:gc()}},
+      y:{ticks:{color:tc(),font:{size:9},callback:v=>v},grid:{color:gc()}}
+    }
+  };
+}
+
+function groupByDate(data, nDays=14){
+  const buckets={};
+  const since = new Date(); since.setDate(since.getDate()-nDays);
+  data.filter(r=>new Date(r.created_at)>=since).forEach(r=>{
+    const d=new Date(r.created_at).toLocaleDateString('es-ES',{day:'2-digit',month:'short'});
+    buckets[d]=(buckets[d]||0)+1;
+  });
+  return {labels:Object.keys(buckets),values:Object.values(buckets)};
+}
+
+function buildChartGerencial(canvas){
+  const {labels,values}=groupByDate(allData,21);
+  return new Chart(canvas,{type:'bar',data:{labels,datasets:[{data:values,backgroundColor:'rgba(79,70,229,.7)',borderRadius:4,borderSkipped:false}]},options:miniOpts('#4f46e5')});
+}
+
+function buildChartPrecios(canvas){
+  const prodUSD={};
+  allData.forEach(r=>{parseItems(r.myitems).forEach(i=>{if(i.price&&i.currency&&i.presentation&&i.presentation!=='SIN STOCK'){const u=toUSD(i.price,i.currency,r.created_at);if(!prodUSD[i.presentation])prodUSD[i.presentation]=[];prodUSD[i.presentation].push(u);}});});
+  const top=Object.entries(prodUSD).map(([k,v])=>({k,v:v.reduce((a,b)=>a+b,0)/v.length})).sort((a,b)=>b.v-a.v).slice(0,8);
+  return new Chart(canvas,{type:'bar',data:{labels:top.map(x=>x.k.length>15?x.k.slice(0,13)+'…':x.k),datasets:[{data:top.map(x=>+x.v.toFixed(2)),backgroundColor:'rgba(219,39,119,.7)',borderRadius:4,borderSkipped:false}]},options:{...miniOpts('#db2777'),scales:{...miniOpts().scales,y:{ticks:{color:tc(),font:{size:9},callback:v=>'$'+v.toFixed(1)},grid:{color:gc()}}}}});
+}
+
+function buildChartAnaquel(canvas){
+  const byTrade={};
+  allData.forEach(r=>{if(r.trade&&r.shelf_meters){byTrade[r.trade]=(byTrade[r.trade]||0)+parseFloat(r.shelf_meters);}});
+  const top=Object.entries(byTrade).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  return new Chart(canvas,{type:'bar',data:{labels:top.map(([k])=>k.length>14?k.slice(0,12)+'…':k),datasets:[{data:top.map(([,v])=>+v.toFixed(2)),backgroundColor:'rgba(5,150,105,.7)',borderRadius:4,borderSkipped:false}]},options:miniOpts('#059669')});
+}
+
+function buildChartCaras(canvas){
+  const byProd={b:[],a:[]};
+  allData.forEach(r=>{const b=parseFloat(r.our_faces_before_counted)||parseFloat(r.our_faces_before_manual)||0;const af=parseFloat(r.our_faces_after)||0;if(b||af){byProd.b.push(b);byProd.a.push(af);}});
+  const mkAvg=arr=>arr.length?arr.reduce((s,v)=>s+v,0)/arr.length:0;
+  const labels=allData.map(r=>new Date(r.created_at).toLocaleDateString('es-ES',{day:'2-digit',month:'short'})).filter((v,i,a)=>a.indexOf(v)===i).slice(0,12);
+  const bArr=[],aArr=[];
+  labels.forEach(lbl=>{
+    const rows=allData.filter(r=>new Date(r.created_at).toLocaleDateString('es-ES',{day:'2-digit',month:'short'})===lbl);
+    bArr.push(mkAvg(rows.map(r=>parseFloat(r.our_faces_before_counted)||0)));
+    aArr.push(mkAvg(rows.map(r=>parseFloat(r.our_faces_after)||0)));
+  });
+  return new Chart(canvas,{type:'line',data:{labels,datasets:[{label:'Antes',data:bArr,borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.1)',tension:.4,pointRadius:3},{label:'Después',data:aArr,borderColor:'#059669',backgroundColor:'rgba(5,150,105,.1)',tension:.4,pointRadius:3}]},options:{...miniOpts('#d97706'),plugins:{legend:{display:true,labels:{color:tc(),font:{size:9},boxWidth:8}}}}});
+}
+
+function buildChartStock(canvas){
+  const sinStock={};
+  allData.forEach(r=>{parseItems(r.myitems).forEach(i=>{if(i.presentation==='SIN STOCK'||(i.stock_shelf===0||i.stock_shelf===null)){sinStock[r.trade||'Sin nombre']=(sinStock[r.trade||'Sin nombre']||0)+1;}});});
+  const top=Object.entries(sinStock).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  return new Chart(canvas,{type:'bar',data:{labels:top.map(([k])=>k.length>14?k.slice(0,12)+'…':k),datasets:[{data:top.map(([,v])=>v),backgroundColor:'rgba(22,101,52,.7)',borderRadius:4,borderSkipped:false}]},options:miniOpts('#166534')});
+}
+
+function buildChartProyeccion(canvas){
+  const {labels:lHist,values:vHist}=groupByDate(allData,14);
+  const promDia=vHist.length?vHist.reduce((a,b)=>a+b,0)/vHist.length:0;
+  const proj=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()+i+1);return{l:d.toLocaleDateString('es-ES',{day:'2-digit',month:'short'}),v:+promDia.toFixed(1)};});
+  return new Chart(canvas,{type:'line',data:{labels:[...lHist,...proj.map(x=>x.l)],datasets:[{label:'Histórico',data:[...vHist,...Array(7).fill(null)],borderColor:'#0369a1',backgroundColor:'rgba(3,105,161,.1)',tension:.4,pointRadius:3},{label:'Proyección',data:[...Array(lHist.length).fill(null),...proj.map(x=>x.v)],borderColor:'#7dd3fc',backgroundColor:'rgba(125,211,252,.1)',tension:.4,borderDash:[5,5],pointRadius:3}]},options:{...miniOpts('#0369a1'),plugins:{legend:{display:true,labels:{color:tc(),font:{size:9},boxWidth:8}}}}});
+}
+
+// ════════════════════════════════════════════════════════
+// EXCEL DOWNLOADS
+// ════════════════════════════════════════════════════════
+function spin(id,on){ const el=document.getElementById(id); if(el) el.style.display=on?'inline-block':'none'; }
+
+function dlXLS(id){ const r=REPORTES.find(x=>x.id===id); if(!r) return; spin('spin-xl-'+id,true); setTimeout(()=>{ try{ const data=r.xlsFn(); if(!data||!data.length){captaToast&&captaToast('Sin datos para exportar','warn');return;} const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,r.name.slice(0,31)); XLSX.writeFile(wb,`CAPTA_${r.name.replace(/\s+/g,'_')}_${new Date().toISOString().split('T')[0]}.xlsx`); }finally{spin('spin-xl-'+id,false);} },100); }
+
+function dataXlsGerencial(){
+  return allData.map(r=>({
+    Fecha: fmtDate(r.created_at), Promotor: r.promoter_name||'', Comercio: r.trade||'',
+    Estado: r.state||'', Zona: r.zone||'', GPS: r.verified||'',
+    'Distancia(m)': r.distance||0, 'Metros Anaquel': r.shelf_meters||0,
+    'Caras Antes': r.our_faces_before_counted||r.our_faces_before_manual||0,
+    'Caras Después': r.our_faces_after||0,
+    Mayorista: r.p_mayorista||'No', Comentarios: r.comments||''
+  }));
+}
+
+function dataXlsPrecios(){
+  const rows=[];
+  allData.forEach(r=>{
+    parseItems(r.myitems).forEach(i=>{
+      rows.push({Fecha:fmtDate(r.created_at),Promotor:r.promoter_name||'',Comercio:r.trade||'',Estado:r.state||'',Tipo:'Propio',Producto:i.presentation||'',Precio:i.price||'',Moneda:i.currency||'','Precio USD':toUSD(i.price,i.currency,r.created_at).toFixed(2)});
+    });
+    parseItems(r.competitoritems).forEach(i=>{
+      rows.push({Fecha:fmtDate(r.created_at),Promotor:r.promoter_name||'',Comercio:r.trade||'',Estado:r.state||'',Tipo:'Competencia',Producto:i.presentation||'',Precio:i.price||'',Moneda:i.currency||'','Precio USD':toUSD(i.price,i.currency,r.created_at).toFixed(2)});
+    });
+  });
+  return rows;
+}
+
+function dataXlsAnaquel(){
+  return allData.filter(r=>r.shelf_meters).map(r=>({
+    Fecha:fmtDate(r.created_at),Promotor:r.promoter_name||'',Comercio:r.trade||'',
+    Estado:r.state||'',Zona:r.zone||'','Metros Propios':r.shelf_meters||0,
+    'Metros Comp.': parseItems(r.competitoritems).reduce((s,i)=>s+(parseFloat(i.shelf_meters)||0),0).toFixed(2)
+  }));
+}
+
+function dataXlsCaras(){
+  return allData.map(r=>({
+    Fecha:fmtDate(r.created_at),Promotor:r.promoter_name||'',Comercio:r.trade||'',
+    Estado:r.state||'','Caras Antes (contadas)':r.our_faces_before_counted||0,
+    'Caras Antes (manual)':r.our_faces_before_manual||0,
+    'Caras Después':r.our_faces_after||0,
+    'Total Caras (antes)':r.total_faces_before||0,'Total Caras (después)':r.total_faces||0
+  }));
+}
+
+function dataXlsStock(){
+  const rows=[];
+  allData.forEach(r=>{ parseItems(r.myitems).forEach(i=>{ if(i.presentation==='SIN STOCK'||i.stock_shelf===0||i.stock_shelf===null){ rows.push({Fecha:fmtDate(r.created_at),Promotor:r.promoter_name||'',Comercio:r.trade||'',Estado:r.state||'',Producto:i.presentation||'','Stock Anaquel':i.stock_shelf??'SIN STOCK','Stock Bodega':i.stock_warehouse??'SIN STOCK'}); } }); });
+  return rows;
+}
+
+function dataXlsProyeccion(){
+  const {labels,values}=groupByDate(allData,30);
+  const prom=values.length?values.reduce((a,b)=>a+b,0)/values.length:0;
+  const hist=labels.map((l,i)=>({Fecha:l,Visitas:values[i],Tipo:'Histórico','Proyección':null}));
+  const futu=[...Array(14)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()+i+1);return{Fecha:d.toLocaleDateString('es-ES',{day:'2-digit',month:'short'}),Visitas:null,Tipo:'Proyección','Proyección':+prom.toFixed(1)};});
+  return [...hist,...futu];
+}
+
+// ════════════════════════════════════════════════════════
+// PDF DOWNLOADS
+// ════════════════════════════════════════════════════════
+async function dlPDF(id){
+  const r=REPORTES.find(x=>x.id===id); if(!r) return;
+  spin('spin-pdf-'+id,true);
+  try {
+    const canvas=document.getElementById('pdfCanvas');
+    canvas.innerHTML=buildPDFContent(r);
+    canvas.style.left='-9999px';
+    canvas.style.top='0px';
+
+    await new Promise(res=>setTimeout(res,500));
+
+    const snap = await html2canvas(canvas,{scale:1.5,useCORS:true,logging:false,backgroundColor:'#ffffff'});
+    const {jsPDF} = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const W=210, H=297;
+    const imgW=W, imgH=(snap.height*imgW)/snap.width;
+    let y=0;
+    while(y<imgH){
+      if(y>0) pdf.addPage();
+      pdf.addImage(snap.toDataURL('image/png'),'PNG',0,-y,imgW,imgH);
+      y+=H;
+    }
+    pdf.save(`CAPTA_${r.name.replace(/\s+/g,'_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+    canvas.innerHTML='';
+  }catch(e){console.error(e);}
+  finally{spin('spin-pdf-'+id,false);}
+}
+
+function buildPDFContent(r){
+  const desde=document.getElementById('rFDesde').value;
+  const hasta=document.getElementById('rFHasta').value;
+  const total=allData.length;
+  const promSet=new Set(allData.map(x=>x.promoter_name).filter(Boolean));
+
+  const sections = {
+    gerencial: buildPDFGerencial,
+    precios:   buildPDFPrecios,
+    anaquel:   buildPDFAnaquel,
+    caras:     buildPDFCaras,
+    stock:     buildPDFStock,
+    proyeccion:buildPDFProyeccion,
+  };
+
+  const body = (sections[r.id]||((r)=>'<p>Reporte no disponible</p>'))(r);
+
+  return `
+  <div style="font-family:'Outfit',sans-serif;background:#fff;color:#0f172a;width:860px;padding:40px">
+    <div style="border-left:5px solid ${r.color};padding-left:18px;margin-bottom:28px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#64748b;margin-bottom:4px">${r.badgeLabel} · CAPTA Intelligence Platform</div>
+      <div style="font-size:26px;font-weight:700;color:#0f172a">${r.icon} ${r.name}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px">${empNombre} · Período: ${desde} → ${hasta} · ${total} visitas analizadas</div>
+    </div>
+    ${body}
+    <div style="margin-top:36px;padding-top:14px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8">
+      <span>© CAPTA C.A. — archyss-dev</span>
+      <span>Generado: ${new Date().toLocaleString('es-ES')}</span>
+    </div>
+  </div>`;
+}
+
+// ── Helpers PDF ──
+const pdfTable=(headers,rows,color='#4f46e5')=>`
+  <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:14px">
+    <thead>
+      <tr style="background:${color};color:#fff">
+        ${headers.map(h=>`<th style="padding:8px 10px;text-align:left;font-weight:600">${h}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.map((r,i)=>`<tr style="background:${i%2===0?'#f8fafc':'#fff'}">
+        ${r.map(c=>`<td style="padding:7px 10px;border-bottom:1px solid #e2e8f0">${c}</td>`).join('')}
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+
+const kpiCard=(val,lbl,color)=>`
+  <div style="flex:1;background:#f8fafc;border-radius:8px;padding:14px 16px;border-top:3px solid ${color}">
+    <div style="font-size:20px;font-weight:700;color:${color}">${val}</div>
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-top:3px">${lbl}</div>
+  </div>`;
+
+// ── PDF: Gerencial ──
+function buildPDFGerencial(){
+  const total=allData.length;
+  const conf=allData.filter(r=>r.verified==='Confirmado').length;
+  const pct=total>0?Math.round(conf/total*100):0;
+  const promMap={};
+  allData.forEach(r=>{if(!promMap[r.promoter_name])promMap[r.promoter_name]={v:0,c:0};promMap[r.promoter_name].v++;if(r.verified==='Confirmado')promMap[r.promoter_name].c++;});
+  const rows=Object.entries(promMap).sort((a,b)=>b[1].v-a[1].v).map(([p,x])=>[p,x.v,x.c,total>0?Math.round(x.c/x.v*100)+'%':'—']);
+  return `
+  <div style="display:flex;gap:12px;margin-bottom:20px">
+    ${kpiCard(total,'Total visitas','#4f46e5')}
+    ${kpiCard(Object.keys(promMap).length,'Promotores activos','#059669')}
+    ${kpiCard(conf,'Visitas confirmadas GPS','#0369a1')}
+    ${kpiCard(pct+'%','Tasa confirmación','#d97706')}
+  </div>
+  <h3 style="font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Rendimiento por promotor</h3>
+  ${pdfTable(['Promotor','Visitas','Confirmadas','% GPS'],rows,'#4f46e5')}`;
+}
+
+// ── PDF: Precios ──
+function buildPDFPrecios(){
+  const prodUSD={};
+  allData.forEach(r=>{parseItems(r.myitems).forEach(i=>{if(i.price&&i.currency&&i.presentation&&i.presentation!=='SIN STOCK'){if(!prodUSD[i.presentation])prodUSD[i.presentation]=[];prodUSD[i.presentation].push(toUSD(i.price,i.currency,r.created_at));}});});
+  const rows=Object.entries(prodUSD).map(([k,v])=>{const avg=v.reduce((a,b)=>a+b,0)/v.length;const min=Math.min(...v);const max=Math.max(...v);return[k,v.length,fmtUSD(avg),fmtUSD(min),fmtUSD(max)];}).sort((a,b)=>parseFloat(b[2].replace('$','').replace(',','.'))-parseFloat(a[2].replace('$','').replace(',','.')));
+  return `
+  <h3 style="font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Precios promedio por presentación (USD)</h3>
+  ${pdfTable(['Producto','# Registros','Promedio USD','Mínimo','Máximo'],rows,'#db2777')}`;
+}
+
+// ── PDF: Anaquel ──
+function buildPDFAnaquel(){
+  const byTrade={};
+  allData.forEach(r=>{if(!byTrade[r.trade])byTrade[r.trade]={n:0,comp:0};byTrade[r.trade].n+=parseFloat(r.shelf_meters)||0;parseItems(r.competitoritems).forEach(i=>{byTrade[r.trade].comp+=parseFloat(i.shelf_meters)||0;});});
+  const rows=Object.entries(byTrade).filter(([,v])=>v.n>0).sort((a,b)=>b[1].n-a[1].n).slice(0,20).map(([t,v])=>{const tot=v.n+v.comp;const sos=tot>0?Math.round(v.n/tot*100):0;return[t,v.n.toFixed(2)+'m',v.comp.toFixed(2)+'m',sos+'%'];});
+  return `
+  <h3 style="font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Metros de anaquel por comercio</h3>
+  ${pdfTable(['Comercio','Metros propios','Metros comp.','SOS %'],rows,'#059669')}`;
+}
+
+// ── PDF: Caras ──
+function buildPDFCaras(){
+  const byDate={};
+  allData.forEach(r=>{const d=fmtDate(r.created_at);if(!byDate[d])byDate[d]={b:0,a:0,n:0};byDate[d].b+=parseFloat(r.our_faces_before_counted)||parseFloat(r.our_faces_before_manual)||0;byDate[d].a+=parseFloat(r.our_faces_after)||0;byDate[d].n++;});
+  const rows=Object.entries(byDate).slice(0,20).map(([d,v])=>[(v.b/v.n).toFixed(1),(v.a/v.n).toFixed(1),v.a>v.b?`+${(v.a-v.b).toFixed(1)}`:((v.a-v.b).toFixed(1))].unshift(d)||[d,(v.b/v.n).toFixed(1),(v.a/v.n).toFixed(1),v.a>=v.b?`▲ +${(v.a-v.b).toFixed(1)}`:`▼ ${(v.a-v.b).toFixed(1)}`]);
+  return `
+  <h3 style="font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Caras de anaquel por día (promedio por visita)</h3>
+  ${pdfTable(['Fecha','Caras antes (prom)','Caras después (prom)','Δ Diferencia'],rows,'#d97706')}`;
+}
+
+// ── PDF: Stock ──
+function buildPDFStock(){
+  const sinStock={};
+  allData.forEach(r=>{parseItems(r.myitems).forEach(i=>{if(i.presentation==='SIN STOCK'||i.stock_shelf===0||i.stock_shelf===null){const k=i.presentation==='SIN STOCK'?`${i.presentation}`:i.presentation||'Desconocido';sinStock[k]=(sinStock[k]||0)+1;}});});
+  const rows=Object.entries(sinStock).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([p,c])=>[p,c,`${Math.round(c/allData.length*100)}%`]);
+  return `
+  <h3 style="font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Productos con quiebre de stock — frecuencia</h3>
+  ${pdfTable(['Producto','Reportes de quiebre','% del total visitas'],rows,'#166534')}`;
+}
+
+// ── PDF: Proyección ──
+function buildPDFProyeccion(){
+  const {labels,values}=groupByDate(allData,30);
+  const prom=values.length?values.reduce((a,b)=>a+b,0)/values.length:0;
+  const tendencia=values.length>1?(values[values.length-1]-values[0])/(values.length-1):0;
+  const p7=Math.max(0,Math.round(prom+tendencia*3));
+  const p14=Math.max(0,Math.round(prom+tendencia*10));
+  const p30=Math.max(0,Math.round(prom+tendencia*25));
+  return `
+  <div style="display:flex;gap:12px;margin-bottom:20px">
+    ${kpiCard(prom.toFixed(1),'Promedio diario histórico','#0369a1')}
+    ${kpiCard(p7,'Proyección 7 días','#0284c7')}
+    ${kpiCard(p14,'Proyección 14 días','#0369a1')}
+    ${kpiCard(p30,'Proyección 30 días','#075985')}
+  </div>
+  <h3 style="font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Historial de visitas diarias (últimos 30 días)</h3>
+  ${pdfTable(['Fecha','Visitas'],labels.map((l,i)=>[l,values[i]]),'#0369a1')}`;
+}
+
+// ════════════════════════════════════════════════════════
+// PREVIEWS
+// ════════════════════════════════════════════════════════
+function openPrev(id){
+  const r=REPORTES.find(x=>x.id===id); if(!r) return;
+  document.getElementById('prevTitle').textContent=`${r.icon} ${r.name}`;
+  document.getElementById('prevBody').innerHTML=buildPDFContent(r).replace(/width:860px/,'width:100%').replace(/font-size:26px/,'font-size:20px');
+  document.getElementById('prevOverlay').classList.add('open');
+}
+function closePrev(){ document.getElementById('prevOverlay').classList.remove('open'); }
+document.getElementById('prevOverlay').addEventListener('click',e=>{ if(e.target===e.currentTarget) closePrev(); });
+
+// Funciones preview (alias a buildPDF)
+function previewGerencial(){ openPrev('gerencial'); }
+function previewPrecios(){ openPrev('precios'); }
+function previewAnaquel(){ openPrev('anaquel'); }
+function previewCaras(){ openPrev('caras'); }
+function previewStock(){ openPrev('stock'); }
+function previewProyeccion(){ openPrev('proyeccion'); }
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+['rFDesde','rFHasta','rFPromotor','rFLinea'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', recargar);
+});
+
+window.captaReady(()=>cargarTodo());
+</script>
+</body>
+</html>

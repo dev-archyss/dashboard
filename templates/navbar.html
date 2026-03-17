@@ -41,7 +41,7 @@
         </span>
         <div class="sp-nav-dropdown" id="analisisDropdown">
           <a href="/analisis" data-nav>
-            <i class="fas fa-dollar-sign"></i> Precios (USD/kg)
+            <i class="fas fa-dollar-sign"></i> Precios
           </a>
           <a href="/caras" data-nav>
             <i class="fas fa-eye"></i> Caras de Anaquel
@@ -54,6 +54,7 @@
           </a>
         </div>
       </div>
+      <a href="/reportes" class="sp-nav-link" data-nav><i class="fas fa-file-chart-column"></i> Reportes</a>
 
       <a href="/clientes"    class="sp-nav-link" data-nav><i class="fas fa-store"></i> Clientes</a>
       <a href="/promotores"  class="sp-nav-link" data-nav><i class="fas fa-user-tie"></i> Promotores</a>
@@ -116,6 +117,7 @@
     <a href="/analisis"         class="sp-drawer-link" style="padding-left:22px"><i class="fas fa-dollar-sign"></i> Precios (USD/kg)</a>
     <a href="/caras"            class="sp-drawer-link" style="padding-left:22px"><i class="fas fa-eye"></i> Caras de Anaquel</a>
     <a href="/metros_espacios"  class="sp-drawer-link" style="padding-left:22px"><i class="fas fa-ruler-combined"></i> Metros y Espacios</a>
+    <a href="/reportes" class="sp-drawer-link"><i class="fas fa-file-chart-column"></i> Reportes</a>
     <a href="/espacios_adicionales" class="sp-drawer-link" style="padding-left:22px"><i class="fas fa-store"></i> Espacios Adicionales</a>
 
     <div class="sp-drawer-sep"></div>
@@ -176,6 +178,7 @@ const _MOD_LINKS = {
   planograma:        ['[href="/planograma"]'],
   gps_verificacion:     ['[href="/gps"]'],
   espacios_adicionales: ['[href="/espacios_adicionales"]'],
+  reportes:             ['[href="/reportes"]'],
 };
 
 async function _applyModules(empresaId) {

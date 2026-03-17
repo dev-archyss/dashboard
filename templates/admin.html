@@ -124,7 +124,7 @@ select.inp option{background:var(--card2)}
     <div class="login-sub">Admin Console</div>
     <div class="login-error" id="loginErr"><i class="fas fa-exclamation-triangle"></i><span id="loginErrMsg"></span></div>
     <div class="field"><label>Usuario</label>
-      <input type="text" class="inp" id="adminUser" placeholder="capta_admin" autocomplete="off"></div>
+      <input type="text" class="inp" id="adminUser" placeholder="Usuario" autocomplete="off"></div>
     <div class="field"><label>Contraseña</label>
       <input type="password" class="inp" id="adminPass" placeholder="••••••••"
         onkeydown="if(event.key==='Enter')doLogin()"></div>
@@ -302,7 +302,7 @@ select.inp option{background:var(--card2)}
 const SB_URL = 'https://djjylikkocemrlsjxscr.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
 const SB_H = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
-const AU = 'capta_admin', AP = 'CaptaAdmin2025!';
+const AU = 'admincapta123', AP = 'archys123';
 
 const MODS = [
   {key:'dashboard',         label:'Dashboard',         icon:'fas fa-gauge-high'},
@@ -323,9 +323,11 @@ const MODS = [
   {key:'caras_despues',     label:'Caras Después',     icon:'fas fa-camera-retro'},
   {key:'stock_bodega',       label:'Stock Bodega',      icon:'fas fa-warehouse'},
   {key:'espacios_adicionales',label:'Espacios Adicionales',icon:'fas fa-store'},
+  {key:'reportes',             label:'Reportes',           icon:'fas fa-file-chart-column'},
 ];
 
-const PLANES = {
+// ── Definición de planes (se carga desde Supabase) ──
+const PLANES_DEFAULT = {
   full:  {label:'Full',   cls:'plan-full',  desc:'Acceso completo a todos los módulos',
           mods: MODS.map(m=>m.key)},
   mid:   {label:'Mid',    cls:'plan-mid',   desc:'Módulos esenciales de operación y análisis',
@@ -334,6 +336,34 @@ const PLANES = {
           mods:['dashboard','productos','promotores','clientes','lineas']},
   custom:{label:'Custom', cls:'plan-custom',desc:'Módulos seleccionados manualmente', mods:[]}
 };
+
+let PLANES = JSON.parse(JSON.stringify(PLANES_DEFAULT));
+
+// Cargar planes desde Supabase
+async function loadPlanesFromDB() {
+  try {
+    const res = await sb('capta_planes?select=id,label,descripcion,modulos&order=id.asc');
+    if (!res || !res.length) return;
+    res.forEach(row => {
+      const key = row.id;
+      if (PLANES[key]) {
+        PLANES[key].mods = Array.isArray(row.modulos) ? row.modulos : JSON.parse(row.modulos || '[]');
+        PLANES[key].desc = row.descripcion || PLANES[key].desc;
+      }
+    });
+  } catch(e) {
+    console.warn('No se pudieron cargar planes desde DB, usando defaults:', e.message);
+  }
+}
+
+// Guardar un plan en Supabase
+async function savePlanToDB(key) {
+  const pl = PLANES[key];
+  await sb(`capta_planes?id=eq.${key}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ modulos: pl.mods, descripcion: pl.desc, updated_at: new Date().toISOString() })
+  });
+}
 
 let allE=[], filtE=[], editId=null;
 
@@ -368,7 +398,13 @@ if(sessionStorage.getItem('cadm')){
   setTimeout(boot,0);
 }
 
-function boot(){loadE();renderPlanes();renderCatalog();buildModGrid('n_mods',{},'full');}
+async function boot(){
+  await loadPlanesFromDB();   // primero cargar planes desde Supabase
+  loadE();
+  renderPlanes();
+  renderCatalog();
+  buildModGrid('n_mods',{},'full');
+}
 
 /* ── NAV ───────────────────────────── */
 const navTitles={empresas:'Empresas registradas',planes:'Planes de suscripción',modulos:'Catálogo de módulos',nueva:'Nueva empresa'};
@@ -583,27 +619,193 @@ async function crearEmpresa(){
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
-/* ── PLANES VIEW ───────────────────── */
+/* ── PLANES VIEW (EDITABLE) ────────── */
+let editingPlan = null; // key del plan en edición
+
 function renderPlanes(){
   const c=document.getElementById('planesContainer');
-  c.innerHTML=Object.entries(PLANES).map(([key,pl])=>{
-    const chips=key==='custom'
-      ?'<p style="color:var(--muted);font-size:.8rem;font-style:italic">Módulos configurados manualmente por empresa.</p>'
-      :pl.mods.map(k=>{const m=MODS.find(x=>x.key===k);return m
-        ?`<span class="plan-mod-chip"><i class="${m.icon}" style="color:var(--accent2);font-size:.65rem"></i>${m.label}</span>`
-        :''}).join('');
-    const cnt=key==='custom'?'Variable':pl.mods.length+' módulos';
-    return `<div class="plan-section">
-      <div class="plan-hdr">
-        <div>
-          <span class="plan-badge ${pl.cls}" style="font-size:.8rem;padding:4px 14px">${pl.label}</span>
-          <div style="font-size:.75rem;color:var(--muted);margin-top:6px">${pl.desc}</div>
+  c.innerHTML='';
+
+  Object.entries(PLANES).forEach(([key,pl])=>{
+    const isCustom = key==='custom';
+    const isEditing = editingPlan === key;
+
+    const div = document.createElement('div');
+    div.className = 'plan-section';
+    div.id = 'plan-sec-'+key;
+
+    if (isEditing) {
+      // ── MODO EDICIÓN ──
+      div.innerHTML = `
+        <div class="plan-hdr" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="plan-badge ${pl.cls}" style="font-size:.8rem;padding:4px 14px">${pl.label}</span>
+            <span style="font-size:.75rem;color:var(--muted)">Editando módulos del plan</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-green btn-sm" onclick="savePlan('${key}')">
+              <i class="fas fa-save"></i> Guardar
+            </button>
+            <button class="btn btn-sec btn-sm" onclick="cancelEditPlan()">
+              <i class="fas fa-times"></i> Cancelar
+            </button>
+          </div>
         </div>
-        <div style="font-size:.8rem;color:var(--accent2);font-family:'Space Mono',monospace;font-weight:700">${cnt}</div>
-      </div>
-      <div class="plan-mods">${chips}</div>
-    </div>`;
-  }).join('');
+        <div class="field" style="margin-bottom:14px">
+          <label>Descripción del plan</label>
+          <input type="text" class="inp" id="plan-desc-${key}" value="${pl.desc}" style="max-width:500px">
+        </div>
+        <label style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px">
+          Módulos incluidos — activa o desactiva con los interruptores
+        </label>
+        <div class="mod-grid" id="plan-mods-grid-${key}"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sec btn-sm" onclick="selectAllPlan('${key}')">
+            <i class="fas fa-check-double"></i> Todos
+          </button>
+          <button class="btn btn-sec btn-sm" onclick="deselectAllPlan('${key}')">
+            <i class="fas fa-square"></i> Ninguno
+          </button>
+          <button class="btn btn-sec btn-sm" onclick="resetPlanDefault('${key}')">
+            <i class="fas fa-undo"></i> Restaurar default
+          </button>
+        </div>`;
+    } else {
+      // ── MODO VISTA ──
+      const chips = isCustom
+        ? '<p style="color:var(--muted);font-size:.8rem;font-style:italic">Los módulos se configuran manualmente por empresa en el modal de edición.</p>'
+        : pl.mods.map(k=>{
+            const m=MODS.find(x=>x.key===k);
+            return m ? `<span class="plan-mod-chip"><i class="${m.icon}" style="color:var(--accent2);font-size:.65rem"></i>${m.label}</span>` : '';
+          }).join('');
+      const cnt = isCustom ? 'Variable' : pl.mods.length+' módulos';
+      div.innerHTML = `
+        <div class="plan-hdr">
+          <div>
+            <span class="plan-badge ${pl.cls}" style="font-size:.8rem;padding:4px 14px">${pl.label}</span>
+            <div style="font-size:.75rem;color:var(--muted);margin-top:6px">${pl.desc}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:.8rem;color:var(--accent2);font-family:'Space Mono',monospace;font-weight:700">${cnt}</span>
+            ${!isCustom ? `<button class="btn btn-sec btn-sm" onclick="startEditPlan('${key}')">
+              <i class="fas fa-pen"></i> Editar
+            </button>` : ''}
+          </div>
+        </div>
+        <div class="plan-mods">${chips}</div>`;
+    }
+
+    c.appendChild(div);
+
+    // Si está en edición, construir el grid de módulos
+    if (isEditing && !isCustom) {
+      buildPlanModGrid(key, pl.mods);
+    }
+  });
+}
+
+function buildPlanModGrid(planKey, activeMods) {
+  const c = document.getElementById('plan-mods-grid-'+planKey);
+  if (!c) return;
+  c.innerHTML = '';
+  MODS.forEach(m => {
+    const on = activeMods.includes(m.key);
+    const d = document.createElement('div');
+    d.className = 'mod-item' + (on ? ' on' : '');
+    d.id = 'PMI_'+planKey+'_'+m.key;
+    d.innerHTML = `<div>
+      <div class="mod-name"><i class="${m.icon}" style="color:var(--accent2);margin-right:4px;font-size:.72rem"></i>${m.label}</div>
+      <div class="mod-key">${m.key}</div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" ${on?'checked':''} onchange="onPlanModToggle('${planKey}','${m.key}',this.checked)">
+      <span class="toggle-sl"></span>
+    </label>`;
+    c.appendChild(d);
+  });
+}
+
+function onPlanModToggle(planKey, modKey, checked) {
+  const item = document.getElementById('PMI_'+planKey+'_'+modKey);
+  if (checked) item.classList.add('on');
+  else item.classList.remove('on');
+}
+
+function startEditPlan(key) {
+  editingPlan = key;
+  renderPlanes();
+  // Scroll al plan
+  setTimeout(()=>{
+    document.getElementById('plan-sec-'+key)?.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 50);
+}
+
+function cancelEditPlan() {
+  editingPlan = null;
+  renderPlanes();
+}
+
+function savePlan(key) {
+  // Leer módulos del grid
+  const mods = [];
+  MODS.forEach(m => {
+    const cb = document.querySelector(`#PMI_${key}_${m.key} input[type=checkbox]`);
+    if (cb && cb.checked) mods.push(m.key);
+  });
+
+  const desc = document.getElementById('plan-desc-'+key)?.value.trim() || PLANES[key].desc;
+
+  if (mods.length === 0) { toast('El plan debe tener al menos 1 módulo', 'err'); return; }
+
+  PLANES[key].mods = mods;
+  PLANES[key].desc = desc;
+
+  // Guardar en Supabase
+  savePlanToDB(key).then(()=>{
+    toast(`Plan ${PLANES[key].label} guardado — ${mods.length} módulos`, 'ok');
+  }).catch(e=>{
+    toast('Error al guardar en BD: '+e.message, 'err');
+  });
+
+  editingPlan = null;
+  renderPlanes();
+}
+
+function selectAllPlan(key) {
+  MODS.forEach(m => {
+    const cb = document.querySelector(`#PMI_${key}_${m.key} input[type=checkbox]`);
+    const item = document.getElementById('PMI_'+key+'_'+m.key);
+    if (cb) { cb.checked = true; item?.classList.add('on'); }
+  });
+}
+
+function deselectAllPlan(key) {
+  MODS.forEach(m => {
+    const cb = document.querySelector(`#PMI_${key}_${m.key} input[type=checkbox]`);
+    const item = document.getElementById('PMI_'+key+'_'+m.key);
+    if (cb) { cb.checked = false; item?.classList.remove('on'); }
+  });
+}
+
+function resetPlanDefault(key) {
+  if (!confirm('¿Restaurar los módulos por defecto para el plan '+PLANES[key].label+'?')) return;
+  PLANES[key].mods = [...PLANES_DEFAULT[key].mods];
+  PLANES[key].desc = PLANES_DEFAULT[key].desc;
+  buildPlanModGrid(key, PLANES[key].mods);
+  // Actualizar checkboxes
+  MODS.forEach(m => {
+    const cb = document.querySelector(`#PMI_${key}_${m.key} input[type=checkbox]`);
+    const item = document.getElementById('PMI_'+key+'_'+m.key);
+    if (cb) {
+      cb.checked = PLANES[key].mods.includes(m.key);
+      if (cb.checked) item?.classList.add('on'); else item?.classList.remove('on');
+    }
+  });
+  savePlanToDB(key).then(()=>{
+    toast('Plan restaurado y guardado en BD', 'ok');
+  }).catch(()=>{
+    toast('Restaurado (error al sincronizar BD)', 'err');
+  });
 }
 
 /* ── CATÁLOGO VIEW ─────────────────── */

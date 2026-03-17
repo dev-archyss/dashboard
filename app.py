@@ -388,6 +388,11 @@ def promotores():
 @require_modulo('espacios_adicionales')
 def espacios_adicionales():
      return render_template('espacios_adicionales.html')
+
+@app.route('/reportes')
+@require_modulo('reportes')
+def reportes():
+    return render_template('reportes.html')
  
 # Dashboard y admin no tienen restricción de módulo
 @app.route('/dashboard')
