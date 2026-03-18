@@ -19,6 +19,11 @@
   --r:14px;--r2:10px;--r3:8px;
   --sh:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
 }
+.dark{
+  --ink:#f1f5f9;--ink2:#cbd5e1;--ink3:#94a3b8;--ink4:#64748b;
+  --bg:#0f172a;--card:#1e293b;--brd:#334155;--brd2:#475569;
+  --grn:#34d399;--red:#f87171;--amb:#fbbf24;--cyn:#22d3ee;
+}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
 .page{max-width:1440px;margin:0 auto;padding:0 0 60px}
 
@@ -73,7 +78,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .rp-tbl-wrap{overflow-x:auto;max-height:400px}
 .rp-tbl{width:100%;border-collapse:collapse;font-size:.8rem}
 .rp-tbl th{position:sticky;top:0;background:var(--bg);padding:9px 12px;text-align:left;font-size:.65rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);border-bottom:2px solid var(--brd);z-index:2}
-.rp-tbl td{padding:9px 12px;border-bottom:1px solid var(--brd);vertical-align:middle}
+.rp-tbl td{padding:9px 12px;border-bottom:1px solid var(--brd);vertical-align:middle;color:var(--ink)}
 .rp-tbl tr:hover td{background:rgba(79,70,229,.03)}
 .rp-tbl tr:last-child td{border-bottom:none}
 .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:.68rem;font-weight:600}
@@ -270,7 +275,11 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
   </div>
   <div class="chart-card"><div class="chart-card-title">Detalle de quiebres</div>
     <div class="rp-tbl-wrap"><table class="rp-tbl" id="t-stk"><thead><tr><th>Fecha</th><th>Promotor</th><th>Comercio</th><th>Producto</th><th>Stock anaquel</th><th>Stock bodega</th></tr></thead><tbody></tbody></table></div>
-  </div>
+  
+    <div class="chart-card" style="grid-column:1/-1">
+      <div class="chart-card-title">🚨 Comercios con mayor frecuencia de stock bajo <span>Requieren atención prioritaria</span></div>
+      <div id="sug-stock-bajo"><div style="color:var(--ink3);font-size:.82rem;text-align:center;padding:24px">Cargando...</div></div>
+    </div></div>
 </div>
 
 <!-- ══ TAB: PROMOTORES ══ -->
@@ -365,6 +374,7 @@ document.getElementById('fHasta').value=hoy.toISOString().split('T')[0];
 // CARGA
 // ════════════════════════════════════════
 async function boot(){
+  await loadClientesCoords();
   const [r1,r2,r3,r4,r5,r6] = await Promise.all([
     $db('web_promotores').select('promoter_id,promoter_name,dias_trabajo').eq('empresa_id',EID).order('promoter_name'),
     $db('web_lineas').select('id,nombre').eq('empresa_id',EID).eq('activa',true).order('nombre'),
@@ -483,15 +493,24 @@ function mkChart(id,type,data,opts={}){
   destroyChart(id);
   const canvas=document.getElementById(id);
   if(!canvas)return;
+  // Guardar labels completos para tooltips
+  const fullLabels=[...(data.labels||[])];
   const isDoughnut = type==='doughnut'||type==='pie';
   const scalesOpt = isDoughnut ? undefined : {
-    x:{ ticks:{color:tc(),font:{size:10}}, grid:{color:gc()} },
+    x:{ ticks:{color:tc(),font:{size:10},maxRotation:35,autoSkip:true,maxTicksLimit:10}, grid:{color:gc()} },
     y:{ ticks:{color:tc(),font:{size:10}}, grid:{color:gc()} }
   };
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend:{display:false} }
+    plugins: {
+      legend:{display:false},
+      tooltip:{
+        callbacks:{
+          title: items => fullLabels[items[0].dataIndex] || items[0].label
+        }
+      }
+    }
   };
   if (!isDoughnut) options.scales = scalesOpt;
   charts[id] = new Chart(canvas, {type, data, options});
@@ -524,6 +543,7 @@ function renderAll(){
   renderAnaquel();
   renderCaras();
   renderStock();
+    renderSugerenciasStock();
   renderPromotores();
   renderEspacios();
   renderProyeccion();
@@ -550,13 +570,41 @@ function showTab(name,btn){
 }
 
 // ════════════════════════════════════════
+// GPS — calcular distancia haversine local
+// ════════════════════════════════════════
+function haversineDist(lat1,lon1,lat2,lon2){
+  const R=6371000;
+  const dL=((lat2-lat1)*Math.PI)/180;
+  const dO=((lon2-lon1)*Math.PI)/180;
+  const a=Math.sin(dL/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dO/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// Mapa de clientes con coordenadas (cargado una vez)
+let clientesCoordMap = {};
+async function loadClientesCoords(){
+  try{
+    const {data}=await $db('web_clientes').select('id,latitude,longitude').eq('empresa_id',empresaId);
+    (data||[]).forEach(c=>{if(c.latitude&&c.longitude)clientesCoordMap[c.id]={lat:parseFloat(c.latitude),lon:parseFloat(c.longitude)};});
+  }catch(e){console.warn('coords:',e);}
+}
+
+// Determinar si una visita está confirmada por GPS
+function isConfirmado(r){
+  if(!r.latitude||!r.longitude) return false;
+  const cli=clientesCoordMap[r.cliente_id];
+  if(!cli) return false;
+  return haversineDist(parseFloat(r.latitude),parseFloat(r.longitude),cli.lat,cli.lon)<=150;
+}
+
+// ════════════════════════════════════════
 // KPIs
 // ════════════════════════════════════════
 function renderKPIs(){
   const total=filtData.length;
   const proms=new Set(filtData.map(r=>r.promoter_name).filter(Boolean)).size;
   const coms=new Set(filtData.map(r=>r.trade).filter(Boolean)).size;
-  const conf=filtData.filter(r=>r.verified==='Confirmado').length;
+  const conf=filtData.filter(r=>isConfirmado(r)).length;
   const pctGPS=total?Math.round(conf/total*100):0;
   let sumUSD=0,cntUSD=0;
   filtData.forEach(r=>parseJ(r.myitems).forEach(i=>{if(i.price&&i.currency&&i.presentation!=='SIN STOCK'){sumUSD+=toUSD(i.price,i.currency,r.created_at);cntUSD++;}}));
@@ -599,14 +647,14 @@ function renderGerencial(){
     const sem=`S${Math.ceil(d.getDate()/7)} ${d.toLocaleDateString('es-ES',{month:'short'})}`;
     if(!bySem[sem])bySem[sem]={total:0,conf:0};
     bySem[sem].total++;
-    if(r.verified==='Confirmado')bySem[sem].conf++;
+    if(isConfirmado(r))bySem[sem].conf++;
   });
   const semE=Object.entries(bySem);
   mkChart('c-ger-gps','line',{labels:semE.map(([k])=>k),datasets:[{label:'GPS %',data:semE.map(([,v])=>v.total?Math.round(v.conf/v.total*100):0),borderColor:'#059669',backgroundColor:'rgba(5,150,105,.1)',tension:.4,pointRadius:4,fill:true}]},{plugins:{legend:{display:false}},yTick:{callback:v=>v+'%'}});
 
   // Tabla comercios
   const byT={};
-  filtData.forEach(r=>{if(!byT[r.trade])byT[r.trade]={v:0,c:0,estado:r.state};byT[r.trade].v++;if(r.verified==='Confirmado')byT[r.trade].c++;});
+  filtData.forEach(r=>{if(!byT[r.trade])byT[r.trade]={v:0,c:0,estado:r.state};byT[r.trade].v++;if(isConfirmado(r))byT[r.trade].c++;});
   const topT=Object.entries(byT).sort((a,b)=>b[1].v-a[1].v).slice(0,15);
   document.querySelector('#t-ger-comercios tbody').innerHTML=topT.map(([t,x],i)=>`<tr><td><strong>${i+1}</strong></td><td>${t||'—'}</td><td><strong>${x.v}</strong></td><td>${x.v?Math.round(x.c/x.v*100):0}%</td><td><span class="badge badge-blu">${x.estado||'—'}</span></td></tr>`).join('');
 }
@@ -776,7 +824,7 @@ function renderPromotores(){
     const p=r.promoter_name; if(!p)return;
     if(!stats[p])stats[p]={name:p,dias:5,v:0,conf:0,metros:0,carBef:0,carAft:0,esp:0,completos:0};
     stats[p].v++;
-    if(r.verified==='Confirmado')stats[p].conf++;
+    if(isConfirmado(r))stats[p].conf++;
     stats[p].metros+=parseFloat(r.shelf_meters)||0;
     stats[p].carBef+=parseFloat(r.our_faces_before_counted)||parseFloat(r.our_faces_before_manual)||0;
     stats[p].carAft+=parseFloat(r.our_faces_after)||0;
@@ -870,10 +918,61 @@ function renderEspacios(){
 }
 
 // ════════════════════════════════════════
+// SUGERENCIAS STOCK BAJO
+// ════════════════════════════════════════
+function renderSugerenciasStock(){
+  const container = document.getElementById('sug-stock-bajo');
+  if(!container) return;
+
+  // Acumular por comercio: cuántas veces tuvo stock bajo/sin stock
+  const porComercio = {};
+  filtData.forEach(r => {
+    parseJ(r.myitems).forEach(i => {
+      const sinStock = i.presentation==='SIN STOCK' || i.stock_shelf===0 || i.stock_shelf===null;
+      if(sinStock) {
+        const k = r.trade || 'Sin nombre';
+        if(!porComercio[k]) porComercio[k] = {n:0, prods:{}};
+        porComercio[k].n++;
+        const prod = i.presentation||'desconocido';
+        porComercio[k].prods[prod] = (porComercio[k].prods[prod]||0)+1;
+      }
+    });
+  });
+
+  const sorted = Object.entries(porComercio).sort((a,b)=>b[1].n-a[1].n).slice(0,8);
+
+  if(!sorted.length){
+    container.innerHTML='<div style="color:var(--ink3);font-size:.82rem;text-align:center;padding:16px">Sin registros de stock bajo en el período</div>';
+    return;
+  }
+
+  container.innerHTML = sorted.map(([trade, data], i) => {
+    const topProd = Object.entries(data.prods).sort((a,b)=>b[1]-a[1])[0];
+    const pct = filtData.filter(r=>r.trade===trade).length;
+    const freq = pct ? Math.round(data.n/pct*100) : 0;
+    const color = freq>=50 ? 'var(--red)' : freq>=25 ? 'var(--amb)' : 'var(--ink3)';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--brd)">
+      <div style="width:24px;height:24px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.82rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${trade}">${trade}</div>
+        <div style="font-size:.7rem;color:var(--ink3);margin-top:1px">${data.n} reportes · producto más afectado: <strong style="color:var(--ink2)">${topProd?topProd[0]:'—'}</strong></div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:.9rem;font-weight:700;color:${color}">${freq}%</div>
+        <div style="font-size:.63rem;color:var(--ink3)">de sus visitas</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════
 // PROYECCIÓN
 // ════════════════════════════════════════
 function renderProyeccion(){
-  const {labels:ld,values:vd}=groupByDay(filtData);
+  // Proyección: datos en orden ascendente (más antiguo → más nuevo → futuro)
+  const {labels:ldDesc,values:vdDesc}=groupByDay(filtData);
+  const ld=[...ldDesc].reverse();
+  const vd=[...vdDesc].reverse();
 
   const reg=linearRegression(vd);
   const proj=[...Array(30)].map((_,i)=>{
@@ -893,7 +992,7 @@ function renderProyeccion(){
     if(!priceByDay[d])priceByDay[d]=[];
     parseJ(r.myitems).forEach(i=>{if(i.price&&i.currency&&i.presentation!=='SIN STOCK')priceByDay[d].push(toUSD(i.price,i.currency,r.created_at));});
   });
-  const pE=Object.entries(priceByDay);
+  const pE=Object.entries(priceByDay).sort((a,b)=>new Date(a[0])-new Date(b[0]));
   const avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
   const pVals=pE.map(([,v])=>avg(v));
   const pReg=linearRegression(pVals);
@@ -917,7 +1016,7 @@ function renderProyeccion(){
 
   // Predicciones y sugerencias
   const total=filtData.length;
-  const conf=filtData.filter(r=>r.verified==='Confirmado').length;
+  const conf=filtData.filter(r=>isConfirmado(r)).length;
   const gpsPct=total?Math.round(conf/total*100):0;
   const visProj30=Math.max(0,Math.round(reg.intercept+reg.slope*(vd.length+30)));
   const priceTrend=pReg.slope>0?'al alza':'a la baja';
@@ -1050,7 +1149,7 @@ function exportXLS(todos=false,specificTab=null){
       anaquel:()=>filtData.filter(r=>r.shelf_meters).map(r=>({'Fecha':fmtD(r.created_at),'Promotor':r.promoter_name||'','Comercio':r.trade||'','Estado':r.state||'','Metros Propios':r.shelf_meters||0,'Metros Comp.':parseJ(r.competitoritems).reduce((s,i)=>s+(parseFloat(i.shelf_meters)||0),0).toFixed(2)})),
       caras:()=>filtData.map(r=>({'Fecha':fmtD(r.created_at),'Promotor':r.promoter_name||'','Comercio':r.trade||'','Caras Antes':r.our_faces_before_counted||r.our_faces_before_manual||0,'Caras Después':r.our_faces_after||0,'Total Antes':r.total_faces_before||0,'Total Después':r.total_faces||0})),
       stock:()=>{const rows=[];filtData.forEach(r=>parseJ(r.myitems).forEach(i=>{if(i.presentation==='SIN STOCK'||i.stock_shelf===0||i.stock_shelf===null)rows.push({'Fecha':fmtD(r.created_at),'Promotor':r.promoter_name||'','Comercio':r.trade||'','Producto':i.presentation||'','Stock Anaquel':i.stock_shelf??'SIN STOCK','Stock Bodega':i.stock_warehouse??'SIN STOCK'});}));return rows;},
-      promotores:()=>{const s={};allProms.forEach(p=>{s[p.promoter_name]={Promotor:p.promoter_name,Dias:p.dias_trabajo||5,Visitas:0,Meta:0,Confirmadas:0,'Cumpl %':0,'GPS %':0,'Metros m':0,'Δ Caras':0,Espacios:0,'Datos completos %':0};});filtData.forEach(r=>{const p=r.promoter_name;if(!s[p])return;s[p].Visitas++;s[p].Meta=s[p].Dias*8;if(r.verified==='Confirmado')s[p].Confirmadas++;s[p]['Metros m']+=parseFloat(r.shelf_meters)||0;s[p]['Δ Caras']+=(parseFloat(r.our_faces_after)||0)-(parseFloat(r.our_faces_before_counted)||parseFloat(r.our_faces_before_manual)||0);let espArr=[];try{espArr=Array.isArray(r.espacios_adicionales)?r.espacios_adicionales:(r.espacios_adicionales?JSON.parse(r.espacios_adicionales):[]);}catch{}s[p].Espacios+=espArr.reduce((t,e)=>t+(parseInt(e.unidades)||0),0);});return Object.values(s).filter(x=>x.Visitas>0).map(x=>{x['Cumpl %']=x.Meta?Math.round(x.Confirmadas/x.Meta*100):0;x['GPS %']=x.Visitas?Math.round(x.Confirmadas/x.Visitas*100):0;x['Metros m']=+x['Metros m'].toFixed(2);x['Δ Caras']=+x['Δ Caras'].toFixed(0);return x;});},
+      promotores:()=>{const s={};allProms.forEach(p=>{s[p.promoter_name]={Promotor:p.promoter_name,Dias:p.dias_trabajo||5,Visitas:0,Meta:0,Confirmadas:0,'Cumpl %':0,'GPS %':0,'Metros m':0,'Δ Caras':0,Espacios:0,'Datos completos %':0};});filtData.forEach(r=>{const p=r.promoter_name;if(!s[p])return;s[p].Visitas++;s[p].Meta=s[p].Dias*8;if(isConfirmado(r))s[p].Confirmadas++;s[p]['Metros m']+=parseFloat(r.shelf_meters)||0;s[p]['Δ Caras']+=(parseFloat(r.our_faces_after)||0)-(parseFloat(r.our_faces_before_counted)||parseFloat(r.our_faces_before_manual)||0);let espArr=[];try{espArr=Array.isArray(r.espacios_adicionales)?r.espacios_adicionales:(r.espacios_adicionales?JSON.parse(r.espacios_adicionales):[]);}catch{}s[p].Espacios+=espArr.reduce((t,e)=>t+(parseInt(e.unidades)||0),0);});return Object.values(s).filter(x=>x.Visitas>0).map(x=>{x['Cumpl %']=x.Meta?Math.round(x.Confirmadas/x.Meta*100):0;x['GPS %']=x.Visitas?Math.round(x.Confirmadas/x.Visitas*100):0;x['Metros m']=+x['Metros m'].toFixed(2);x['Δ Caras']=+x['Δ Caras'].toFixed(0);return x;});},
       espacios:()=>{const rows=[];filtData.forEach(r=>{let esp=[];try{esp=Array.isArray(r.espacios_adicionales)?r.espacios_adicionales:(r.espacios_adicionales?JSON.parse(r.espacios_adicionales):[]);}catch{}esp.forEach(e=>rows.push({'Fecha':fmtD(r.created_at),'Promotor':r.promoter_name||'','Comercio':r.trade||'','Tipo':e.tipo,'Unidades':e.unidades||0}));});return rows;},
     };
 
@@ -1076,6 +1175,17 @@ function exportXLS(todos=false,specificTab=null){
 // ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
+// Sincronizar dark mode con el navbar de CAPTA
+function syncDark(){
+  if(document.documentElement.classList.contains('dark')){
+    document.body.classList.add('dark');
+  } else {
+    document.body.classList.remove('dark');
+  }
+}
+syncDark();
+new MutationObserver(syncDark).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
+
 window.captaReady(()=>boot());
 </script>
 </body>
