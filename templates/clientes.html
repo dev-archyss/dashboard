@@ -36,6 +36,8 @@
         <div><label class="sp-label">Propietario</label><input type="text" id="owner_full_name" class="sp-input"></div>
         <div><label class="sp-label">Ruta</label><input type="text" id="route_name" class="sp-input"></div>
         <div><label class="sp-label">Vendedor</label><input type="text" id="seller_name" class="sp-input"></div>
+        <div><label class="sp-label">Latitud</label><input type="number" id="latitude" class="sp-input" placeholder="Ej: 10.48801" step="any"></div>
+        <div><label class="sp-label">Longitud</label><input type="number" id="longitude" class="sp-input" placeholder="Ej: -66.87919" step="any"></div>
       </div>
       <button type="submit" class="sp-btn sp-btn-primary"><i class="fas fa-plus"></i> Agregar Cliente</button>
     </form>
@@ -89,6 +91,8 @@
           <div><label class="sp-label">Propietario</label><input type="text" id="edit_owner_full_name" class="sp-input"></div>
           <div><label class="sp-label">Ruta</label><input type="text" id="edit_route_name" class="sp-input"></div>
           <div><label class="sp-label">Vendedor</label><input type="text" id="edit_seller_name" class="sp-input"></div>
+          <div><label class="sp-label">Latitud</label><input type="number" id="edit_latitude" class="sp-input" placeholder="Ej: 10.48801" step="any"></div>
+          <div><label class="sp-label">Longitud</label><input type="number" id="edit_longitude" class="sp-input" placeholder="Ej: -66.87919" step="any"></div>
         </div>
       </form>
     </div>
@@ -193,7 +197,7 @@ function renderClients(data){
 
 document.getElementById('clientForm').addEventListener('submit',async e=>{
   e.preventDefault();
-  const payload={empresa_id:empresaId,trade_name:document.getElementById('trade_name').value.trim().toUpperCase(),address:document.getElementById('address').value.trim()||null,city:document.getElementById('city').value.trim()||null,phone:document.getElementById('phone').value.trim()||null,code:document.getElementById('code').value.trim()||null,owner_full_name:document.getElementById('owner_full_name').value.trim()||null,route_name:document.getElementById('route_name').value.trim()||null,seller_name:document.getElementById('seller_name').value.trim()||null};
+  const payload={empresa_id:empresaId,trade_name:document.getElementById('trade_name').value.trim().toUpperCase(),address:document.getElementById('address').value.trim()||null,city:document.getElementById('city').value.trim()||null,phone:document.getElementById('phone').value.trim()||null,code:document.getElementById('code').value.trim()||null,owner_full_name:document.getElementById('owner_full_name').value.trim()||null,route_name:document.getElementById('route_name').value.trim()||null,seller_name:document.getElementById('seller_name').value.trim()||null,latitude:parseFloat(document.getElementById('latitude').value)||null,longitude:parseFloat(document.getElementById('longitude').value)||null};
   const{error}=await db.from('web_clientes').insert([payload]);
   if(error){captaToast('Error: '+error.message,'error');return;}
   captaToast('Cliente agregado','success');document.getElementById('clientForm').reset();loadClients(currentPage,searchTerm);
@@ -212,12 +216,14 @@ async function openEditModal(id){
   if(!c)return;
   document.getElementById('edit_id').value=c.id;
   ['trade_name','address','city','phone','code','owner_full_name','route_name','seller_name'].forEach(f=>{const el=document.getElementById('edit_'+f);if(el)el.value=c[f]||'';});
+  document.getElementById('edit_latitude').value=c.latitude||'';
+  document.getElementById('edit_longitude').value=c.longitude||'';
   document.getElementById('editModal').classList.add('open');
 }
 
 async function saveEdit(){
   const id=document.getElementById('edit_id').value;
-  const payload={trade_name:document.getElementById('edit_trade_name').value.trim().toUpperCase(),address:document.getElementById('edit_address').value.trim()||null,city:document.getElementById('edit_city').value.trim()||null,phone:document.getElementById('edit_phone').value.trim()||null,code:document.getElementById('edit_code').value.trim()||null,owner_full_name:document.getElementById('edit_owner_full_name').value.trim()||null,route_name:document.getElementById('edit_route_name').value.trim()||null,seller_name:document.getElementById('edit_seller_name').value.trim()||null};
+  const payload={trade_name:document.getElementById('edit_trade_name').value.trim().toUpperCase(),address:document.getElementById('edit_address').value.trim()||null,city:document.getElementById('edit_city').value.trim()||null,phone:document.getElementById('edit_phone').value.trim()||null,code:document.getElementById('edit_code').value.trim()||null,owner_full_name:document.getElementById('edit_owner_full_name').value.trim()||null,route_name:document.getElementById('edit_route_name').value.trim()||null,seller_name:document.getElementById('edit_seller_name').value.trim()||null,latitude:parseFloat(document.getElementById('edit_latitude').value)||null,longitude:parseFloat(document.getElementById('edit_longitude').value)||null};
   const{error}=await db.from('web_clientes').update(payload).eq('id',id).eq('empresa_id',empresaId);
   if(error){captaToast('Error: '+error.message,'error');return;}
   captaToast('Actualizado','success');closeModal('editModal');loadClients(currentPage,searchTerm);
