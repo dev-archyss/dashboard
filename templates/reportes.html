@@ -356,8 +356,9 @@ let charts={};
 let expMode='pdf', activeTab='gerencial';
 
 // Fechas default
-const hoy=new Date(), d30=new Date(hoy); d30.setDate(hoy.getDate()-30);
-document.getElementById('fDesde').value=d30.toISOString().split('T')[0];
+const hoy=new Date();
+const inicioMes=new Date(hoy.getFullYear(),hoy.getMonth(),1);
+document.getElementById('fDesde').value=inicioMes.toISOString().split('T')[0];
 document.getElementById('fHasta').value=hoy.toISOString().split('T')[0];
 
 // ════════════════════════════════════════
