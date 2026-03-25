@@ -260,14 +260,15 @@ async function cargar() {
       <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando...
     </td></tr>`;
 
+  // Traer TODOS los registros con espacios para poder quedarnos
+  // con el más reciente por comercio
   let q = window.db.from('web_precios')
     .select('id, created_at, promoter_name, trade, state, zone, espacios_adicionales')
     .eq('empresa_id', empresaId)
     .not('espacios_adicionales', 'is', null)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false }); // más reciente primero
 
-  if (desde)  q = q.gte('created_at', desde + 'T00:00:00+00:00');
-  if (hasta)  q = q.lte('created_at', hasta + 'T23:59:59+00:00');
+  // Filtros de promotor y estado se aplican al fetch
   if (prom)   q = q.eq('promoter_name', prom);
   if (estado) q = q.eq('state', estado);
 
@@ -281,18 +282,37 @@ async function cargar() {
     return;
   }
 
-  // Expandir: 1 visita puede tener N espacios → N filas
+  // ── Quedarse solo con el registro más reciente por comercio ──
+  // Como ya viene ordenado desc, el primer registro de cada comercio
+  // es el más reciente → ese es el estado actual
+  const ultimoPorComercio = new Map();
+  (data || []).forEach(r => {
+    if (!ultimoPorComercio.has(r.trade)) {
+      ultimoPorComercio.set(r.trade, r);
+    }
+  });
+
+  // Ahora expandir espacios solo del último registro de cada comercio
+  // y solo los que estén activos (activo === true o activo no definido)
   allRows = [];
   const comercioSet = new Set();
   const productoSet = new Set();
 
-  (data || []).forEach(r => {
+  // Aplicar filtro de fechas sobre el último registro del comercio
+  ultimoPorComercio.forEach((r) => {
+    // Filtro de fecha: la visita más reciente debe estar dentro del rango
+    if (desde && new Date(r.created_at) < new Date(desde + 'T00:00:00')) return;
+    if (hasta && new Date(r.created_at) > new Date(hasta + 'T23:59:59')) return;
+
     let esp = r.espacios_adicionales;
     if (typeof esp === 'string') { try { esp = JSON.parse(esp); } catch { esp = []; } }
     if (!Array.isArray(esp) || esp.length === 0) return;
 
-    esp.forEach(e => {
-      if (!e.tipo || !e.producto) return;
+    // Solo espacios activos — si el promotor lo eliminó (activo: false) no aparece
+    const activos = esp.filter(e => e.activo !== false && e.tipo && e.producto);
+    if (activos.length === 0) return;
+
+    activos.forEach(e => {
       allRows.push({
         fecha:     r.created_at,
         promotor:  r.promoter_name || '—',
