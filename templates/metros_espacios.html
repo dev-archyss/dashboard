@@ -7,31 +7,32 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
-  .table-header-sticky th{position:sticky;top:0;z-index:10;background:#F9FAFB}
-  .dark .table-header-sticky th{background:#334155;color:#e2e8f0}
-  .badge{display:inline-flex;align-items:center;padding:.25rem .65rem;font-size:.7rem;font-weight:700;border-radius:9999px;white-space:nowrap}
-  .badge-real{background:#D1FAE5;color:#065F46}
-  .badge-est{background:#FEF3C7;color:#92400E}
-  .cob-track{height:12px;border-radius:9999px;background:#e5e7eb;overflow:hidden}
-  .dark .cob-track{background:#334155}
-  .cob-fill{height:100%;border-radius:9999px;transition:width .6s ease}
-  .com-dd{position:absolute;top:100%;left:0;z-index:200;width:100%;background:white;border:1px solid #e5e7eb;border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)}
-  .dark .com-dd{background:#1e293b;border-color:#475569}
-  .com-dd-item{padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid #f3f4f6}
-  .com-dd-item:hover{background:#f0f4ff}
-  .dark .com-dd-item:hover{background:#334155}
-  #leyendaModal{display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:1rem}
-  #leyendaModal.open{display:flex}
-  select:focus,input:focus{outline:none;box-shadow:0 0 0 3px rgba(79,70,229,.18);border-color:#4F46E5!important}
-  /* Tabs */
-  .tab-btn{border-bottom:2px solid transparent;margin-bottom:-1px}
-  .tab-btn.active{border-bottom-color:currentColor}
-  .tab-panel{animation:fadeIn .18s ease}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .table-header-sticky th { position:sticky; top:0; z-index:10; background:#F9FAFB; }
+  .dark .table-header-sticky th { background:#334155; color:#e2e8f0; }
+  .pct-bar { height:8px; border-radius:99px; background:#e5e7eb; overflow:hidden; }
+  .dark .pct-bar { background:#334155; }
+  .pct-fill { height:100%; border-radius:99px; transition:width .5s ease; }
+  .com-dd { position:absolute; top:100%; left:0; z-index:200; width:100%; background:white;
+    border:1px solid #e5e7eb; border-radius:8px; max-height:200px; overflow-y:auto;
+    box-shadow:0 8px 24px rgba(0,0,0,.12); }
+  .dark .com-dd { background:#1e293b; border-color:#475569; }
+  .com-dd-item { padding:8px 12px; cursor:pointer; font-size:.83rem; border-bottom:1px solid #f3f4f6; }
+  .com-dd-item:hover { background:#f0f4ff; }
+  .dark .com-dd-item:hover { background:#334155; }
+  .row-hover:hover { background:rgba(79,70,229,.04) !important; }
+  .dark .row-hover:hover { background:rgba(139,92,246,.08) !important; }
+  /* Modal */
+  .sp-overlay { display:none; position:fixed; inset:0; z-index:500;
+    background:rgba(0,0,0,.6); align-items:center; justify-content:center; padding:1rem; }
+  .sp-overlay.open { display:flex; }
+  .sp-modal-box { background:white; border-radius:20px; width:min(780px,95vw);
+    max-height:90vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.3); }
+  .dark .sp-modal-box { background:#1e293b; color:#e2e8f0; }
 </style>
-</head>
-<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
 <script>tailwind.config={darkMode:'class'}</script>
+</head>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans">
+
 {% include 'navbar.html' %}
 
 <div class="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -42,530 +43,703 @@
       <h1 class="text-3xl font-extrabold text-gray-800 dark:text-white">
         <i class="fas fa-ruler-combined mr-2 text-indigo-500"></i>Metros de Anaquel
       </h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Análisis de metros lineales abordados por promotores y cobertura frente al anaquel total.</p>
-    </div>
-    <button onclick="abrirLeyenda()" class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-all text-sm">
-      <i class="fas fa-circle-info text-indigo-500"></i> ¿Cómo usar este módulo?
-    </button>
-  </div>
-
-  <!-- KPIs fila -->
-  <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-4">
-    <div class="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-xl text-center border border-indigo-100 dark:border-indigo-800">
-      <p class="text-2xl font-extrabold text-indigo-600" id="kpiNuestros">—</p>
-      <p class="text-xs text-indigo-500 dark:text-indigo-300 font-medium mt-1">Metros nuestros</p>
-    </div>
-    <div class="bg-red-50 dark:bg-red-900/30 p-4 rounded-xl text-center border border-red-100 dark:border-red-800">
-      <p class="text-2xl font-extrabold text-red-500" id="kpiComp">—</p>
-      <p class="text-xs text-red-400 dark:text-red-300 font-medium mt-1">Metros competencia</p>
-    </div>
-    <div class="bg-teal-50 dark:bg-teal-900/30 p-4 rounded-xl text-center border border-teal-100 dark:border-teal-800">
-      <p class="text-2xl font-extrabold text-teal-600" id="kpiTotal">—</p>
-      <p class="text-xs text-teal-500 dark:text-teal-300 font-medium mt-1">Total del anaquel</p>
-    </div>
-    <div class="bg-green-50 dark:bg-green-900/30 p-4 rounded-xl text-center border border-green-100 dark:border-green-800">
-      <p class="text-2xl font-extrabold text-green-600" id="kpiProm">—</p>
-      <p class="text-xs text-green-500 dark:text-green-300 font-medium mt-1">Metros / visita</p>
-    </div>
-    <div class="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-xl text-center border border-purple-100 dark:border-purple-800">
-      <p class="text-2xl font-extrabold text-purple-600" id="kpiEst">—</p>
-      <p class="text-xs text-purple-500 dark:text-purple-300 font-medium mt-1">Establecimientos</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Participación real por comercio — metros nuestros vs. total del anaquel.
+      </p>
     </div>
   </div>
 
-  <!-- Cobertura destacada -->
-  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 mb-6 border border-gray-100 dark:border-slate-700">
-    <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
-      <div>
-        <h2 class="text-lg font-bold text-gray-700 dark:text-white"><i class="fas fa-percentage mr-2 text-green-500"></i>Cobertura del anaquel</h2>
-        <p class="text-xs text-gray-400 mt-1">Metros nuestros ÷ Total del anaquel × 100</p>
-      </div>
-      <div class="text-right">
-        <p id="kpiPct" class="text-4xl font-black text-green-600 leading-none">—</p>
-        <p class="text-xs text-gray-400 mt-1">de cobertura</p>
-      </div>
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border border-gray-100 dark:border-slate-700 shadow-sm">
+      <p class="text-2xl font-extrabold text-indigo-600" id="kComerciosConDato">—</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Comercios con medición</p>
     </div>
-    <div class="cob-track"><div class="cob-fill bg-green-500" id="cobFill" style="width:0%"></div></div>
-    <div class="flex justify-between mt-1 text-xs text-gray-400">
-      <span>0 m</span><span id="cobLabel">—</span>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border border-gray-100 dark:border-slate-700 shadow-sm">
+      <p class="text-2xl font-extrabold text-green-600" id="kPctPromedio">—</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">% participación promedio</p>
     </div>
-    <div class="flex gap-3 mt-4 flex-wrap">
-      <span class="badge badge-real"><i class="fas fa-check mr-1"></i><span id="cntReal">0</span> visitas con medición real</span>
-      <span class="badge badge-est"><i class="fas fa-calculator mr-1"></i><span id="cntEst">0</span> visitas estimadas (caras × 0.4 m)</span>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border border-gray-100 dark:border-slate-700 shadow-sm">
+      <p class="text-2xl font-extrabold text-blue-600" id="kMejorComercio">—</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Mayor participación</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border border-gray-100 dark:border-slate-700 shadow-sm">
+      <p class="text-2xl font-extrabold text-red-500" id="kPeorComercio">—</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Menor participación</p>
     </div>
   </div>
 
   <!-- Filtros -->
-  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl p-6 mb-6 border border-gray-100 dark:border-slate-700">
-    <h2 class="text-lg font-bold text-gray-700 dark:text-white mb-4">Filtros</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
-      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Desde</label>
-        <input type="date" id="dateFrom" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"></div>
-      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Hasta</label>
-        <input type="date" id="dateTo" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"></div>
-      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Promotor</label>
-        <select id="promoter" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"><option value="all">Todos</option></select></div>
-      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estado</label>
-        <select id="state" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"><option value="all">Todos</option></select></div>
-      <div><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Zona</label>
-        <select id="zone" disabled class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"><option value="all">Todas</option></select></div>
-      <div style="position:relative" id="comercioWrapper">
-        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Establecimiento</label>
-        <input type="text" id="comercioSearch" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" placeholder="Buscar…" oninput="buscarComercio(this.value)" autocomplete="off">
-        <input type="hidden" id="comercioSelected">
-        <div id="comercioDropdown" class="com-dd" style="display:none"></div>
+  <div class="bg-white dark:bg-slate-800 shadow-sm rounded-2xl p-5 mb-6 border border-gray-100 dark:border-slate-700">
+    <h2 class="text-base font-bold text-gray-700 dark:text-white mb-4">Filtros</h2>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Desde</label>
+        <input type="date" id="fDesde" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Hasta</label>
+        <input type="date" id="fHasta" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Promotor</label>
+        <select id="fPromotor" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estado</label>
+        <select id="fEstado" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Zona</label>
+        <select id="fZona" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" disabled>
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="relative" id="comercioWrap">
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Comercio</label>
+        <input type="text" id="fComercio" placeholder="Buscar comercio…"
+          class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"
+          oninput="buscarComercio(this.value)" autocomplete="off">
+        <input type="hidden" id="fComercioVal">
+        <div id="comercioDD" class="com-dd" style="display:none"></div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">% Participación</label>
+        <select id="fNivel" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+          <option value="">Todos</option>
+          <option value="alto">Alto ≥ 40%</option>
+          <option value="medio">Medio 20–39%</option>
+          <option value="bajo">Bajo &lt; 20%</option>
+          <option value="sin">Sin medición</option>
+        </select>
       </div>
     </div>
-    <div class="flex gap-3 border-t border-gray-100 dark:border-slate-700 pt-4 flex-wrap">
-      <button onclick="loadData()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition-all flex items-center gap-2">
-        <i class="fas fa-filter"></i> Aplicar filtros
+    <div class="flex gap-3 border-t border-gray-100 dark:border-slate-700 pt-4">
+      <button onclick="aplicar()"
+        class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition-all flex items-center gap-2">
+        <i class="fas fa-filter"></i> Filtrar
       </button>
-      <button onclick="clearComercio()" id="btnClearComercio" style="display:none" class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2">
-        <i class="fas fa-times"></i> Quitar filtro establecimiento
+      <button onclick="limpiar()"
+        class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2">
+        <i class="fas fa-undo"></i> Limpiar
       </button>
     </div>
   </div>
 
-  <!-- ═══ TABS ═══════════════════════════════════════════════════ -->
-  <div class="bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden mb-6">
-
-    <!-- Nav tabs -->
-    <div class="flex overflow-x-auto border-b border-gray-100 dark:border-slate-700 px-2 pt-2 gap-1" id="tabNav">
-      <button onclick="switchTab('nuestros')" id="tab-nuestros"
-        class="tab-btn active flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all
-               text-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 border-b-2 border-indigo-500">
-        <i class="fas fa-chart-bar text-indigo-500"></i> Metros nuestros
-      </button>
-      <button onclick="switchTab('competencia')" id="tab-competencia"
-        class="tab-btn flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all
-               text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
-        <i class="fas fa-store-slash text-red-400"></i> Metros competencia
-      </button>
-      <button onclick="switchTab('establecimientos')" id="tab-establecimientos"
-        class="tab-btn flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all
-               text-gray-500 dark:text-gray-400 hover:text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20">
-        <i class="fas fa-store text-teal-400"></i> Top Establecimientos
-      </button>
-      <button onclick="switchTab('ranking')" id="tab-ranking"
-        class="tab-btn flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all
-               text-gray-500 dark:text-gray-400 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20">
-        <i class="fas fa-trophy text-purple-400"></i> Ranking Total
-      </button>
-      <button onclick="switchTab('visitas')" id="tab-visitas"
-        class="tab-btn flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all
-               text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-slate-700">
-        <i class="fas fa-list text-gray-400"></i> Detalle por visita
-        <span id="registrosInfo" class="text-xs font-semibold text-indigo-600 bg-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 rounded-full">—</span>
-      </button>
-    </div>
-
-    <!-- TAB: Metros nuestros -->
-    <div id="panel-nuestros" class="tab-panel p-6">
-      <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">
-        Metros lineales de productos <strong class="text-indigo-600">propios</strong> por presentación. Dato real (campo metros) o estimado (caras × 0.4 m).
-      </p>
-      <div style="position:relative;height:480px"><canvas id="chartProductos"></canvas></div>
-    </div>
-
-    <!-- TAB: Metros competencia -->
-    <div id="panel-competencia" class="tab-panel hidden p-6">
-      <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">
-        Metros lineales ocupados por productos de la <strong class="text-red-500">competencia</strong> por presentación.
-      </p>
-      <div style="position:relative;height:480px"><canvas id="chartCompetencia"></canvas></div>
-    </div>
-
-    <!-- TAB: Top establecimientos (nuestros) -->
-    <div id="panel-establecimientos" class="tab-panel hidden p-6">
-      <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">
-        Top 15 establecimientos por metros lineales de productos propios capturados.
-      </p>
-      <div style="position:relative;height:480px"><canvas id="chartEstablecimientos"></canvas></div>
-    </div>
-
-    <!-- TAB: Ranking Total (nuestros + competencia) -->
-    <div id="panel-ranking" class="tab-panel hidden p-6">
-      <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">
-        Comparación directa nuestros metros vs. competencia por establecimiento — Top 10.
-      </p>
-      <div style="position:relative;height:480px"><canvas id="chartRanking"></canvas></div>
-    </div>
-
-    <!-- TAB: Detalle por visita -->
-    <div id="panel-visitas" class="tab-panel hidden">
-      <div class="overflow-x-auto max-h-[65vh]">
-        <table class="min-w-full divide-y divide-gray-100 dark:divide-slate-700">
-          <thead class="table-header-sticky">
-            <tr>
-              <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
-              <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Promotor</th>
-              <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Establecimiento</th>
-              <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado / Zona</th>
-              <th class="py-3 px-4 text-center text-xs font-bold text-indigo-500 uppercase tracking-wider">M. nuestros</th>
-              <th class="py-3 px-4 text-center text-xs font-bold text-red-400 uppercase tracking-wider">M. competencia</th>
-              <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total anaquel</th>
-              <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cobertura</th>
-              <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fuente</th>
-              <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Caras ✓</th>
-              <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Productos</th>
-            </tr>
-          </thead>
-          <tbody id="metrosTableBody" class="bg-white dark:bg-slate-800 divide-y divide-gray-50 dark:divide-slate-700">
-            <tr><td colspan="11" class="text-center py-10 text-gray-400 dark:text-gray-500">
-              <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando…
-            </td></tr>
-          </tbody>
-        </table>
+  <!-- Gráfico participación top comercios -->
+  <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 shadow-sm mb-6">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+      <div>
+        <h3 class="text-sm font-bold text-gray-700 dark:text-white">% Participación por comercio — Top 20</h3>
+        <p class="text-xs text-gray-400 mt-0.5">Metros nuestros ÷ Metros totales del anaquel × 100</p>
+      </div>
+      <div class="flex items-center gap-4 text-xs text-gray-500">
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>≥ 40%</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>20–39%</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span>&lt; 20%</span>
       </div>
     </div>
+    <div style="position:relative; height:340px">
+      <canvas id="chartParticipacion"></canvas>
+    </div>
+  </div>
 
-  </div><!-- /tabs -->
+  <!-- Tabla principal por comercio -->
+  <div class="bg-white dark:bg-slate-800 shadow-sm rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden mb-6">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
+      <div>
+        <h2 class="text-base font-bold text-gray-700 dark:text-white">Participación por comercio</h2>
+        <p class="text-xs text-gray-400 mt-0.5">Clic en una fila para ver el historial de ese comercio</p>
+      </div>
+      <span id="infoTabla" class="text-xs font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-300 px-3 py-1 rounded-full">—</span>
+    </div>
+    <div class="overflow-x-auto max-h-[60vh]">
+      <table class="min-w-full divide-y divide-gray-100 dark:divide-slate-700">
+        <thead class="table-header-sticky">
+          <tr>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comercio</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado / Zona</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Promotor</th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-indigo-500 uppercase tracking-wider">Metros nuestros</th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total anaquel</th>
+            <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:160px">% Participación</th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Visitas</th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Última visita</th>
+          </tr>
+        </thead>
+        <tbody id="tbody" class="bg-white dark:bg-slate-800 divide-y divide-gray-50 dark:divide-slate-700">
+          <tr>
+            <td colspan="8" class="text-center py-12 text-gray-400 dark:text-gray-500">
+              <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 
-<!-- Modal leyenda -->
-<div id="leyendaModal">
-  <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-gray-100 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-bold text-gray-800 dark:text-white"><i class="fas fa-circle-info mr-2 text-indigo-500"></i>¿Cómo usar este módulo?</h2>
-      <button onclick="cerrarLeyenda()" class="text-gray-400 hover:text-red-500 text-2xl font-bold leading-none">×</button>
+<!-- Modal historial por comercio -->
+<div class="sp-overlay" id="modalHistorial">
+  <div class="sp-modal-box">
+    <div class="flex items-center justify-between p-6 border-b border-gray-100 dark:border-slate-700">
+      <div>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white" id="modalTitulo">Historial</h2>
+        <p class="text-xs text-gray-400 mt-1" id="modalSubtitulo">Evolución de participación en el tiempo</p>
+      </div>
+      <button onclick="cerrarModal()" class="text-gray-400 hover:text-red-500 text-2xl font-bold leading-none px-2">×</button>
     </div>
-    <div class="space-y-4 text-sm text-gray-600 dark:text-gray-300">
-      <div class="flex gap-3 items-start"><div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-ruler-horizontal text-xs"></i></div><div><p class="font-bold text-gray-800 dark:text-white mb-1">Metros nuestros</p><p class="text-xs">Metros lineales que ocupan nuestros productos. Dato real (shelf_meters) o estimado (caras × 0.4 m).</p></div></div>
-      <div class="flex gap-3 items-start"><div class="w-8 h-8 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-expand-arrows-alt text-xs"></i></div><div><p class="font-bold text-gray-800 dark:text-white mb-1">Total del anaquel</p><p class="text-xs">Metros totales del espacio (nuestros + competencia). Total de caras × 0.4 m.</p></div></div>
-      <div class="flex gap-3 items-start"><div class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-percentage text-xs"></i></div><div><p class="font-bold text-gray-800 dark:text-white mb-1">Cobertura</p><p class="text-xs">Metros nuestros ÷ Total × 100. Verde ≥40% · Ámbar ≥20% · Rojo &lt;20%.</p></div></div>
-      <div class="flex gap-3 items-start"><div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-check text-xs"></i></div><div><p class="font-bold text-gray-800 dark:text-white mb-1">Real vs Estimado</p><p class="text-xs"><span class="badge badge-real mr-1">Real</span> = medición directa del promotor. <span class="badge badge-est ml-1">Estimado</span> = caras × 0.4 m cuando no hay medición.</p></div></div>
-    </div>
-    <div class="mt-5 text-right">
-      <button onclick="cerrarLeyenda()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg transition-all"><i class="fas fa-check mr-1"></i>Entendido</button>
+    <div class="p-6">
+      <!-- Mini KPIs del comercio -->
+      <div class="grid grid-cols-3 gap-4 mb-6" id="modalKpis"></div>
+      <!-- Gráfico evolución -->
+      <div class="mb-6">
+        <p class="text-sm font-bold text-gray-700 dark:text-white mb-3">Evolución de % participación</p>
+        <div style="position:relative;height:220px">
+          <canvas id="chartHistorial"></canvas>
+        </div>
+      </div>
+      <!-- Tabla de visitas -->
+      <p class="text-sm font-bold text-gray-700 dark:text-white mb-3">Detalle de visitas</p>
+      <div class="overflow-x-auto rounded-xl border border-gray-100 dark:border-slate-700">
+        <table class="min-w-full divide-y divide-gray-100 dark:divide-slate-700 text-sm">
+          <thead>
+            <tr class="bg-gray-50 dark:bg-slate-700">
+              <th class="py-2 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Fecha</th>
+              <th class="py-2 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Promotor</th>
+              <th class="py-2 px-4 text-center text-xs font-bold text-indigo-500 uppercase">Metros nuestros</th>
+              <th class="py-2 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Total anaquel</th>
+              <th class="py-2 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">% Participación</th>
+            </tr>
+          </thead>
+          <tbody id="modalTabla" class="bg-white dark:bg-slate-800 divide-y divide-gray-50 dark:divide-slate-700"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-function waitDb(fn) {
-  if (window.db) { fn(); return; }
-  const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
-}
-const supabaseClient = { from: (...a) => window.db.from(...a) };
-const empresaId = localStorage.getItem('empresa_id') || await (async()=>{try{const r=await fetch('/api/dashboard/config');if(r.ok){const d=await r.json();localStorage.setItem('empresa_id',d.empresa_id);localStorage.setItem('empresa_nombre',d.empresa_nombre);return d.empresa_id;}return null;}catch{return null;}})();
-if (!empresaId) { window.location.replace('/'); throw new Error('no session'); }
+const empresaId = localStorage.getItem('empresa_id');
+if (!empresaId) window.location.replace('/');
 
-let chartProd = null, chartEst = null;
-let allZonas = [], comercioSeleccionado = '', comercioTimer = null;
+// Estado global
+let allVisitas   = [];   // registros raw de Supabase
+let comercioData = [];   // datos procesados por comercio
+let allZonas     = [];
+let chartPart    = null;
+let chartHist    = null;
+let comercioTimer = null;
 
-const fmt = s => new Date(s).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'});
-
-function metrosNuestros(r) {
-  if (r.shelf_meters != null && r.shelf_meters !== '')
-    return { valor: parseFloat(r.shelf_meters) || 0, esReal: true };
-  return { valor: (r.our_faces_after || 0) * 0.4, esReal: false };
+function fmtDate(s) {
+  return new Date(s).toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' });
 }
-function metrosComp(r) {
-  // Suma shelf_meters por ítem de competencia, o caras*0.4 si no tiene
-  const items = r.competitoritems || [];
-  if (!items.length) return 0;
-  return items.reduce((s, i) => {
-    if (!i.presentation || i.presentation === 'SIN STOCK') return s;
-    if (i.shelf_meters != null && i.shelf_meters !== '') return s + (parseFloat(i.shelf_meters) || 0);
-    return s + (i.faces_after || 0) * 0.4;
-  }, 0);
-}
-function metrosTotal(r) {
-  return (r.total_faces || r.total_faces_before || 0) * 0.4;
+function fmtDateShort(s) {
+  return new Date(s).toLocaleDateString('es-ES', { day:'2-digit', month:'short' });
 }
 
+// ── Parsear JSON seguro ───────────────────────────────────────────
+function parseJ(v) {
+  if (Array.isArray(v)) return v;
+  try { return JSON.parse(v) || []; } catch { return []; }
+}
+
+// ── Calcular metros nuestros de una visita ────────────────────────
+// Suma shelf_meters de cada item propio (del visitaService normalizado)
+// Si no hay metros por ítem, usa shelf_meters global
+function calcMetrosNuestros(r) {
+  const items = parseJ(r.myitems);
+  if (items.length > 0) {
+    const sumaItems = items
+      .filter(i => !i.sin_stock)
+      .reduce((s, i) => s + (parseFloat(i.shelf_meters) || 0), 0);
+    if (sumaItems > 0) return { valor: sumaItems, fuente: 'items' };
+  }
+  // Fallback: shelf_meters global
+  const global = parseFloat(r.shelf_meters);
+  if (!isNaN(global) && global > 0) return { valor: global, fuente: 'global' };
+  return { valor: null, fuente: null };
+}
+
+// ── Calcular metros totales del anaquel ───────────────────────────
+function calcMetrosTotal(r) {
+  const v = parseFloat(r.shelf_meters);
+  return (!isNaN(v) && v > 0) ? v : null;
+}
+
+// ── Calcular % participación ──────────────────────────────────────
+function calcPct(nuestros, total) {
+  if (nuestros == null || total == null || total === 0) return null;
+  return Math.min(100, (nuestros / total) * 100);
+}
+
+// ── Color según % ─────────────────────────────────────────────────
+function pctColor(pct) {
+  if (pct == null) return '#9CA3AF';
+  if (pct >= 40)   return '#10B981';
+  if (pct >= 20)   return '#F59E0B';
+  return '#EF4444';
+}
+function pctBadgeCls(pct) {
+  if (pct == null) return 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400';
+  if (pct >= 40)   return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300';
+  if (pct >= 20)   return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+  return 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300';
+}
+
+// ── Catálogos ─────────────────────────────────────────────────────
 async function loadCatalogs() {
-  const { data: promos } = await supabaseClient.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId).order('promoter_name');
-  const pSel = document.getElementById('promoter');
-  (promos || []).forEach(p => { const o = document.createElement('option'); o.value = p.promoter_name; o.textContent = p.promoter_name; pSel.appendChild(o); });
-
-  const { data: estados } = await supabaseClient.from('web_estados').select('id,nombre').order('nombre');
-  const { data: zonas }   = await supabaseClient.from('web_zonas').select('id,nombre,estado_id').order('nombre');
+  const [{ data: promos }, { data: estados }, { data: zonas }] = await Promise.all([
+    window.db.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId).order('promoter_name'),
+    window.db.from('web_estados').select('id, nombre').order('nombre'),
+    window.db.from('web_zonas').select('id, nombre, estado_id').order('nombre'),
+  ]);
   allZonas = zonas || [];
-  const sSel = document.getElementById('state');
-  (estados || []).forEach(e => { const o = document.createElement('option'); o.value = e.nombre; o.textContent = e.nombre; sSel.appendChild(o); });
-  sSel.addEventListener('change', () => {
-    const zSel = document.getElementById('zone');
-    const snm  = sSel.value;
-    zSel.innerHTML = '<option value="all">Todas</option>';
-    zSel.disabled  = snm === 'all';
-    if (snm !== 'all') {
-      const est = (estados || []).find(e => e.nombre === snm);
-      allZonas.filter(z => est && String(z.estado_id) === String(est.id))
-        .forEach(z => { const o = document.createElement('option'); o.value = z.nombre; o.textContent = z.nombre; zSel.appendChild(o); });
+  const ps = document.getElementById('fPromotor');
+  (promos || []).forEach(p => ps.innerHTML += `<option value="${p.promoter_name}">${p.promoter_name}</option>`);
+  const es = document.getElementById('fEstado');
+  (estados || []).forEach(e => es.innerHTML += `<option value="${e.id}">${e.nombre}</option>`);
+
+  document.getElementById('fEstado').addEventListener('change', function() {
+    const zSel = document.getElementById('fZona');
+    zSel.innerHTML = '<option value="">Todas</option>';
+    zSel.disabled = !this.value;
+    if (this.value) {
+      allZonas.filter(z => String(z.estado_id) === this.value)
+        .forEach(z => zSel.innerHTML += `<option value="${z.nombre}">${z.nombre}</option>`);
     }
   });
 }
 
-async function loadData() {
-  const df      = document.getElementById('dateFrom').value;
-  const dt      = document.getElementById('dateTo').value;
-  const prom    = document.getElementById('promoter').value;
-  const st      = document.getElementById('state').value;
-  const zone    = document.getElementById('zone').value;
+// ── Cargar datos ──────────────────────────────────────────────────
+async function cargar() {
+  document.getElementById('tbody').innerHTML = `
+    <tr><td colspan="8" class="text-center py-12 text-gray-400">
+      <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando...
+    </td></tr>`;
+
+  const desde  = document.getElementById('fDesde').value;
+  const hasta  = document.getElementById('fHasta').value;
+  const prom   = document.getElementById('fPromotor').value;
+  const estado = document.getElementById('fEstado').value;
+  const zona   = document.getElementById('fZona').value;
   const lineaId = localStorage.getItem('sp-linea') || '';
 
-  let q = supabaseClient.from('web_precios')
-    .select('id,created_at,promoter_name,state,zone,trade,our_faces_before_counted,total_faces_before,our_faces_after,total_faces,myitems,competitoritems,shelf_meters')
-    .eq('empresa_id', empresaId);
+  let q = window.db.from('web_precios')
+    .select('id, created_at, promoter_name, trade, state, zone, shelf_meters, myitems, competitoritems')
+    .eq('empresa_id', empresaId)
+    .order('created_at', { ascending: false });
 
-  if (df)             q = q.gte('created_at', `${df}T00:00:00`);
-  if (dt)             q = q.lte('created_at', `${dt}T23:59:59`);
-  if (prom !== 'all') q = q.eq('promoter_name', prom);
-  if (st   !== 'all') q = q.eq('state', st);
-  if (zone !== 'all') q = q.eq('zone', zone);
-  if (lineaId)        q = q.eq('linea_id', lineaId);
-  if (comercioSeleccionado) q = q.eq('trade', comercioSeleccionado);
+  if (desde)   q = q.gte('created_at', desde + 'T00:00:00+00:00');
+  if (hasta)   q = q.lte('created_at', hasta + 'T23:59:59+00:00');
+  if (prom)    q = q.eq('promoter_name', prom);
+  if (estado)  q = q.eq('state', estado);
+  if (zona)    q = q.eq('zone', zona);
+  if (lineaId) q = q.eq('linea_id', lineaId);
 
-  const { data, error } = await q.order('created_at', { ascending: false });
-  if (error) { console.error(error.message); return; }
-  procesarDatos(data || []);
-}
-
-function procesarDatos(registros) {
-  let sumN = 0, sumC = 0, sumT = 0, cntReal = 0, cntEst = 0;
-  const porProd = {}, porProdComp = {}, porEst = {}, porEstComp = {};
-
-  registros.forEach(r => {
-    const { valor: mN, esReal } = metrosNuestros(r);
-    const mC = metrosComp(r);
-    const mT = metrosTotal(r);
-    sumN += mN;
-    sumC += mC;
-    sumT += mT > 0 ? mT : (mN + mC);
-    if (esReal) cntReal++; else cntEst++;
-    const comercio = r.trade || 'Sin nombre';
-    porEst[comercio] = (porEst[comercio] || 0) + mN;
-    (r.myitems || []).forEach(item => {
-      if (!item.presentation) return;
-      porProd[item.presentation] = (porProd[item.presentation] || 0) + ((item.faces_after || 0) * 0.4);
-    });
-    (r.competitoritems || []).forEach(item => {
-      if (!item.presentation || item.presentation === 'SIN STOCK') return;
-      const m = item.shelf_meters != null ? parseFloat(item.shelf_meters)||0 : (item.faces_after||0)*0.4;
-      porProdComp[item.presentation] = (porProdComp[item.presentation] || 0) + m;
-      porEstComp[comercio] = (porEstComp[comercio] || 0) + m;  // comp por establecimiento
-    });
-  });
-
-  window._lastEstComp = porEstComp; // disponible para chartRanking
-
-  const numEst  = Object.keys(porEst).length;
-  const pct     = sumT > 0 ? Math.min(100, (sumN / sumT) * 100) : 0;
-  const promPV  = registros.length > 0 ? sumN / registros.length : 0;
-  const pctReal = registros.length > 0 ? Math.round((cntReal / registros.length) * 100) : 0;
-
-  document.getElementById('kpiNuestros').textContent = sumN.toFixed(1) + ' m';
-  document.getElementById('kpiTotal').textContent    = sumT.toFixed(1) + ' m';
-  document.getElementById('kpiProm').textContent     = promPV.toFixed(1) + ' m';
-  document.getElementById('kpiEst').textContent      = numEst;
-  document.getElementById('kpiPct').textContent      = pct.toFixed(1) + '%';
-  document.getElementById('cobFill').style.width     = `${pct}%`;
-  document.getElementById('cobLabel').textContent    = `${sumN.toFixed(1)} m nuestros · ${sumC.toFixed(1)} m competencia · ${sumT.toFixed(1)} m total`;
-  document.getElementById('cntReal').textContent     = cntReal;
-  document.getElementById('cntEst').textContent      = cntEst;
-  document.getElementById('registrosInfo').textContent = `${registros.length} visitas · ${pctReal}% con medición real`;
-
-  // KPI competencia (opcional, si existe el elemento)
-  const elKC = document.getElementById('kpiComp');
-  if (elKC) elKC.textContent = sumC.toFixed(1) + ' m';
-
-  const cobEl = document.getElementById('kpiPct');
-  const cobFill = document.getElementById('cobFill');
-  if (pct >= 40)      { cobEl.style.color = 'var(--green)';  cobFill.style.background = 'linear-gradient(90deg,#10b981,#059669)'; }
-  else if (pct >= 20) { cobEl.style.color = 'var(--amber)';  cobFill.style.background = 'linear-gradient(90deg,#f59e0b,#d97706)'; }
-  else                { cobEl.style.color = 'var(--red)';    cobFill.style.background = 'linear-gradient(90deg,#ef4444,#dc2626)'; }
-
-  renderizarGraficos(porProd, porProdComp, porEst);
-  renderizarTabla(registros);
-}
-
-// ── Tabs ────────────────────────────────────────────────────────────
-const TAB_IDS = ['nuestros','competencia','establecimientos','ranking','visitas'];
-function switchTab(name) {
-  TAB_IDS.forEach(id => {
-    const btn   = document.getElementById('tab-'+id);
-    const panel = document.getElementById('panel-'+id);
-    if (!btn||!panel) return;
-    const active = id===name;
-    panel.classList.toggle('hidden', !active);
-    const colors = {
-      nuestros:'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 border-indigo-500',
-      competencia:'text-red-500 bg-red-50 dark:bg-red-900/30 border-red-400',
-      establecimientos:'text-teal-600 bg-teal-50 dark:bg-teal-900/30 border-teal-500',
-      ranking:'text-purple-600 bg-purple-50 dark:bg-purple-900/30 border-purple-500',
-      visitas:'text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-slate-700 border-gray-400',
-    };
-    if (active) {
-      btn.className = `tab-btn active flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all border-b-2 ${colors[id]}`;
-    } else {
-      btn.className = 'tab-btn flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl whitespace-nowrap transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 border-b-2 border-transparent';
-    }
-  });
-  if (['nuestros','competencia','establecimientos','ranking'].includes(name)){
-    setTimeout(()=>{if(window._lastChartData) renderizarGraficos(...window._lastChartData);},60);
-  }
-}
-
-function renderizarGraficos(porProd, porProdComp, porEst) {
-  window._lastChartData = [porProd, porProdComp, porEst];
-  const dark = document.documentElement.classList.contains('dark');
-  const tc   = dark ? '#94a3b8' : '#4b5563';
-  const gc   = dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
-  const pal  = ['#4f46e5','#10b981','#f59e0b','#f43f5e','#8b5cf6','#14b8a6','#3b82f6','#ec4899','#6366f1','#84cc16','#22d3ee','#fb923c','#0ea5e9','#a78bfa','#34d399'];
-
-  const sP  = Object.entries(porProd).sort((a,b)=>b[1]-a[1]).slice(0,15);
-  const sPC = Object.entries(porProdComp).sort((a,b)=>b[1]-a[1]).slice(0,15);
-  const sE  = Object.entries(porEst).sort((a,b)=>b[1]-a[1]).slice(0,15);
-
-  const makeOpts = () => ({
-    responsive:true, maintainAspectRatio:false,
-    plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x.toFixed(2)} m`}} },
-    scales:{
-      x:{ticks:{color:tc,font:{size:10},callback:v=>`${Number(v).toFixed(1)}m`},grid:{color:gc}},
-      y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}
-    }
-  });
-
-  const dynH = n => Math.max(320, n*38) + 'px';
-  const remake = (id, labels, datasets, opts) => {
-    const el = document.getElementById(id);
-    if(!el) return null;
-    const ex = Chart.getChart(el); if(ex) ex.destroy();
-    el.parentElement.style.height = dynH(labels.length);
-    return new Chart(el.getContext('2d'),{type:'bar',indexAxis:'y',data:{labels,datasets},options:opts});
-  };
-
-  chartProd = remake('chartProductos',
-    sP.map(([k])=>k),
-    [{data:sP.map(([,v])=>+v.toFixed(2)),backgroundColor:sP.map((_,i)=>pal[i%pal.length]+'cc'),borderRadius:5}],
-    makeOpts());
-
-  window._chartComp = remake('chartCompetencia',
-    sPC.map(([k])=>k),
-    [{data:sPC.map(([,v])=>+v.toFixed(2)),backgroundColor:sPC.map(()=>'#f43f5ecc'),borderRadius:5}],
-    makeOpts());
-
-  chartEst = remake('chartEstablecimientos',
-    sE.map(([k])=>k),
-    [{data:sE.map(([,v])=>+v.toFixed(2)),backgroundColor:pal.map(c=>c+'cc'),borderRadius:5}],
-    makeOpts());
-
-  // Ranking Total: nuestros vs competencia por establecimiento
-  const sER = window._lastEstComp || {};
-  const allEst = [...new Set([...Object.keys(porEst),...Object.keys(sER)])];
-  const topEst = allEst.map(e=>({e,n:porEst[e]||0,c:sER[e]||0,tot:(porEst[e]||0)+(sER[e]||0)}))
-                        .sort((a,b)=>b.tot-a.tot).slice(0,10);
-  const elR = document.getElementById('chartRanking');
-  if(elR){
-    const exR = Chart.getChart(elR); if(exR) exR.destroy();
-    elR.parentElement.style.height = dynH(topEst.length);
-    new Chart(elR.getContext('2d'),{
-      type:'bar',indexAxis:'y',
-      data:{
-        labels:topEst.map(r=>r.e),
-        datasets:[
-          {label:'Nuestros',  data:topEst.map(r=>+r.n.toFixed(2)),backgroundColor:'#4f46e5cc',borderRadius:5},
-          {label:'Competencia',data:topEst.map(r=>+r.c.toFixed(2)),backgroundColor:'#f43f5ecc',borderRadius:5},
-        ]
-      },
-      options:{
-        responsive:true,maintainAspectRatio:false,
-        plugins:{
-          legend:{display:true,position:'top',labels:{color:tc,font:{size:11},usePointStyle:true,padding:16}},
-          tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)} m`}}
-        },
-        scales:{
-          x:{stacked:false,ticks:{color:tc,font:{size:10},callback:v=>`${Number(v).toFixed(1)}m`},grid:{color:gc}},
-          y:{stacked:false,ticks:{color:tc,font:{size:11}},grid:{color:gc}}
-        }
-      }
-    });
-  }
-}
-
-function renderizarTabla(registros) {
-  const tbody = document.getElementById('metrosTableBody');
-  if (!registros.length) {
-    tbody.innerHTML='<tr><td colspan="11" class="text-center py-10 text-gray-400 dark:text-gray-500"><i class="fas fa-inbox text-2xl block mb-2 opacity-40"></i>Sin datos para los filtros aplicados</td></tr>';
+  const { data, error } = await q;
+  if (error) {
+    document.getElementById('tbody').innerHTML =
+      `<tr><td colspan="8" class="text-center py-8 text-red-400">Error: ${error.message}</td></tr>`;
     return;
   }
-  tbody.innerHTML = registros.map(r => {
-    const { valor:mN, esReal } = metrosNuestros(r);
-    const mC  = metrosComp(r);
-    const mT  = metrosTotal(r);
-    const pct = mT > 0 ? Math.min(100,(mN/mT)*100) : 0;
-    const col = pct >= 40 ? '#10b981' : pct >= 20 ? '#f59e0b' : '#ef4444';
-    const bM  = mN > 0
-      ? `<span class="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-xs font-bold px-2 py-1 rounded-lg">
-           <i class="fas fa-ruler-horizontal text-xs"></i> ${mN.toFixed(2)} m</span>`
-      : '<span class="text-gray-300 dark:text-gray-600">—</span>';
-    const bMC = mC > 0
-      ? `<span class="inline-flex items-center gap-1 bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold px-2 py-1 rounded-lg">
-           <i class="fas fa-store-slash text-xs"></i> ${mC.toFixed(2)} m</span>`
-      : '<span class="text-gray-300 dark:text-gray-600">—</span>';
-    const bT  = mT > 0 ? `<span class="text-xs font-semibold text-gray-500 dark:text-gray-400">${mT.toFixed(2)} m</span>` : '<span class="text-gray-300">—</span>';
-    const bC  = mT > 0 ? `<span class="text-xs font-bold" style="color:${col}">${pct.toFixed(0)}%</span>` : '<span class="text-gray-300">—</span>';
-    const bF  = esReal
-      ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✓ Real</span>'
-      : '<span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">≈ Est.</span>';
-    return `<tr class="hover:bg-indigo-50/30 dark:hover:bg-slate-700/50 transition-colors">
-      <td class="py-3 px-4 text-xs font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">${fmt(r.created_at)}</td>
-      <td class="py-3 px-4 text-xs text-indigo-600 dark:text-indigo-400 font-medium">${r.promoter_name||'—'}</td>
-      <td class="py-3 px-4 text-sm font-semibold text-gray-800 dark:text-white">${r.trade||'—'}</td>
-      <td class="py-3 px-4 text-xs text-gray-500 dark:text-gray-400">${r.state||'—'}${r.zone?' / '+r.zone:''}</td>
-      <td class="py-3 px-4 text-center">${bM}</td>
-      <td class="py-3 px-4 text-center">${bMC}</td>
-      <td class="py-3 px-4 text-center">${bT}</td>
-      <td class="py-3 px-4 text-center">${bC}</td>
-      <td class="py-3 px-4 text-center">${bF}</td>
-      <td class="py-3 px-4 text-center text-xs font-bold text-indigo-600 dark:text-indigo-400">${r.our_faces_after||0}</td>
-      <td class="py-3 px-4 text-center text-xs text-gray-500">${(r.myitems||[]).length}</td>
+
+  allVisitas = data || [];
+  procesarDatos();
+  aplicar();
+}
+
+// ── Procesar: agrupar por comercio con todas sus visitas ──────────
+function procesarDatos() {
+  const porComercio = {};
+
+  allVisitas.forEach(r => {
+    const trade = r.trade || '—';
+    if (!porComercio[trade]) {
+      porComercio[trade] = {
+        comercio: trade,
+        state:    r.state || '—',
+        zone:     r.zone  || '—',
+        visitas:  [],
+      };
+    }
+    const mn = calcMetrosNuestros(r);
+    const mt = calcMetrosTotal(r);
+    const pct = calcPct(mn.valor, mt);
+
+    porComercio[trade].visitas.push({
+      fecha:    r.created_at,
+      promotor: r.promoter_name || '—',
+      mn:       mn.valor,
+      mt:       mt,
+      pct:      pct,
+    });
+  });
+
+  // Para cada comercio: calcular métricas sobre la visita más reciente
+  // (no promediar — la más reciente = estado actual)
+  comercioData = Object.values(porComercio).map(c => {
+    const sorted = [...c.visitas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    const ultima = sorted[0];
+    return {
+      ...c,
+      visitas:     sorted,
+      ultimaFecha: ultima.fecha,
+      ultimoProm:  ultima.promotor,
+      mn:          ultima.mn,
+      mt:          ultima.mt,
+      pct:         ultima.pct,
+      numVisitas:  sorted.length,
+    };
+  });
+}
+
+// ── Aplicar filtros client-side ───────────────────────────────────
+function aplicar() {
+  const comercio = document.getElementById('fComercioVal').value;
+  const nivel    = document.getElementById('fNivel').value;
+
+  let filtered = comercioData;
+
+  if (comercio) filtered = filtered.filter(c => c.comercio === comercio);
+
+  if (nivel === 'alto')  filtered = filtered.filter(c => c.pct != null && c.pct >= 40);
+  if (nivel === 'medio') filtered = filtered.filter(c => c.pct != null && c.pct >= 20 && c.pct < 40);
+  if (nivel === 'bajo')  filtered = filtered.filter(c => c.pct != null && c.pct < 20);
+  if (nivel === 'sin')   filtered = filtered.filter(c => c.pct == null);
+
+  // Ordenar: mayor participación primero; sin medición al final
+  filtered.sort((a, b) => {
+    if (a.pct == null && b.pct == null) return 0;
+    if (a.pct == null) return 1;
+    if (b.pct == null) return -1;
+    return b.pct - a.pct;
+  });
+
+  renderKPIs(filtered);
+  renderTabla(filtered);
+  renderChart(filtered);
+  document.getElementById('infoTabla').textContent = `${filtered.length} comercios`;
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────
+function renderKPIs(rows) {
+  const conDato = rows.filter(c => c.pct != null);
+  const pcts    = conDato.map(c => c.pct);
+  const prom    = pcts.length ? pcts.reduce((a,b) => a+b, 0) / pcts.length : null;
+  const mejor   = conDato.length ? conDato.reduce((a,b) => a.pct > b.pct ? a : b) : null;
+  const peor    = conDato.length ? conDato.reduce((a,b) => a.pct < b.pct ? a : b) : null;
+
+  document.getElementById('kComerciosConDato').textContent = conDato.length;
+  document.getElementById('kPctPromedio').textContent      = prom != null ? prom.toFixed(1) + '%' : '—';
+  document.getElementById('kMejorComercio').textContent    = mejor ? mejor.pct.toFixed(1) + '%' : '—';
+  document.getElementById('kPeorComercio').textContent     = peor  ? peor.pct.toFixed(1) + '%'  : '—';
+
+  // Color dinámico
+  document.getElementById('kPctPromedio').style.color = prom != null ? pctColor(prom) : '';
+  document.getElementById('kMejorComercio').style.color = mejor ? pctColor(mejor.pct) : '';
+  document.getElementById('kPeorComercio').style.color  = peor  ? pctColor(peor.pct)  : '';
+}
+
+// ── Tabla principal ───────────────────────────────────────────────
+function renderTabla(rows) {
+  const tbody = document.getElementById('tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-gray-400 dark:text-gray-500">
+      <i class="fas fa-inbox text-2xl block mb-2 opacity-30"></i>Sin datos para los filtros aplicados
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(c => {
+    const pct    = c.pct;
+    const color  = pctColor(pct);
+    const badge  = pctBadgeCls(pct);
+    const pctVal = pct != null ? pct.toFixed(1) + '%' : '—';
+    const mnVal  = c.mn  != null ? c.mn.toFixed(2) + ' m'  : '—';
+    const mtVal  = c.mt  != null ? c.mt.toFixed(2) + ' m'  : '—';
+
+    return `<tr class="row-hover transition-colors cursor-pointer"
+      onclick="abrirHistorial('${c.comercio.replace(/'/g,"\\'")}')">
+      <td class="py-3 px-4">
+        <p class="text-sm font-bold text-gray-800 dark:text-white">${c.comercio}</p>
+      </td>
+      <td class="py-3 px-4 text-xs text-gray-500 dark:text-gray-400">
+        ${c.state}${c.zone && c.zone !== '—' ? ' / ' + c.zone : ''}
+      </td>
+      <td class="py-3 px-4 text-sm text-indigo-600 dark:text-indigo-400 font-medium">${c.ultimoProm}</td>
+      <td class="py-3 px-4 text-center">
+        <span class="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-sm font-bold px-3 py-1 rounded-lg">
+          <i class="fas fa-ruler-horizontal text-xs"></i> ${mnVal}
+        </span>
+      </td>
+      <td class="py-3 px-4 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">${mtVal}</td>
+      <td class="py-3 px-4" style="min-width:160px">
+        <div class="flex items-center gap-3">
+          <div class="flex-1 pct-bar">
+            <div class="pct-fill" style="width:${pct != null ? Math.min(100,pct) : 0}%; background:${color}"></div>
+          </div>
+          <span class="text-xs font-bold px-2 py-1 rounded-lg ${badge}" style="min-width:52px; text-align:center">
+            ${pctVal}
+          </span>
+        </div>
+      </td>
+      <td class="py-3 px-4 text-center text-sm text-gray-500 dark:text-gray-400 font-medium">${c.numVisitas}</td>
+      <td class="py-3 px-4 text-center text-xs text-gray-400 whitespace-nowrap">${fmtDate(c.ultimaFecha)}</td>
     </tr>`;
   }).join('');
 }
 
-function buscarComercio(term) {
-  clearTimeout(comercioTimer);
-  const dd = document.getElementById('comercioDropdown');
-  if (!term.trim()) { dd.style.display='none'; return; }
-  comercioTimer = setTimeout(async () => {
-    const { data } = await supabaseClient.from('web_precios').select('trade').eq('empresa_id', empresaId).ilike('trade',`%${term}%`).limit(20);
-    const trades = [...new Set((data||[]).map(r=>r.trade).filter(Boolean))].sort();
-    if (!trades.length) { dd.style.display='none'; return; }
-    dd.innerHTML = trades.map(t=>`<div class="comercio-item" onmousedown="seleccionarComercio('${t.replace(/'/g,"\\'")}')"><i class="fas fa-store" style="color:var(--accent);margin-right:6px;font-size:.75rem"></i>${t}</div>`).join('');
-    dd.style.display = 'block';
-  }, 300);
+// ── Gráfico barras participación ──────────────────────────────────
+function renderChart(rows) {
+  const dark = document.documentElement.classList.contains('dark');
+  const tc   = dark ? '#94a3b8' : '#6b7280';
+  const gc   = dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
+
+  const top = rows.filter(c => c.pct != null).slice(0, 20);
+
+  if (chartPart) chartPart.destroy();
+
+  if (!top.length) {
+    document.getElementById('chartParticipacion').parentElement.innerHTML =
+      '<p class="text-center py-10 text-gray-400 text-sm">Sin datos con medición de metros</p>';
+    return;
+  }
+
+  chartPart = new Chart(
+    document.getElementById('chartParticipacion').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: top.map(c => c.comercio.length > 20 ? c.comercio.slice(0,18) + '…' : c.comercio),
+      datasets: [
+        {
+          label: 'Nuestros (m)',
+          data: top.map(c => c.mn != null ? +c.mn.toFixed(2) : 0),
+          backgroundColor: 'rgba(79,70,229,.8)',
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+        {
+          label: 'Competencia / Resto (m)',
+          data: top.map(c => {
+            if (c.mt == null || c.mn == null) return 0;
+            return +(Math.max(0, c.mt - c.mn)).toFixed(2);
+          }),
+          backgroundColor: 'rgba(239,68,68,.45)',
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position:'top', labels:{ color:tc, font:{size:11}, boxWidth:12 } },
+        tooltip: {
+          callbacks: {
+            afterBody: (items) => {
+              const idx = items[0].dataIndex;
+              const c   = top[idx];
+              return c.pct != null ? [`Participación: ${c.pct.toFixed(1)}%`] : [];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          ticks: { color:tc, font:{size:10}, maxRotation:35 },
+          grid:  { color:gc }
+        },
+        y: {
+          stacked: true,
+          ticks: { color:tc, font:{size:10}, callback: v => v + 'm' },
+          grid:  { color:gc }
+        }
+      }
+    }
+  });
 }
-function seleccionarComercio(trade) {
-  comercioSeleccionado = trade;
-  document.getElementById('comercioSearch').value = trade;
-  document.getElementById('comercioDropdown').style.display = 'none';
-  document.getElementById('btnClearComercio').style.display = '';
+
+// ── Modal historial por comercio ──────────────────────────────────
+function abrirHistorial(nombreComercio) {
+  const c = comercioData.find(x => x.comercio === nombreComercio);
+  if (!c) return;
+
+  document.getElementById('modalTitulo').textContent   = nombreComercio;
+  document.getElementById('modalSubtitulo').textContent =
+    `${c.state}${c.zone && c.zone !== '—' ? ' / ' + c.zone : ''} · ${c.numVisitas} visita${c.numVisitas !== 1 ? 's' : ''}`;
+
+  // Mini KPIs
+  const conPct = c.visitas.filter(v => v.pct != null);
+  const pctProm = conPct.length ? conPct.reduce((s,v) => s + v.pct, 0) / conPct.length : null;
+  const pctMax  = conPct.length ? Math.max(...conPct.map(v => v.pct)) : null;
+  const mnProm  = c.visitas.filter(v => v.mn != null).reduce((s,v,_,a) => s + v.mn/a.length, 0);
+
+  document.getElementById('modalKpis').innerHTML = [
+    { lbl:'% Participación prom.', val: pctProm != null ? pctProm.toFixed(1)+'%' : '—', color: pctColor(pctProm) },
+    { lbl:'Máxima participación',  val: pctMax  != null ? pctMax.toFixed(1)+'%'  : '—', color: pctColor(pctMax) },
+    { lbl:'Metros nuestros prom.', val: mnProm > 0 ? mnProm.toFixed(2)+'m' : '—', color:'#4F46E5' },
+  ].map(k => `
+    <div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 text-center border border-gray-100 dark:border-slate-600">
+      <p class="text-xl font-extrabold" style="color:${k.color}">${k.val}</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${k.lbl}</p>
+    </div>`).join('');
+
+  // Gráfico evolución (orden cronológico)
+  const cronologico = [...c.visitas].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+  const dark = document.documentElement.classList.contains('dark');
+  const tc   = dark ? '#94a3b8' : '#6b7280';
+  const gc   = dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
+
+  if (chartHist) chartHist.destroy();
+  chartHist = new Chart(document.getElementById('chartHistorial').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: cronologico.map(v => fmtDateShort(v.fecha)),
+      datasets: [
+        {
+          label: '% Participación',
+          data: cronologico.map(v => v.pct != null ? +v.pct.toFixed(1) : null),
+          borderColor: '#4F46E5',
+          backgroundColor: 'rgba(79,70,229,.1)',
+          tension: .4, pointRadius: 5, fill: true,
+          spanGaps: true,
+          yAxisID: 'yPct',
+        },
+        {
+          label: 'Metros nuestros',
+          data: cronologico.map(v => v.mn != null ? +v.mn.toFixed(2) : null),
+          borderColor: '#10B981',
+          backgroundColor: 'transparent',
+          tension: .4, pointRadius: 4, borderDash: [5,3],
+          spanGaps: true,
+          yAxisID: 'yM',
+        },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display:true, position:'top', labels:{ color:tc, font:{size:11}, boxWidth:12 } },
+      },
+      scales: {
+        x:    { ticks:{ color:tc, font:{size:10} }, grid:{ color:gc } },
+        yPct: {
+          position:'left',
+          ticks:{ color:tc, font:{size:10}, callback: v => v+'%' },
+          grid:{ color:gc },
+          min: 0, max: 100,
+        },
+        yM: {
+          position:'right',
+          ticks:{ color:tc, font:{size:10}, callback: v => v+'m' },
+          grid:{ display:false },
+        },
+      }
+    }
+  });
+
+  // Tabla de visitas del comercio
+  document.getElementById('modalTabla').innerHTML = cronologico.reverse().map(v => {
+    const badge = pctBadgeCls(v.pct);
+    return `<tr>
+      <td class="py-2 px-4 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap font-semibold">${fmtDate(v.fecha)}</td>
+      <td class="py-2 px-4 text-xs text-indigo-600 dark:text-indigo-400">${v.promotor}</td>
+      <td class="py-2 px-4 text-center">
+        ${v.mn != null
+          ? `<span class="text-xs font-bold text-indigo-600 dark:text-indigo-300">${v.mn.toFixed(2)} m</span>`
+          : '<span class="text-gray-300 text-xs">—</span>'}
+      </td>
+      <td class="py-2 px-4 text-center text-xs text-gray-500 dark:text-gray-400">
+        ${v.mt != null ? v.mt.toFixed(2) + ' m' : '—'}
+      </td>
+      <td class="py-2 px-4 text-center">
+        ${v.pct != null
+          ? `<span class="text-xs font-bold px-2 py-0.5 rounded-lg ${badge}">${v.pct.toFixed(1)}%</span>`
+          : '<span class="text-gray-300 text-xs">Sin dato</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('modalHistorial').classList.add('open');
 }
-function clearComercio() {
-  comercioSeleccionado = '';
-  document.getElementById('comercioSearch').value = '';
-  document.getElementById('btnClearComercio').style.display = 'none';
+
+function cerrarModal() {
+  document.getElementById('modalHistorial').classList.remove('open');
 }
-document.addEventListener('click', e => {
-  const w = document.getElementById('comercioWrapper');
-  if (w && !w.contains(e.target)) document.getElementById('comercioDropdown').style.display = 'none';
+document.getElementById('modalHistorial').addEventListener('click', e => {
+  if (e.target === e.currentTarget) cerrarModal();
 });
 
-function abrirLeyenda()  { document.getElementById('leyendaModal').classList.add('open'); }
-function cerrarLeyenda() { document.getElementById('leyendaModal').classList.remove('open'); }
-document.getElementById('leyendaModal').addEventListener('click', e => { if (e.target===e.currentTarget) cerrarLeyenda(); });
+// ── Búsqueda comercio ─────────────────────────────────────────────
+function buscarComercio(term) {
+  clearTimeout(comercioTimer);
+  document.getElementById('fComercioVal').value = '';
+  const dd = document.getElementById('comercioDD');
+  if (!term.trim()) { dd.style.display = 'none'; return; }
+  comercioTimer = setTimeout(() => {
+    const matches = comercioData
+      .map(c => c.comercio)
+      .filter(c => c.toLowerCase().includes(term.toLowerCase()))
+      .sort()
+      .slice(0, 15);
+    if (!matches.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = matches.map(c =>
+      `<div class="com-dd-item" onmousedown="selecComercio('${c.replace(/'/g,"\\'")}')">
+        <i class="fas fa-store mr-2 text-indigo-400 text-xs"></i>${c}
+      </div>`
+    ).join('');
+    dd.style.display = 'block';
+  }, 200);
+}
+function selecComercio(val) {
+  document.getElementById('fComercio').value    = val;
+  document.getElementById('fComercioVal').value = val;
+  document.getElementById('comercioDD').style.display = 'none';
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('comercioWrap')?.contains(e.target))
+    document.getElementById('comercioDD').style.display = 'none';
+});
 
-function setDates() {
-  const t = new Date(), s = new Date(t);
-  s.setDate(t.getDate() - 30);
-  document.getElementById('dateFrom').value = s.toISOString().split('T')[0];
-  document.getElementById('dateTo').value   = t.toISOString().split('T')[0];
+function limpiar() {
+  ['fDesde','fHasta','fComercio','fComercioVal'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('fPromotor').value = '';
+  document.getElementById('fEstado').value   = '';
+  document.getElementById('fZona').value     = '';
+  document.getElementById('fZona').disabled  = true;
+  document.getElementById('fNivel').value    = '';
+  aplicar();
 }
 
-window.onLineaChanged = () => loadData();
-waitDb(async () => { setDates(); await loadCatalogs(); await loadData(); });
+function setDefaultDates() {
+  const hoy = new Date();
+  const d30 = new Date(hoy); d30.setDate(hoy.getDate() - 30);
+  document.getElementById('fHasta').value = hoy.toISOString().split('T')[0];
+  document.getElementById('fDesde').value = d30.toISOString().split('T')[0];
+}
+
+window.onLineaChanged = () => cargar();
+
+function waitDb(fn) {
+  if (window.db) { fn(); return; }
+  const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
+}
+
+waitDb(async () => {
+  setDefaultDates();
+  await loadCatalogs();
+  await cargar();
+});
 </script>
 </body>
 </html>
