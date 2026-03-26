@@ -648,7 +648,7 @@ async function updateWeeklyProgress(pName = 'all') {
 
       if (hide && myGroups.length === 0) return;
 
-      const pct   = goal > 0 ? Math.min(100, (myGroups.length / goal) * 100) : 0;
+      const pct = goal > 0 ? Math.min(100, (conf / goal) * 100) : 0;
       const color = pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-500';
       cont.innerHTML += `
         <div class="bg-gray-50 dark:bg-slate-700 p-4 rounded-xl border border-gray-100 dark:border-slate-600 shadow-sm">
@@ -660,17 +660,23 @@ async function updateWeeklyProgress(pName = 'all') {
             <div class="${color} h-2 rounded-full transition-all duration-500" style="width:${pct}%"></div>
           </div>
           <p class="text-xs text-gray-400 dark:text-gray-500">
-            ${pct.toFixed(0)}% · ${myGroups.length} visita${myGroups.length !== 1 ? 's' : ''} única${myGroups.length !== 1 ? 's' : ''}
-            · ${conf} conf. GPS
+            ${pct.toFixed(0)}% meta · ${conf} conf. GPS de ${myGroups.length} visita${myGroups.length !== 1 ? 's' : ''}
           </p>
           ${myGroups.length > goal ? '<p class="text-orange-500 text-xs font-semibold mt-1">¡Superó la meta!</p>' : ''}
         </div>`;
     });
 
-  const totalPct = totalGoal > 0 ? (totalUniq / totalGoal) * 100 : 0;
-  document.getElementById('totalGoalProgress').textContent  = `${totalPct.toFixed(1)}%`;
-  document.getElementById('totalGoalProgressBar').style.width = `${Math.min(100, totalPct)}%`;
-  document.getElementById('metaDetalle').textContent = `${totalUniq} únicas / ${totalGoal} meta`;
+  // Contar solo confirmadas globalmente
+const totalConf = listaFinal
+  .filter(p => pName === 'all' || p.promoter_name === pName)
+  .reduce((s, p) => {
+    const myGroups = weekGroups.filter(g => g.promoter_id === p.promoter_id || g.promoter_name === p.promoter_name);
+    return s + myGroups.filter(isConfirmed).length;
+  }, 0);
+const totalPct = totalGoal > 0 ? (totalConf / totalGoal) * 100 : 0;
+document.getElementById('metaDetalle').textContent = `${totalConf} conf. GPS / ${totalGoal} meta`;
+document.getElementById('totalGoalProgressBar').style.width = `${Math.min(100, totalPct)}%`;
+document.getElementById('metaDetalle').textContent = `${totalUniq} únicas / ${totalGoal} meta`;
 }
 
 // ── Tabla ─────────────────────────────────────────────────────────
@@ -950,31 +956,41 @@ function showDetails(group) {
   const allBefore = records.flatMap(r => parseJ(r.before_photos));
   const allAfter  = records.flatMap(r => parseJ(r.after_photos));
 
-  const photoSection = (title, photos) => {
-    if (!photos.length) return `
-      <div class="modal-section bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600">
-        <p class="modal-section-title text-gray-500 dark:text-gray-400">
-          <i class="fas fa-camera mr-1"></i>${title}
-        </p>
-        <p class="text-sm text-gray-400 italic">Sin fotos registradas.</p>
-      </div>`;
-    return `
-      <div class="modal-section bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600">
-        <p class="modal-section-title text-gray-500 dark:text-gray-400">
-          <i class="fas fa-camera mr-1"></i>${title}
-          <span class="font-normal normal-case text-gray-400 ml-1">(${photos.length} foto${photos.length !== 1 ? 's' : ''})</span>
-        </p>
-        <div class="photo-grid">
-          ${photos.map(fn => {
-            const url = fn.startsWith('data:') ? fn : `${STORAGE_BASE}${fn}`;
-            return `<img src="${url}" alt="${title}" onclick="showLightbox('${url}')" loading="lazy">`;
-          }).join('')}
-        </div>
-      </div>`;
-  };
+  const photoSection = (title, photos, tipo) => {
+  if (!photos.length) return `
+    <div class="modal-section bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600">
+      <p class="modal-section-title text-gray-500 dark:text-gray-400">
+        <i class="fas fa-camera mr-1"></i>${title}
+      </p>
+      <p class="text-sm text-gray-400 italic">Sin fotos registradas.</p>
+    </div>`;
+  return `
+    <div class="modal-section bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600">
+      <p class="modal-section-title text-gray-500 dark:text-gray-400">
+        <i class="fas fa-camera mr-1"></i>${title}
+        <span class="font-normal normal-case text-gray-400 ml-1">(${photos.length} foto${photos.length !== 1 ? 's' : ''})</span>
+      </p>
+      <div class="photo-grid">
+        ${photos.map(fn => {
+          let url;
+          if (fn.startsWith('data:')) {
+            url = fn;                                    // base64 directo
+          } else if (fn.startsWith('http')) {
+            url = fn;                                    // ya es URL completa
+          } else {
+            // El archivo está en subcarpeta before/ o after/ dentro del bucket
+            // pero el nombre en DB ya incluye el prefijo "before_" o "after_"
+            url = `${STORAGE_BASE}${tipo}/${fn}`;
+          }
+          return `<img src="${url}" alt="${title}"
+            onclick="showLightbox('${url}')" loading="lazy">`;
+        }).join('')}
+      </div>
+    </div>`;
+};
 
-  html += photoSection('📷 Fotos antes', allBefore);
-  html += photoSection('📷 Fotos después', allAfter);
+html += photoSection('📷 Fotos antes',   allBefore, 'before');
+html += photoSection('📷 Fotos después', allAfter,  'after');
 
   document.getElementById('modalDetailsContent').innerHTML = html;
   document.getElementById('detailsModal').classList.add('open');
