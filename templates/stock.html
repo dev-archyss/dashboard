@@ -202,8 +202,7 @@
               <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Comercio</th>
               <th class="py-3 px-4 text-center text-xs font-bold text-red-500 uppercase tracking-wider">Quiebres</th>
               <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Visitas totales</th>
-              <th class="py-3 px-4 text-center text-xs font-bold text-amber-500 uppercase tracking-wider">Tasa quiebre</th>
-              <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Productos afectados</th>
+              <th class="py-3 px-4 text-center text-xs font-bold text-amber-500 uppercase tracking-wider">Sin stock / visita</th>              <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Productos afectados</th>
             </tr>
           </thead>
           <tbody id="tbodyComercio" class="bg-white dark:bg-slate-800 divide-y divide-gray-50 dark:divide-slate-700"></tbody>
@@ -766,15 +765,16 @@ function renderTablaComercio(f) {
     return;
   }
   tbody.innerHTML = sorted.map((r, idx) => {
-    const tasa    = r.visitas ? (r.quiebres / r.visitas * 100) : 0;
-    const tasaCls = tasa > 50 ? 'text-red-600 font-bold' : tasa > 25 ? 'text-amber-600 font-bold' : 'text-green-600';
+    const promSinStock = r.visitas ? (r.quiebres / r.visitas).toFixed(1) : '0';
+    const promNum      = parseFloat(promSinStock);
+    const tasaCls      = promNum > 3 ? 'text-red-600 font-bold' : promNum > 1.5 ? 'text-amber-600 font-bold' : 'text-green-600';
     return `<tr class="row-hover cursor-pointer"
       onclick="abrirTendenciaModal('${r.comercio.replace(/'/g,"\\'")}', '')">
       <td class="py-3 px-4 text-sm font-bold text-gray-400">${idx+1}</td>
       <td class="py-3 px-4 font-semibold text-gray-800 dark:text-white">${r.comercio}</td>
       <td class="py-3 px-4 text-center font-extrabold text-red-500">${r.quiebres}</td>
       <td class="py-3 px-4 text-center text-gray-500">${r.visitas}</td>
-      <td class="py-3 px-4 text-center ${tasaCls}">${tasa.toFixed(0)}%</td>
+      <td class="py-3 px-4 text-center ${tasaCls}">${promSinStock} prod/visita</td>
       <td class="py-3 px-4 text-xs text-gray-500">${r.prods.slice(0,3).join(', ')}${r.prods.length>3?'…':''}</td>
     </tr>`;
   }).join('');
