@@ -313,13 +313,10 @@ const BUCKET       = 'visits_photos';
 // ── Helper: obtener la anon key real desde el cliente ya instanciado
 // window.db es el cliente Supabase del navbar — necesitamos su key para Storage
 function getSupabaseKey() {
-  // Intentar obtener la key del cliente existente
-  if (window.db && window.db.supabaseKey) return window.db.supabaseKey;
-  if (window.db && window.db.rest && window.db.rest.headers) {
-    return window.db.rest.headers['apikey'] || SUPABASE_KEY;
-  }
-  // Fallback: usar la key del template
-  return SUPABASE_KEY;
+  try {
+    const h = window.db?.rest?.headers || window.db?.headers || {};
+    return h['apikey'] || h['Authorization']?.replace('Bearer ','');
+  } catch { return null; }
 }
 
 // ── Upload a Storage via fetch (más confiable que el SDK para archivos)
@@ -662,8 +659,8 @@ function getAnonKey() {
     // El navbar instancia window.db = createClient(url, key)
     // Supabase JS v2 guarda la key en headers internos
     const h = window.db?.rest?.headers || window.db?.headers || {};
-    return h['apikey'] || h['Authorization']?.replace('Bearer ','') || SUPABASE_KEY;
-  } catch { return SUPABASE_KEY; }
+    return h['apikey'] || h['Authorization']?.replace('Bearer ','');
+  } catch { return null; }
 }
 
 async function storageUpload(storagePath, file) {
