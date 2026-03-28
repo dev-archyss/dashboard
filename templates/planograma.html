@@ -306,8 +306,8 @@
 const empresaId  = localStorage.getItem('empresa_id');
 if (!empresaId) window.location.replace('/');
 
-const SUPABASE_URL = '{{ supabase_url }}';
-const SUPABASE_KEY = '{{ supabase_key }}';
+// URL de Supabase — hardcodeada para evitar dependencia de variables Jinja2
+const SUPABASE_URL = 'https://djjylikkocemrlsjxscr.supabase.co';
 const BUCKET       = 'visits_photos';
 
 // ── Helper: obtener la anon key real desde el cliente ya instanciado
@@ -843,23 +843,6 @@ function waitDb(fn) {
 }
 
 waitDb(async () => {
-  // Intentar asegurar que el bucket existe (no bloquea si falla)
-  try {
-    const key = getAnonKey();
-    const check = await fetch(`${SUPABASE_URL}/storage/v1/bucket/${BUCKET}`, {
-      headers: { 'Authorization': `Bearer ${key}`, 'apikey': key }
-    });
-    if (!check.ok) {
-      // Bucket no existe, intentar crearlo
-      await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
-        method : 'POST',
-        headers: { 'Authorization': `Bearer ${key}`, 'apikey': key,
-                   'Content-Type': 'application/json' },
-        body   : JSON.stringify({ id: BUCKET, name: BUCKET, public: true }),
-      });
-    }
-  } catch(e) { console.warn('Bucket check:', e); }
-
   await cargar();
 });
 </script>
