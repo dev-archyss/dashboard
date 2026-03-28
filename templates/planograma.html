@@ -385,10 +385,11 @@ function mostrarToast(msg, tipo = 'success') {
 // ══════════════════════════════════════════════════════════
 function imgUrl(path) {
   if (!path) return null;
-  // Soporta paths con o sin la carpeta "planogramas/" como prefijo
-  // Ej: "planograma_xxx.jpeg" → agrega "planogramas/"
-  // Ej: "planogramas/planograma_xxx.jpeg" → usa tal cual
-  const fullPath = path.startsWith('planogramas/') ? path : `planogramas/${path}`;
+  // Path puede venir en varios formatos:
+  // "planogramas/{empresaId}/planograma_xxx.jpg"  → nuevo formato
+  // "planogramas/planograma_xxx.jpg"              → formato viejo sin empresaId
+  // "planograma_xxx.jpg"                          → más viejo aún
+  const fullPath = path.includes('/') ? path : `planogramas/${empresaId}/${path}`;
   return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${fullPath}`;
 }
 
@@ -656,37 +657,32 @@ function cancelarPreview() {
 // Obtiene la anon key de Supabase desde el cliente ya instanciado o el template
 function getAnonKey() {
   try {
-    // El navbar instancia window.db = createClient(url, key)
-    // Supabase JS v2 guarda la key en headers internos
-    const h = window.db?.rest?.headers || window.db?.headers || {};
-    return h['apikey'] || h['Authorization']?.replace('Bearer ','');
+    // Supabase JS v2: la key está en supabaseKey o en los headers del cliente fetch
+    if (window.db?.supabaseKey) return window.db.supabaseKey;
+    // Alternativa: leer del fetch handler interno
+    const headers = window.db?.rest?.headers
+                 || window.db?.fetchHandler?.headers
+                 || window.db?._headers
+                 || {};
+    const key = headers['apikey'] || headers['Authorization']?.replace('Bearer ', '');
+    if (key) return key;
+    // Último recurso: leer del globalHeaders del cliente
+    const global = window.db?.realtime?.accessToken
+                || window.db?.auth?.currentSession?.access_token;
+    return global || null;
   } catch { return null; }
 }
 
 async function storageUpload(storagePath, file) {
-  const key = getAnonKey();
-  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${storagePath}`;
-  const res = await fetch(url, {
-    method : 'POST',
-    headers: { 'Authorization': `Bearer ${key}`, 'apikey': key,
-               'Content-Type': file.type || 'image/jpeg', 'x-upsert': 'true' },
-    body   : file,
-  });
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    throw new Error(e.message || e.error || `HTTP ${res.status}`);
-  }
+  // Usar window.db.storage directamente — ya tiene la key internamente
+  const { error } = await window.db.storage
+    .from(BUCKET)
+    .upload(storagePath, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+  if (error) throw new Error(error.message || 'Error al subir');
 }
 
 async function storageDelete(storagePath) {
-  const key = getAnonKey();
-  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}`;
-  await fetch(url, {
-    method : 'DELETE',
-    headers: { 'Authorization': `Bearer ${key}`, 'apikey': key,
-               'Content-Type': 'application/json' },
-    body   : JSON.stringify({ prefixes: [storagePath] }),
-  }).catch(() => {}); // ignorar errores de delete
+  await window.db.storage.from(BUCKET).remove([storagePath]).catch(() => {});
 }
 
 // ── Subir imagen ──
@@ -694,7 +690,7 @@ async function subirImagen() {
   if (!archivoActual || !lineaActual) return;
 
   const ext      = (archivoActual.name.split('.').pop() || 'jpg').toLowerCase();
-  const filePath = `planogramas/planograma_${Date.now()}.${ext}`;
+  const filePath = `planogramas/${empresaId}/planograma_${Date.now()}.${ext}`;
   const progFill = document.getElementById('progressFill');
   const progLbl  = document.getElementById('progressLabel');
   const progWrap = document.getElementById('progressWrap');
