@@ -310,6 +310,59 @@ const SUPABASE_URL = '{{ supabase_url }}';
 const SUPABASE_KEY = '{{ supabase_key }}';
 const BUCKET       = 'planogramas';
 
+// ── Helper: obtener la anon key real desde el cliente ya instanciado
+// window.db es el cliente Supabase del navbar — necesitamos su key para Storage
+function getSupabaseKey() {
+  // Intentar obtener la key del cliente existente
+  if (window.db && window.db.supabaseKey) return window.db.supabaseKey;
+  if (window.db && window.db.rest && window.db.rest.headers) {
+    return window.db.rest.headers['apikey'] || SUPABASE_KEY;
+  }
+  // Fallback: usar la key del template
+  return SUPABASE_KEY;
+}
+
+// ── Upload a Storage via fetch (más confiable que el SDK para archivos)
+async function uploadToStorage(path, file) {
+  const key = getSupabaseKey();
+  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${key}`,
+      'apikey': key,
+      'Content-Type': file.type || 'image/jpeg',
+      'x-upsert': 'true',
+    },
+    body: file,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(err.message || err.error || `Storage error ${res.status}`);
+  }
+  return await res.json();
+}
+
+// ── Delete de Storage via fetch
+async function deleteFromStorage(path) {
+  const key = getSupabaseKey();
+  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}`;
+
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${key}`,
+      'apikey': key,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prefixes: [path] }),
+  });
+  // No lanzar error si falla el delete (el archivo puede no existir)
+  return res.ok;
+}
+
 // ══════════════════════════════════════════════════════════
 //  ESTADO GLOBAL
 // ══════════════════════════════════════════════════════════
@@ -607,12 +660,52 @@ function cancelarPreview() {
   document.getElementById('fileInput').value = '';
 }
 
+// ══════════════════════════════════════════════════════════
+//  STORAGE — via fetch directo (más confiable que el SDK)
+// ══════════════════════════════════════════════════════════
+
+// Obtiene la anon key de Supabase desde el cliente ya instanciado o el template
+function getAnonKey() {
+  try {
+    // El navbar instancia window.db = createClient(url, key)
+    // Supabase JS v2 guarda la key en headers internos
+    const h = window.db?.rest?.headers || window.db?.headers || {};
+    return h['apikey'] || h['Authorization']?.replace('Bearer ','') || SUPABASE_KEY;
+  } catch { return SUPABASE_KEY; }
+}
+
+async function storageUpload(storagePath, file) {
+  const key = getAnonKey();
+  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${storagePath}`;
+  const res = await fetch(url, {
+    method : 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'apikey': key,
+               'Content-Type': file.type || 'image/jpeg', 'x-upsert': 'true' },
+    body   : file,
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.message || e.error || `HTTP ${res.status}`);
+  }
+}
+
+async function storageDelete(storagePath) {
+  const key = getAnonKey();
+  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}`;
+  await fetch(url, {
+    method : 'DELETE',
+    headers: { 'Authorization': `Bearer ${key}`, 'apikey': key,
+               'Content-Type': 'application/json' },
+    body   : JSON.stringify({ prefixes: [storagePath] }),
+  }).catch(() => {}); // ignorar errores de delete
+}
+
 // ── Subir imagen ──
 async function subirImagen() {
   if (!archivoActual || !lineaActual) return;
 
-  const ext      = archivoActual.name.split('.').pop().toLowerCase();
-  const path     = `${empresaId}/${lineaActual.id}_${Date.now()}.${ext}`;
+  const ext      = (archivoActual.name.split('.').pop() || 'jpg').toLowerCase();
+  const filePath = `${empresaId}/${lineaActual.id}_${Date.now()}.${ext}`;
   const progFill = document.getElementById('progressFill');
   const progLbl  = document.getElementById('progressLabel');
   const progWrap = document.getElementById('progressWrap');
@@ -620,59 +713,61 @@ async function subirImagen() {
 
   prevWrap.classList.add('hidden');
   progWrap.classList.remove('hidden');
-  animProgress(progFill, 0, 35, 400);
-  progLbl.textContent = 'Preparando imagen...';
+  animProgress(progFill, 0, 20, 300);
+  progLbl.textContent = 'Preparando...';
 
   try {
-    // Eliminar imagen anterior si existe
+    // 1. Borrar imagen anterior si existe
     if (lineaActual.planogram_image) {
-      await window.db.storage.from(BUCKET).remove([lineaActual.planogram_image]);
+      animProgress(progFill, 20, 35, 300);
+      progLbl.textContent = 'Eliminando versión anterior...';
+      await storageDelete(lineaActual.planogram_image);
     }
 
-    animProgress(progFill, 35, 65, 500);
-    progLbl.textContent = 'Subiendo al servidor...';
+    // 2. Subir nueva imagen
+    animProgress(progFill, 35, 80, 1000);
+    progLbl.textContent = 'Subiendo imagen al servidor...';
+    await storageUpload(filePath, archivoActual);
 
-    const { error: upErr } = await window.db.storage
-      .from(BUCKET)
-      .upload(path, archivoActual, { upsert: true, contentType: archivoActual.type });
-    if (upErr) throw upErr;
+    // 3. Guardar referencia en la BD
+    animProgress(progFill, 80, 93, 300);
+    progLbl.textContent = 'Guardando en base de datos...';
 
-    animProgress(progFill, 65, 88, 300);
-    progLbl.textContent = 'Guardando referencia...';
+    await new Promise((resolve, reject) => {
+      function waitDb(fn) { if (window.db) { fn(); return; } const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 60); }
+      waitDb(async () => {
+        const { error } = await window.db.from('web_lineas').update({ planogram_image: filePath }).eq('id', lineaActual.id);
+        if (error) reject(error); else resolve();
+      });
+    });
 
-    const { error: dbErr } = await window.db
-      .from('web_lineas')
-      .update({ planogram_image: path })
-      .eq('id', lineaActual.id);
-    if (dbErr) throw dbErr;
+    animProgress(progFill, 93, 100, 200);
+    progLbl.textContent = '✓ ¡Guardado!';
 
-    animProgress(progFill, 88, 100, 200);
-    progLbl.textContent = '✓ ¡Listo!';
-
-    // Actualizar local
+    // Actualizar estado local
     const idx = todasLineas.findIndex(l => l.id === lineaActual.id);
-    if (idx >= 0) todasLineas[idx].planogram_image = path;
+    if (idx >= 0) todasLineas[idx].planogram_image = filePath;
 
     setTimeout(() => {
       cerrarModal();
       actualizarKPIs();
       renderGrid();
-      mostrarToast(`Planograma de "${lineaActual.nombre}" guardado correctamente`);
+      mostrarToast(`Planograma de "${lineaActual.nombre}" guardado ✓`);
     }, 500);
 
   } catch (err) {
-    console.error(err);
+    console.error('Error subiendo planograma:', err);
     progWrap.classList.add('hidden');
     prevWrap.classList.remove('hidden');
     progFill.style.width = '0%';
-    mostrarToast('Error al subir: ' + (err.message || 'Intenta de nuevo'), 'error');
+    mostrarToast('Error: ' + (err.message || 'Verifica tu conexión e intenta de nuevo'), 'error');
   }
 }
 
 // ── Eliminar planograma ──
 async function confirmarEliminar() {
   if (!lineaActual?.planogram_image) return;
-  if (!confirm(`¿Eliminar el planograma de "${lineaActual.nombre}"? Esta acción no se puede deshacer.`)) return;
+  if (!confirm(`¿Eliminar el planograma de "${lineaActual.nombre}"?\nEsta acción no se puede deshacer.`)) return;
 
   const progWrap = document.getElementById('progressWrap');
   const progFill = document.getElementById('progressFill');
@@ -680,23 +775,31 @@ async function confirmarEliminar() {
   document.getElementById('deleteWrap').classList.add('hidden');
   progWrap.classList.remove('hidden');
   progLbl.textContent = 'Eliminando...';
-  animProgress(progFill, 0, 70, 400);
+  animProgress(progFill, 0, 60, 400);
 
   try {
-    await window.db.storage.from(BUCKET).remove([lineaActual.planogram_image]);
-    await window.db.from('web_lineas').update({ planogram_image: null }).eq('id', lineaActual.id);
+    await storageDelete(lineaActual.planogram_image);
+
+    animProgress(progFill, 60, 85, 300);
+    await new Promise((resolve, reject) => {
+      function waitDb(fn) { if (window.db) { fn(); return; } const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 60); }
+      waitDb(async () => {
+        const { error } = await window.db.from('web_lineas').update({ planogram_image: null }).eq('id', lineaActual.id);
+        if (error) reject(error); else resolve();
+      });
+    });
 
     const idx = todasLineas.findIndex(l => l.id === lineaActual.id);
     if (idx >= 0) todasLineas[idx].planogram_image = null;
 
-    animProgress(progFill, 70, 100, 200);
+    animProgress(progFill, 85, 100, 200);
     progLbl.textContent = '✓ Eliminado';
 
     setTimeout(() => {
       cerrarModal();
       actualizarKPIs();
       renderGrid();
-      mostrarToast(`Planograma de "${lineaActual.nombre}" eliminado`, 'info');
+      mostrarToast(`Planograma eliminado`, 'info');
     }, 400);
 
   } catch (err) {
@@ -737,12 +840,40 @@ document.addEventListener('keydown', e => {
 });
 
 // ══════════════════════════════════════════════════════════
+//  VERIFICAR / CREAR BUCKET
+// ══════════════════════════════════════════════════════════
+async function asegurarBucket() {
+  const key = getAnonKey();
+  // Verificar si el bucket existe listando sus archivos
+  const r = await fetch(`${SUPABASE_URL}/storage/v1/bucket/${BUCKET}`, {
+    headers: { 'Authorization': `Bearer ${key}`, 'apikey': key }
+  });
+  if (r.ok) return; // ya existe
+
+  // Crear el bucket como público
+  await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+    method : 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'apikey': key,
+               'Content-Type': 'application/json' },
+    body   : JSON.stringify({ id: BUCKET, name: BUCKET, public: true }),
+  });
+}
+
+// ══════════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════════
 // Ignorar el filtro de línea del navbar — planogramas siempre muestra todo
 window.onLineaChanged = () => { /* no recargar */ };
 
-cargar();
+// Esperar a que window.db esté listo y luego cargar
+function waitDbAndStart() {
+  if (window.db) {
+    asegurarBucket().catch(e => console.warn('Bucket check:', e)).finally(cargar);
+  } else {
+    setTimeout(waitDbAndStart, 100);
+  }
+}
+waitDbAndStart();
 </script>
 </body>
 </html>
