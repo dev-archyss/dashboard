@@ -308,7 +308,7 @@ if (!empresaId) window.location.replace('/');
 
 const SUPABASE_URL = '{{ supabase_url }}';
 const SUPABASE_KEY = '{{ supabase_key }}';
-const BUCKET       = 'planogramas';
+const BUCKET       = 'visits_photos';
 
 // ── Helper: obtener la anon key real desde el cliente ya instanciado
 // window.db es el cliente Supabase del navbar — necesitamos su key para Storage
@@ -388,7 +388,11 @@ function mostrarToast(msg, tipo = 'success') {
 // ══════════════════════════════════════════════════════════
 function imgUrl(path) {
   if (!path) return null;
-  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+  // Soporta paths con o sin la carpeta "planogramas/" como prefijo
+  // Ej: "planograma_xxx.jpeg" → agrega "planogramas/"
+  // Ej: "planogramas/planograma_xxx.jpeg" → usa tal cual
+  const fullPath = path.startsWith('planogramas/') ? path : `planogramas/${path}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${fullPath}`;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -406,7 +410,7 @@ async function cargar() {
 
   const { data, error } = await window.db
       .from('web_lineas')
-      .select('id, nombre, planogram_image, color')
+      .select('id, nombre, planogram_image')
       .eq('empresa_id', empresaId)
       .order('nombre');
 
@@ -478,7 +482,7 @@ function renderGrid() {
   empty.classList.add('hidden');
 
   grid.innerHTML = lineas.map(l => {
-    const color   = l.color || '#4F46E5';
+    const color   = '#4F46E5';
     const imgPath = l.planogram_image;
     const url     = imgUrl(imgPath);
     const tiene   = !!url;
@@ -693,7 +697,7 @@ async function subirImagen() {
   if (!archivoActual || !lineaActual) return;
 
   const ext      = (archivoActual.name.split('.').pop() || 'jpg').toLowerCase();
-  const filePath = `${empresaId}/${lineaActual.id}_${Date.now()}.${ext}`;
+  const filePath = `planogramas/planograma_${Date.now()}.${ext}`;
   const progFill = document.getElementById('progressFill');
   const progLbl  = document.getElementById('progressLabel');
   const progWrap = document.getElementById('progressWrap');
