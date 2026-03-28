@@ -404,8 +404,7 @@ async function cargar() {
     const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 60);
   }
 
-  await new Promise(resolve => waitDb(async () => {
-    const { data, error } = await window.db
+  const { data, error } = await window.db
       .from('web_lineas')
       .select('id, nombre, planogram_image, color')
       .eq('empresa_id', empresaId)
@@ -413,31 +412,20 @@ async function cargar() {
 
     if (error) {
       console.error('Error cargando líneas:', error);
-      mostrarToast('Error al cargar líneas', 'error');
-      resolve(); return;
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('gridLineas').classList.remove('hidden');
+      document.getElementById('emptyState').classList.remove('hidden');
+      mostrarToast('Error al cargar líneas: ' + error.message, 'error');
+      return;
     }
 
     todasLineas = data || [];
     document.getElementById('loadingState').classList.add('hidden');
     document.getElementById('gridLineas').classList.remove('hidden');
 
-    // Si no hay líneas configuradas, mostrar aviso
-    if (!todasLineas.length) {
-      document.getElementById('avisoInstrucciones').classList.remove('hidden');
-      document.getElementById('avisoInstrucciones').innerHTML = `
-        <i class="fas fa-exclamation-triangle text-amber-500 text-lg mt-0.5 flex-shrink-0"></i>
-        <div class="text-sm text-amber-700 dark:text-amber-300">
-          <strong>No hay líneas registradas para esta empresa.</strong>
-          Ve a <a href="/lineas" class="underline font-bold">Líneas</a> para crearlas primero.
-        </div>`;
-    } else {
-      document.getElementById('avisoInstrucciones').classList.remove('hidden');
-    }
-
+    document.getElementById('avisoInstrucciones').classList.remove('hidden');
     actualizarKPIs();
     renderGrid();
-    resolve();
-  }));
 }
 
 // ══════════════════════════════════════════════════════════
@@ -840,40 +828,36 @@ document.addEventListener('keydown', e => {
 });
 
 // ══════════════════════════════════════════════════════════
-//  VERIFICAR / CREAR BUCKET
-// ══════════════════════════════════════════════════════════
-async function asegurarBucket() {
-  const key = getAnonKey();
-  // Verificar si el bucket existe listando sus archivos
-  const r = await fetch(`${SUPABASE_URL}/storage/v1/bucket/${BUCKET}`, {
-    headers: { 'Authorization': `Bearer ${key}`, 'apikey': key }
-  });
-  if (r.ok) return; // ya existe
-
-  // Crear el bucket como público
-  await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
-    method : 'POST',
-    headers: { 'Authorization': `Bearer ${key}`, 'apikey': key,
-               'Content-Type': 'application/json' },
-    body   : JSON.stringify({ id: BUCKET, name: BUCKET, public: true }),
-  });
-}
-
-// ══════════════════════════════════════════════════════════
-//  INIT
+//  INIT — patrón estándar del proyecto
 // ══════════════════════════════════════════════════════════
 // Ignorar el filtro de línea del navbar — planogramas siempre muestra todo
 window.onLineaChanged = () => { /* no recargar */ };
 
-// Esperar a que window.db esté listo y luego cargar
-function waitDbAndStart() {
-  if (window.db) {
-    asegurarBucket().catch(e => console.warn('Bucket check:', e)).finally(cargar);
-  } else {
-    setTimeout(waitDbAndStart, 100);
-  }
+function waitDb(fn) {
+  if (window.db) { fn(); return; }
+  const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
 }
-waitDbAndStart();
+
+waitDb(async () => {
+  // Intentar asegurar que el bucket existe (no bloquea si falla)
+  try {
+    const key = getAnonKey();
+    const check = await fetch(`${SUPABASE_URL}/storage/v1/bucket/${BUCKET}`, {
+      headers: { 'Authorization': `Bearer ${key}`, 'apikey': key }
+    });
+    if (!check.ok) {
+      // Bucket no existe, intentar crearlo
+      await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+        method : 'POST',
+        headers: { 'Authorization': `Bearer ${key}`, 'apikey': key,
+                   'Content-Type': 'application/json' },
+        body   : JSON.stringify({ id: BUCKET, name: BUCKET, public: true }),
+      });
+    }
+  } catch(e) { console.warn('Bucket check:', e); }
+
+  await cargar();
+});
 </script>
 </body>
 </html>
