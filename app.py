@@ -997,6 +997,72 @@ def upload_planogram():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
     
+
+#ESTADO DE CUENTAS
+
+@app.route('/api/empresa/status')
+@require_session
+def empresa_status():
+    """
+    Retorna el estado de cuenta de la empresa:
+    estatus, fecha_vencimiento, dias_gracia, y pagos vencidos/próximos.
+    """
+    empresa_id = session['empresa_id']
+    hoy = datetime.now().date()
+
+    # Datos de la empresa
+    url_e = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{empresa_id}&select=estatus,fecha_vencimiento,dias_gracia,nombre"
+    res_e = requests.get(url_e, headers=headers, timeout=5)
+    if not res_e.ok or not res_e.json():
+        return jsonify({'error': 'Empresa no encontrada'}), 404
+    empresa = res_e.json()[0]
+
+    estatus        = empresa.get('estatus', 'activa')
+    fecha_venc_raw = empresa.get('fecha_vencimiento')
+    dias_gracia    = empresa.get('dias_gracia') or 15
+
+    # Calcular días para vencimiento del plan
+    dias_para_vencer = None
+    if fecha_venc_raw:
+        fecha_venc = datetime.strptime(fecha_venc_raw, '%Y-%m-%d').date()
+        dias_para_vencer = (fecha_venc - hoy).days
+
+    # Pagos vencidos o próximos a vencer (capta_pagos)
+    url_p = (f"{SUPABASE_URL}/rest/v1/capta_pagos"
+             f"?empresa_id=eq.{empresa_id}"
+             f"&select=tipo,concepto,vencimiento,estado,monto")
+    res_p = requests.get(url_p, headers=headers, timeout=5)
+    pagos = res_p.json() if res_p.ok else []
+
+    alertas_pagos = []
+    for p in pagos:
+        if not p.get('vencimiento'):
+            continue
+        venc_pago = datetime.strptime(p['vencimiento'][:10], '%Y-%m-%d').date()
+        dias_diff = (venc_pago - hoy).days
+        if dias_diff < 0:
+            alertas_pagos.append({
+                'tipo': p['tipo'],
+                'concepto': p.get('concepto', p['tipo']),
+                'dias_vencido': abs(dias_diff),
+                'nivel': 'vencido'
+            })
+        elif dias_diff <= 7:
+            alertas_pagos.append({
+                'tipo': p['tipo'],
+                'concepto': p.get('concepto', p['tipo']),
+                'dias_para_vencer': dias_diff,
+                'nivel': 'proximo'
+            })
+
+    return jsonify({
+        'estatus': estatus,
+        'dias_para_vencer': dias_para_vencer,
+        'dias_gracia': dias_gracia,
+        'alertas_pagos': alertas_pagos,
+        'nombre': empresa.get('nombre', '')
+    })
+    
     # ──────────────────────────────────────────────────────────────────────
 # COMPETENCIA DIRECTA POR PRODUCTO
 # GET  /api/producto_competencia?producto_id=X&empresa_id=Y  → lista

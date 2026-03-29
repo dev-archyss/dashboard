@@ -567,10 +567,32 @@ footer{
             </div>
           </div>
 
-          <div class="error-box" id="errorBox">
-            <i class="fas fa-triangle-exclamation"></i>
-            <span id="errorMsg">Empresa o clave incorrecta.</span>
-          </div>
+          <!-- Modal bloqueo -->
+<div id="modalBloqueo" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);align-items:center;justify-content:center">
+  <div style="background:#1a1a2e;border:1px solid rgba(244,63,94,.4);border-radius:16px;padding:36px 32px;max-width:420px;width:90%;text-align:center;box-shadow:0 0 60px rgba(244,63,94,.2)">
+    <div style="width:64px;height:64px;background:rgba(244,63,94,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+      <i class="fas fa-lock" style="font-size:1.6rem;color:#f43f5e"></i>
+    </div>
+    <div style="font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:8px" id="modalBloqueoTitulo">Acceso suspendido</div>
+    <div style="font-size:.85rem;color:#94a3b8;line-height:1.6;margin-bottom:24px" id="modalBloqueoMsg">
+      Tu cuenta ha sido bloqueada por incumplimiento de pago.<br>
+      Comunícate con la administración para reactivar el servicio.
+    </div>
+    <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:.78rem;color:#a5b4fc">
+      <i class="fas fa-headset" style="margin-right:6px"></i>
+      Contacta al administrador de CAPTA para regularizar tu cuenta
+    </div>
+    <button onclick="document.getElementById('modalBloqueo').style.display='none'" 
+      style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:.84rem">
+      Cerrar
+    </button>
+  </div>
+</div>
+
+<div class="error-box" id="errorBox">
+  <i class="fas fa-triangle-exclamation"></i>
+  <span id="errorMsg">Empresa o clave incorrecta.</span>
+</div>
 
           <button type="submit" class="btn-login" id="btnLogin">
             <div class="btn-inner">
@@ -646,15 +668,44 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
   btn.classList.add('loading');
   btn.disabled = true;
 });
+/* ── Manejar errores de Flask (via Jinja + query param) ── */
+(function() {
+  const errJinja = "{{ error | default('') }}";
+  const errQuery = new URLSearchParams(location.search).get('error');
+  const err = errJinja || errQuery;
 
-/* ── Mostrar error si Flask lo envía via query param (opcional) ──── */
-const urlErr = new URLSearchParams(location.search).get('error');
-if (urlErr) {
-  const box = document.getElementById('errorBox');
-  const msg = document.getElementById('errorMsg');
-  box.classList.add('show');
-  if (urlErr === '1') msg.textContent = 'Empresa o clave incorrecta.';
-}
+  if (!err) return;
+
+  const modal  = document.getElementById('modalBloqueo');
+  const titulo = document.getElementById('modalBloqueoTitulo');
+  const msg    = document.getElementById('modalBloqueoMsg');
+  const box    = document.getElementById('errorBox');
+  const errMsg = document.getElementById('errorMsg');
+
+  if (err === 'bloqueada') {
+    titulo.textContent = '🔒 Cuenta bloqueada';
+    msg.innerHTML = 'Tu cuenta ha sido <strong style="color:#f43f5e">bloqueada por incumplimiento de pago</strong>.<br><br>Comunícate con la administración de CAPTA para regularizar tu situación y reactivar el servicio.';
+    modal.style.display = 'flex';
+
+  } else if (err === 'suspendida') {
+    titulo.textContent = '⏸ Cuenta suspendida';
+    msg.innerHTML = 'Tu cuenta está temporalmente <strong style="color:#f59e0b">suspendida</strong>.<br><br>Contacta al administrador para más información.';
+    modal.style.display = 'flex';
+
+  } else if (err === 'inactiva') {
+    box.classList.add('show');
+    errMsg.textContent = 'La cuenta no está activa. Contacta al administrador.';
+
+  } else if (err === '1' || err === 'incorrecta') {
+    box.classList.add('show');
+    errMsg.textContent = 'Empresa o clave incorrecta.';
+
+  } else {
+    // Cualquier otro mensaje de error genérico de Flask
+    box.classList.add('show');
+    errMsg.textContent = err;
+  }
+})();
 
 /* ── Enter en campo empresa → siguiente campo ────────────────────── */
 document.getElementById('empresa').addEventListener('keydown', function(e) {

@@ -1,4 +1,4 @@
-{# CAPTA — navbar.html universal v3 #}
+{# CAPTA — navbar.html universal v4 — con sistema de alertas de cuenta #}
 <script>
 (function(){var t=localStorage.getItem('sp-theme'),s=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||((!t)&&s))document.documentElement.classList.add('dark');})();
 </script>
@@ -20,6 +20,116 @@
 .sp-nav-links.loading-mods > *:not([data-nav-core]) {
   visibility: hidden;
 }
+
+/* ── Banner de alerta de cuenta ── */
+#captaAlertaBanner {
+  display: none;
+  background: linear-gradient(90deg, rgba(245,158,11,.13), rgba(245,158,11,.06));
+  border-bottom: 1px solid rgba(245,158,11,.35);
+  padding: 7px 20px;
+  font-size: .78rem;
+  font-weight: 500;
+  color: #f59e0b;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 100;
+}
+#captaAlertaBanner i { flex-shrink: 0; }
+#captaAlertaBanner .banner-contact {
+  margin-left: auto;
+  font-size: .72rem;
+  color: var(--muted, #94a3b8);
+  white-space: nowrap;
+}
+
+/* ── Modal bloqueo ── */
+#captaModalBloqueo {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  align-items: center;
+  justify-content: center;
+}
+.capta-bloqueo-card {
+  background: #0f172a;
+  border: 1px solid rgba(244,63,94,.45);
+  border-radius: 20px;
+  padding: 44px 36px;
+  max-width: 440px;
+  width: 92%;
+  text-align: center;
+  box-shadow: 0 0 80px rgba(244,63,94,.2), 0 24px 60px rgba(0,0,0,.5);
+  animation: bloqueoIn .3s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes bloqueoIn {
+  from { opacity:0; transform: scale(.92) translateY(12px); }
+  to   { opacity:1; transform: scale(1)  translateY(0); }
+}
+.capta-bloqueo-icon {
+  width: 72px; height: 72px;
+  background: rgba(244,63,94,.15);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 24px;
+  border: 1px solid rgba(244,63,94,.3);
+}
+.capta-bloqueo-icon i { font-size: 1.8rem; color: #f43f5e; }
+.capta-bloqueo-titulo {
+  font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 10px;
+  font-family: 'Syne', sans-serif;
+}
+.capta-bloqueo-msg {
+  font-size: .86rem; color: #94a3b8; line-height: 1.75; margin-bottom: 28px;
+}
+.capta-bloqueo-msg strong { color: #f43f5e; }
+.capta-bloqueo-contacto {
+  background: rgba(99,102,241,.1);
+  border: 1px solid rgba(99,102,241,.25);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  font-size: .78rem;
+  color: #a5b4fc;
+  text-align: left;
+  line-height: 1.5;
+}
+.capta-bloqueo-contacto i { margin-right: 8px; }
+.capta-bloqueo-btn {
+  background: #f43f5e;
+  border: none;
+  color: #fff;
+  padding: 13px 28px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: .86rem;
+  font-weight: 700;
+  width: 100%;
+  font-family: 'DM Sans', sans-serif;
+  transition: background .15s, transform .1s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.capta-bloqueo-btn:hover { background: #e11d48; transform: translateY(-1px); }
+.capta-bloqueo-btn:active { transform: translateY(0); }
+
+/* ── Modal suspendida (amber) ── */
+.capta-bloqueo-card.suspendida {
+  border-color: rgba(245,158,11,.45);
+  box-shadow: 0 0 80px rgba(245,158,11,.15), 0 24px 60px rgba(0,0,0,.5);
+}
+.capta-bloqueo-card.suspendida .capta-bloqueo-icon {
+  background: rgba(245,158,11,.15);
+  border-color: rgba(245,158,11,.3);
+}
+.capta-bloqueo-card.suspendida .capta-bloqueo-icon i { color: #f59e0b; }
+.capta-bloqueo-card.suspendida .capta-bloqueo-msg strong { color: #f59e0b; }
+.capta-bloqueo-card.suspendida .capta-bloqueo-btn { background: #d97706; }
+.capta-bloqueo-card.suspendida .capta-bloqueo-btn:hover { background: #b45309; }
 </style>
 
 <nav class="sp-nav" id="mainNav">
@@ -95,6 +205,34 @@
   </div>
 </nav>
 
+<!-- ══ BANNER DE ALERTA DE CUENTA ══ -->
+<div id="captaAlertaBanner">
+  <i class="fas fa-exclamation-triangle"></i>
+  <span id="captaAlertaMsg"></span>
+  <span class="banner-contact">
+    <i class="fas fa-headset" style="margin-right:4px"></i>Contacta al administrador para regularizar
+  </span>
+</div>
+
+<!-- ══ MODAL BLOQUEO / SUSPENSIÓN ══ -->
+<div id="captaModalBloqueo">
+  <div class="capta-bloqueo-card" id="captaBloqueoCard">
+    <div class="capta-bloqueo-icon">
+      <i id="captaBloqueoIco" class="fas fa-lock"></i>
+    </div>
+    <div class="capta-bloqueo-titulo" id="captaModalTitulo">Acceso restringido</div>
+    <div class="capta-bloqueo-msg" id="captaModalMsg"></div>
+    <div class="capta-bloqueo-contacto">
+      <i class="fas fa-headset"></i>
+      Comunícate con la administración de <strong>CAPTA</strong> para regularizar
+      tu cuenta y reactivar el servicio.
+    </div>
+    <button class="capta-bloqueo-btn" onclick="captaLogout(event)">
+      <i class="fas fa-right-from-bracket"></i> Cerrar sesión
+    </button>
+  </div>
+</div>
+
 <!-- DRAWER MOBILE -->
 <div class="sp-drawer" id="drawer">
   <div class="sp-drawer-overlay" onclick="closeDrawer()"></div>
@@ -146,41 +284,126 @@
 </div>
 
 <script>
-/* ── CAPTA NAV v4 — credenciales desde backend ── */
+/* ── CAPTA NAV v4 — con sistema de alertas de cuenta ── */
 
-// window.db se inicializa aquí y queda disponible para TODOS los templates
 window.db = null;
 let _captaLineas = [];
 let _captaLinea  = localStorage.getItem('sp-linea') || '';
 
-/* ── Cargar config desde Flask y crear cliente Supabase ── */
-// Flag: indica si db ya fue inicializado
 window._captaDbReady = false;
 
-// Los templates llaman captaReady(fn) en vez de escuchar el evento.
-// Si db ya está listo ejecuta fn() inmediatamente, si no, espera el evento.
 window.captaReady = function(fn) {
   if (window._captaDbReady) { fn(); }
   else { window.addEventListener('capta:db-ready', fn, { once: true }); }
 };
 
-// Mapa: módulo → selector CSS del link en navbar y drawer
+/* ── Mapa módulos → selectores CSS ── */
 const _MOD_LINKS = {
-  analisis_precios:  ['[href="/analisis"]'],
-  caras:             ['[href="/caras"]'],
-  metros_espacios:   ['[href="/metros_espacios"]'],
-  clientes:          ['[href="/clientes"]'],
-  promotores:        ['[href="/promotores"]'],
-  lineas:            ['[href="/lineas"]'],
-  productos:         ['[href="/productos"]'],
-  competencia:       ['[href="/competencia"]'],
-  stock:             ['[href="/stock"]'],
-  planograma:        ['[href="/planograma"]'],
+  analisis_precios:     ['[href="/analisis"]'],
+  caras:                ['[href="/caras"]'],
+  metros_espacios:      ['[href="/metros_espacios"]'],
+  clientes:             ['[href="/clientes"]'],
+  promotores:           ['[href="/promotores"]'],
+  lineas:               ['[href="/lineas"]'],
+  productos:            ['[href="/productos"]'],
+  competencia:          ['[href="/competencia"]'],
+  stock:                ['[href="/stock"]'],
+  planograma:           ['[href="/planograma"]'],
   gps_verificacion:     ['[href="/gps"]'],
   espacios_adicionales: ['[href="/espacios_adicionales"]'],
   reportes:             ['[href="/reportes"]'],
 };
 
+/* ══════════════════════════════════════════════
+   VERIFICACIÓN DE ESTADO DE CUENTA
+══════════════════════════════════════════════ */
+async function _checkCuentaStatus() {
+  try {
+    const res = await fetch('/api/empresa/status');
+    if (!res.ok) return; // Silencioso — no interrumpir si falla
+    const s = await res.json();
+
+    const modal    = document.getElementById('captaModalBloqueo');
+    const card     = document.getElementById('captaBloqueoCard');
+    const ico      = document.getElementById('captaBloqueoIco');
+    const titulo   = document.getElementById('captaModalTitulo');
+    const msg      = document.getElementById('captaModalMsg');
+    const banner   = document.getElementById('captaAlertaBanner');
+    const bannerMsg= document.getElementById('captaAlertaMsg');
+
+    // ── BLOQUEADA — modal bloqueante sin escape ──────────────────────
+    if (s.estatus === 'bloqueada') {
+      card.classList.remove('suspendida');
+      ico.className = 'fas fa-lock';
+      titulo.textContent = 'Cuenta bloqueada';
+      msg.innerHTML = 'Tu empresa ha sido <strong>bloqueada por incumplimiento de pago</strong>.<br><br>'
+        + 'No es posible acceder al sistema hasta regularizar el saldo pendiente con la administración.';
+      modal.style.display = 'flex';
+      return; // No procesar más alertas
+    }
+
+    // ── SUSPENDIDA — modal bloqueante (tono amber) ───────────────────
+    if (s.estatus === 'suspendida') {
+      card.classList.add('suspendida');
+      ico.className = 'fas fa-pause-circle';
+      titulo.textContent = 'Cuenta suspendida';
+      msg.innerHTML = 'Tu cuenta está temporalmente <strong>suspendida</strong>.<br><br>'
+        + 'Contacta al administrador para conocer los detalles y reactivar el servicio.';
+      modal.style.display = 'flex';
+      return;
+    }
+
+    // ── ALERTAS DE VENCIMIENTO DEL PLAN ─────────────────────────────
+    const alertas = [];
+
+    if (s.dias_para_vencer !== null && s.dias_para_vencer !== undefined) {
+      if (s.dias_para_vencer < 0) {
+        const dias = Math.abs(s.dias_para_vencer);
+        alertas.push(
+          `⚠ Tu plan venció hace ${dias} día${dias === 1 ? '' : 's'} — `
+          + `período de gracia: ${s.dias_gracia} días`
+        );
+      } else if (s.dias_para_vencer === 0) {
+        alertas.push('⚠ Tu plan vence hoy');
+      } else if (s.dias_para_vencer <= 10) {
+        alertas.push(
+          `⚠ Tu plan vence en ${s.dias_para_vencer} día${s.dias_para_vencer === 1 ? '' : 's'}`
+        );
+      }
+    }
+
+    // ── ALERTAS DE PAGOS PENDIENTES / VENCIDOS ──────────────────────
+    if (Array.isArray(s.alertas_pagos)) {
+      s.alertas_pagos.forEach(p => {
+        if (p.nivel === 'vencido') {
+          alertas.push(
+            `Pago "${p.concepto}" vencido hace ${p.dias_vencido} día${p.dias_vencido === 1 ? '' : 's'}`
+          );
+        } else if (p.nivel === 'proximo') {
+          const d = p.dias_para_vencer;
+          alertas.push(
+            d === 0
+              ? `Pago "${p.concepto}" vence hoy`
+              : `Pago "${p.concepto}" vence en ${d} día${d === 1 ? '' : 's'}`
+          );
+        }
+      });
+    }
+
+    // ── Mostrar banner si hay alertas ───────────────────────────────
+    if (alertas.length > 0) {
+      bannerMsg.textContent = alertas.join('  ·  ');
+      banner.style.display = 'flex';
+    }
+
+  } catch(e) {
+    console.warn('CAPTA: no se pudo verificar estado de cuenta', e);
+  }
+}
+
+/* ══════════════════════════════════════════════
+   MÓDULOS
+══════════════════════════════════════════════ */
 async function _applyModules(empresaId) {
   const navLinks = document.getElementById('navLinks');
   if (navLinks) navLinks.classList.add('loading-mods');
@@ -192,23 +415,18 @@ async function _applyModules(empresaId) {
     if (!res.ok) return;
     const data = await res.json();
     const raw  = data[0]?.modulos_activos;
-    // Si no hay modulos_activos definidos => empresa legacy => mostrar todo
     if (!raw || Object.keys(raw).length === 0) return;
     const mods = typeof raw === 'string' ? JSON.parse(raw) : raw;
 
-    // Ocultar links no permitidos en navbar y drawer
     Object.entries(_MOD_LINKS).forEach(([key, selectors]) => {
       const allowed = mods[key] === true;
       selectors.forEach(sel => {
         document.querySelectorAll(sel).forEach(el => {
           el.style.display      = allowed ? '' : 'none';
           el.dataset.modBlocked = allowed ? '' : '1';
-          // Si el link está dentro del dropdown de análisis,
-          // también marcar el <div> padre en navLinks
           const navParent = el.parentElement?.closest('#navLinks > div, #navLinks > a');
           if (navParent && !allowed) {
-            // Solo ocultar el padre si TODOS sus hijos están bloqueados
-            const siblings = navParent.querySelectorAll('a[href]');
+            const siblings   = navParent.querySelectorAll('a[href]');
             const allBlocked = Array.from(siblings).every(s => s.dataset.modBlocked === '1');
             if (allBlocked) { navParent.style.display = 'none'; navParent.dataset.modBlocked = '1'; }
           }
@@ -216,16 +434,12 @@ async function _applyModules(empresaId) {
       });
     });
 
-    // Si todos los módulos de análisis están ocultos, ocultar el dropdown completo
     const analisisKeys = ['analisis_precios','caras','metros_espacios'];
-    const anyAnalisis = analisisKeys.some(k => mods[k] === true);
+    const anyAnalisis  = analisisKeys.some(k => mods[k] === true);
     const wrap = document.getElementById('analisisDropdownWrap');
     if (wrap) wrap.style.display = anyAnalisis ? '' : 'none';
 
-    // Guardar en window para que las rutas Flask también puedan verificar
     window._captaModulos = mods;
-
-    // Recalcular overflow DESPUÉS de ocultar módulos
     if (navLinks) navLinks.classList.remove('loading-mods');
     _checkNavOverflow();
 
@@ -236,6 +450,9 @@ async function _applyModules(empresaId) {
   }
 }
 
+/* ══════════════════════════════════════════════
+   INIT SUPABASE
+══════════════════════════════════════════════ */
 async function _initSupabase() {
   try {
     const res = await fetch('/api/config');
@@ -246,12 +463,15 @@ async function _initSupabase() {
     window.db = supabase.createClient(cfg.supabase_url, cfg.supabase_key);
     await _loadLineas();
 
-    // Aplicar restricciones de módulos según el plan de la empresa
     const eid = localStorage.getItem('empresa_id');
     if (eid) await _applyModules(eid);
 
     window._captaDbReady = true;
     window.dispatchEvent(new Event('capta:db-ready'));
+
+    // Verificar estado de cuenta DESPUÉS de inicializar todo
+    await _checkCuentaStatus();
+
   } catch(e) {
     console.error('CAPTA: error inicializando Supabase', e);
     window.location.href = '/';
@@ -290,7 +510,7 @@ syncTheme();
   });
 })();
 
-/* ── ACTIVO ── */
+/* ── LINK ACTIVO ── */
 (function() {
   const path = window.location.pathname;
   document.querySelectorAll('[data-nav]').forEach(a => {
@@ -347,12 +567,10 @@ window.captaLightbox = function(src) {
 
 /* ── OVERFLOW RESPONSIVO ── */
 function _checkNavOverflow() {
-  const nav = document.getElementById('navLinks');
+  const nav  = document.getElementById('navLinks');
   const more = document.getElementById('navMore'); if (!nav || !more) return;
-  const dd = document.getElementById('navDropdown'); dd.innerHTML = '';
-  // Restaurar solo los que NO están bloqueados por módulo
+  const dd   = document.getElementById('navDropdown'); dd.innerHTML = '';
   Array.from(nav.children).forEach(el => {
-    const href = el.getAttribute('href') || el.querySelector('a')?.getAttribute('href') || '';
     const blocked = el.dataset.modBlocked === '1';
     if (!blocked) el.style.display = '';
   });
@@ -369,7 +587,7 @@ function _checkNavOverflow() {
 }
 const _moreBtn = document.getElementById('navMoreBtn');
 if (_moreBtn) _moreBtn.onclick = () => {
-  const dd = document.getElementById('navDropdown');
+  const dd  = document.getElementById('navDropdown');
   const ico = document.getElementById('navMoreIco');
   dd.classList.toggle('open');
   ico.style.transform = dd.classList.contains('open') ? 'rotate(180deg)' : '';
@@ -388,21 +606,21 @@ function _updateHamburger() {
   if (!nav || !ham) return; ham.style.display = nav.offsetWidth < 200 ? '' : 'none';
 }
 
-/* ── INIT — primero db, luego layout ── */
+/* ── INIT ── */
 window.addEventListener('load', () => {
-  _initSupabase();   // async: inicializa db y dispara capta:db-ready
+  _initSupabase();
   _checkNavOverflow();
   _updateHamburger();
 });
 window.addEventListener('resize', () => { _checkNavOverflow(); _updateHamburger(); });
 new ResizeObserver(() => { _checkNavOverflow(); _updateHamburger(); }).observe(document.body);
 
-// ── Logout limpio — borra localStorage antes de redirigir ──────────
+/* ── LOGOUT ── */
 window.captaLogout = function(e) {
-    if (e) e.preventDefault();
-    localStorage.removeItem('empresa_id');
-    localStorage.removeItem('empresa_nombre');
-    localStorage.removeItem('sp-linea');
-    window.location.href = '/logout';
+  if (e) e.preventDefault();
+  localStorage.removeItem('empresa_id');
+  localStorage.removeItem('empresa_nombre');
+  localStorage.removeItem('sp-linea');
+  window.location.href = '/logout';
 };
 </script>
