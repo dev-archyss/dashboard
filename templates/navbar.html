@@ -309,7 +309,7 @@ const _MOD_LINKS = {
   competencia:          ['[href="/competencia"]'],
   stock:                ['[href="/stock"]'],
   planograma:           ['[href="/planograma"]'],
-  gps_verificacion:     ['[href="/gps"]'],
+  gps:                  ['[href="/gps"]'],
   espacios_adicionales: ['[href="/espacios_adicionales"]'],
   reportes:             ['[href="/reportes"]'],
 };
@@ -502,12 +502,32 @@ window.toggleTheme = function() {
 };
 syncTheme();
 
+
 /* ── NOMBRE EMPRESA ── */
 (function() {
-  const n = localStorage.getItem('empresa_nombre') || '';
+  // Primero intentar desde localStorage (carga instantánea)
+  const cached = localStorage.getItem('empresa_nombre');
   ['navEmpresa', 'drawerEmpresa'].forEach(id => {
-    const e = document.getElementById(id); if (e) e.textContent = n || 'Sistema';
+    const e = document.getElementById(id);
+    if (e) e.textContent = cached || '…';
   });
+
+  // Luego confirmar/actualizar desde el backend (fuente de verdad)
+  fetch('/api/dashboard/config')
+    .then(r => r.ok ? r.json() : null)
+    .then(cfg => {
+      if (!cfg) return;
+      // Guardar en localStorage para próximas cargas
+      if (cfg.empresa_nombre) localStorage.setItem('empresa_nombre', cfg.empresa_nombre);
+      if (cfg.empresa_id)     localStorage.setItem('empresa_id',     cfg.empresa_id);
+      // Actualizar UI
+      const nombre = cfg.empresa_nombre || cached || 'Sistema';
+      ['navEmpresa', 'drawerEmpresa'].forEach(id => {
+        const e = document.getElementById(id);
+        if (e) e.textContent = nombre;
+      });
+    })
+    .catch(() => {}); // Silencioso si falla
 })();
 
 /* ── LINK ACTIVO ── */
