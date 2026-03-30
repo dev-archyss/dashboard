@@ -448,8 +448,13 @@ def login():
                     return render_template('login.html', error='Clave incorrecta')
                 return render_template('login.html', error='Empresa no encontrada')
  
-            if empresa.get('estatus') != 'activa':
-                return render_template('login.html', error='La cuenta no está activa')
+            estatus = empresa.get('estatus', 'activa')
+            if estatus == 'bloqueada':
+                return render_template('login.html', error='bloqueada')
+            elif estatus == 'suspendida':
+                return render_template('login.html', error='suspendida')
+            elif estatus == 'inactiva':
+                return render_template('login.html', error='inactiva')
  
             # Limpiar sesión anterior y guardar la nueva
             session.clear()
