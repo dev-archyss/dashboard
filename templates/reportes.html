@@ -497,7 +497,7 @@ function mkChart(id,type,data,opts={}){
   const fullLabels=[...(data.labels||[])];
   const isDoughnut = type==='doughnut'||type==='pie';
   const scalesOpt = isDoughnut ? undefined : {
-    x:{ ticks:{color:tc(),font:{size:10},maxRotation:35,autoSkip:true,maxTicksLimit:10}, grid:{color:gc()} },
+    x:{ ticks:{color:tc(),font:{size:10},maxRotation:50,autoSkip:false}, grid:{color:gc()} },
     y:{ ticks:{color:tc(),font:{size:10}}, grid:{color:gc()} }
   };
   const options = {
@@ -633,7 +633,7 @@ function renderGerencial(){
   const byProm={};
   filtData.forEach(r=>{const p=r.promoter_name||'Sin nombre';byProm[p]=(byProm[p]||0)+1;});
   const topP=Object.entries(byProm).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  mkChart('c-ger-prom','bar',{labels:topP.map(([k])=>k.length>14?k.slice(0,12)+'…':k),datasets:[{data:topP.map(([,v])=>v),backgroundColor:COLORS,borderRadius:4,borderSkipped:false}]},{plugins:{legend:{display:false}}});
+  mkChart('c-ger-prom','bar',{labels:topP.map(([k])=>k),datasets:[{data:topP.map(([,v])=>v),backgroundColor:COLORS,borderRadius:4,borderSkipped:false}]},{plugins:{legend:{display:false}}});
 
   const byEst={};
   filtData.forEach(r=>{const e=r.state||'N/A';byEst[e]=(byEst[e]||0)+1;});
@@ -686,12 +686,12 @@ function renderPrecios(){
   const avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
   const topProd=Object.entries(prodUSD).map(([k,v])=>({k,v:avg(v)})).sort((a,b)=>b.v-a.v).slice(0,10);
 
-  mkChart('c-pre-prod','bar',{labels:topProd.map(x=>x.k.length>16?x.k.slice(0,14)+'…':x.k),datasets:[{data:topProd.map(x=>+x.v.toFixed(2)),backgroundColor:'rgba(79,70,229,.75)',borderRadius:4,borderSkipped:false}]},{yTick:{callback:v=>'$'+v.toFixed(1)}});
+  mkChart('c-pre-prod','bar',{labels:topProd.map(x=>x.k),datasets:[{data:topProd.map(x=>+x.v.toFixed(2)),backgroundColor:'rgba(79,70,229,.75)',borderRadius:4,borderSkipped:false}]},{yTick:{callback:v=>'$'+v.toFixed(1)}});
 
   // Nuestros vs comp por producto común
   const comunes=Object.keys(prodUSD).filter(k=>compUSD[k]).slice(0,8);
   if(comunes.length){
-    mkChart('c-pre-comp','bar',{labels:comunes.map(k=>k.length>14?k.slice(0,12)+'…':k),datasets:[
+    mkChart('c-pre-comp','bar',{labels:comunes.map(k=>k),datasets:[
       {label:'Nuestro',data:comunes.map(k=>+avg(prodUSD[k]).toFixed(2)),backgroundColor:'rgba(79,70,229,.75)',borderRadius:4,borderSkipped:false},
       {label:'Competencia',data:comunes.map(k=>+avg(compUSD[k]).toFixed(2)),backgroundColor:'rgba(220,38,38,.65)',borderRadius:4,borderSkipped:false}
     ]},{plugins:{legend:{display:true,labels:{color:tc(),font:{size:10},boxWidth:10}}}});
@@ -745,12 +745,12 @@ function renderAnaquel(){
   });
 
   const topI=Object.entries(byItem).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  mkChart('c-an-prod','bar',{labels:topI.map(([k])=>k.length>16?k.slice(0,14)+'…':k),datasets:[{data:topI.map(([,v])=>+v.toFixed(2)),backgroundColor:'rgba(5,150,105,.75)',borderRadius:4,borderSkipped:false}]},{yTick:{callback:v=>v+'m'}});
+  mkChart('c-an-prod','bar',{labels:topI.map(([k])=>k),datasets:[{data:topI.map(([,v])=>+v.toFixed(2)),backgroundColor:'rgba(5,150,105,.75)',borderRadius:4,borderSkipped:false}]},{yTick:{callback:v=>v+'m'}});
 
   mkChart('c-an-sos','doughnut',{labels:['Metros propios','Metros competencia'],datasets:[{data:[+totN[0].toFixed(2),+totC[0].toFixed(2)],backgroundColor:['rgba(79,70,229,.8)','rgba(220,38,38,.7)'],borderWidth:0}]},{plugins:{legend:{display:true,position:'bottom',labels:{color:tc(),font:{size:11},boxWidth:10}}}});
 
   const topT=Object.entries(byTrade).sort((a,b)=>b[1].n-a[1].n).slice(0,15);
-  mkChart('c-an-trade','bar',{labels:topT.map(([k])=>k.length>18?k.slice(0,16)+'…':k),datasets:[
+  mkChart('c-an-trade','bar',{labels:topT.map(([k])=>k),datasets:[
     {label:'Propios',data:topT.map(([,v])=>+v.n.toFixed(2)),backgroundColor:'rgba(79,70,229,.75)',borderRadius:4,borderSkipped:false},
     {label:'Competencia',data:topT.map(([,v])=>+v.c.toFixed(2)),backgroundColor:'rgba(220,38,38,.6)',borderRadius:4,borderSkipped:false}
   ]},{plugins:{legend:{display:true,labels:{color:tc(),font:{size:10},boxWidth:10}}}});
@@ -781,7 +781,7 @@ function renderCaras(){
   ]},{plugins:{legend:{display:true,labels:{color:tc(),font:{size:10},boxWidth:10}}}});
 
   const promE=Object.entries(byProm).sort((a,b)=>(b[1].a-b[1].b)-(a[1].a-a[1].b)).slice(0,10);
-  mkChart('c-car-prom','bar',{labels:promE.map(([k])=>k.length>12?k.slice(0,10)+'…':k),datasets:[{data:promE.map(([,v])=>+(v.a-v.b).toFixed(1)),backgroundColor:promE.map(([,v])=>v.a>=v.b?'rgba(5,150,105,.75)':'rgba(220,38,38,.65)'),borderRadius:4,borderSkipped:false}]});
+  mkChart('c-car-prom','bar',{labels:promE.map(([k])=>k),datasets:[{data:promE.map(([,v])=>+(v.a-v.b).toFixed(1)),backgroundColor:promE.map(([,v])=>v.a>=v.b?'rgba(5,150,105,.75)':'rgba(220,38,38,.65)'),borderRadius:4,borderSkipped:false}]});
 
   const totNuestras=totAft;const totComp=Math.max(totCBef-totBef,0);
   mkChart('c-car-sos','bar',{labels:['Total acumulado'],datasets:[
@@ -806,10 +806,10 @@ function renderStock(){
   });
 
   const topP=Object.entries(byProd).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  mkChart('c-stk-prod','bar',{labels:topP.map(([k])=>k.length>16?k.slice(0,14)+'…':k),datasets:[{data:topP.map(([,v])=>v),backgroundColor:'rgba(220,38,38,.7)',borderRadius:4,borderSkipped:false}]});
+  mkChart('c-stk-prod','bar',{labels:topP.map(([k])=>k),datasets:[{data:topP.map(([,v])=>v),backgroundColor:'rgba(220,38,38,.7)',borderRadius:4,borderSkipped:false}]});
 
   const topT=Object.entries(byTrade).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  mkChart('c-stk-trade','bar',{labels:topT.map(([k])=>k.length>16?k.slice(0,14)+'…':k),datasets:[{data:topT.map(([,v])=>v),backgroundColor:'rgba(217,119,6,.75)',borderRadius:4,borderSkipped:false}]});
+  mkChart('c-stk-trade','bar',{labels:topT.map(([k])=>k),datasets:[{data:topT.map(([,v])=>v),backgroundColor:'rgba(217,119,6,.75)',borderRadius:4,borderSkipped:false}]});
 
   document.querySelector('#t-stk tbody').innerHTML=rows.slice(0,200).map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="6" class="empty">Sin quiebres registrados</td></tr>';
 }
@@ -869,16 +869,16 @@ function renderPromotores(){
 
   // Charts promotores
   const top8=list.slice(0,8);
-  mkChart('c-prom-vis','bar',{labels:top8.map(p=>p.name.length>10?p.name.slice(0,9)+'…':p.name),datasets:[
+  mkChart('c-prom-vis','bar',{labels:top8.map(p=>p.name),datasets:[
     {label:'Visitas',data:top8.map(p=>p.v),backgroundColor:'rgba(79,70,229,.75)',borderRadius:4,borderSkipped:false},
     {label:'Meta',data:top8.map(p=>p.dias*8),backgroundColor:'rgba(100,116,139,.3)',borderRadius:4,borderSkipped:false}
   ]},{plugins:{legend:{display:true,labels:{color:tc(),font:{size:10},boxWidth:10}}}});
 
-  mkChart('c-prom-gps','bar',{labels:top8.map(p=>p.name.length>10?p.name.slice(0,9)+'…':p.name),datasets:[{data:top8.map(p=>p.v?Math.round(p.conf/p.v*100):0),backgroundColor:top8.map(p=>p.v&&p.conf/p.v>=.7?'rgba(5,150,105,.75)':'rgba(217,119,6,.75)'),borderRadius:4,borderSkipped:false}]},{yTick:{callback:v=>v+'%'}});
+  mkChart('c-prom-gps','bar',{labels:top8.map(p=>p.name),datasets:[{data:top8.map(p=>p.v?Math.round(p.conf/p.v*100):0),backgroundColor:top8.map(p=>p.v&&p.conf/p.v>=.7?'rgba(5,150,105,.75)':'rgba(217,119,6,.75)'),borderRadius:4,borderSkipped:false}]},{yTick:{callback:v=>v+'%'}});
 
-  mkChart('c-prom-metros','bar',{labels:top8.map(p=>p.name.length>10?p.name.slice(0,9)+'…':p.name),datasets:[{data:top8.map(p=>+p.metros.toFixed(1)),backgroundColor:'rgba(8,145,178,.7)',borderRadius:4,borderSkipped:false}]},{yTick:{callback:v=>v+'m'}});
+  mkChart('c-prom-metros','bar',{labels:top8.map(p=>p.name),datasets:[{data:top8.map(p=>+p.metros.toFixed(1)),backgroundColor:'rgba(8,145,178,.7)',borderRadius:4,borderSkipped:false}]},{yTick:{callback:v=>v+'m'}});
 
-  mkChart('c-prom-caras','bar',{labels:top8.map(p=>p.name.length>10?p.name.slice(0,9)+'…':p.name),datasets:[{data:top8.map(p=>+(p.carAft-p.carBef).toFixed(0)),backgroundColor:top8.map(p=>(p.carAft-p.carBef)>=0?'rgba(5,150,105,.75)':'rgba(220,38,38,.65)'),borderRadius:4,borderSkipped:false}]});
+  mkChart('c-prom-caras','bar',{labels:top8.map(p=>p.name),datasets:[{data:top8.map(p=>+(p.carAft-p.carBef).toFixed(0)),backgroundColor:top8.map(p=>(p.carAft-p.carBef)>=0?'rgba(5,150,105,.75)':'rgba(220,38,38,.65)'),borderRadius:4,borderSkipped:false}]});
 
   // Tabla completa
   document.querySelector('#t-prom tbody').innerHTML=list.map((p,i)=>{
@@ -910,11 +910,11 @@ function renderEspacios(){
   mkChart('c-esp-tipo','doughnut',{labels:Object.keys(tipos),datasets:[{data:Object.values(tipos),backgroundColor:['#8b5cf6','#06b6d4','#f59e0b','#10b981'],borderWidth:0}]},{plugins:{legend:{display:true,position:'bottom',labels:{color:tc(),font:{size:10},boxWidth:10}}}});
 
   const topT=Object.entries(byTrade).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  mkChart('c-esp-trade','bar',{labels:topT.map(([k])=>k.length>16?k.slice(0,14)+'…':k),datasets:[{data:topT.map(([,v])=>v),backgroundColor:'rgba(139,92,246,.75)',borderRadius:4,borderSkipped:false}]});
+  mkChart('c-esp-trade','bar',{labels:topT.map(([k])=>k),datasets:[{data:topT.map(([,v])=>v),backgroundColor:'rgba(139,92,246,.75)',borderRadius:4,borderSkipped:false}]});
 
   const promE=Object.entries(byProm).slice(0,10);
   const cols=['#8b5cf6','#06b6d4','#f59e0b','#10b981'];
-  mkChart('c-esp-prom','bar',{labels:promE.map(([k])=>k.length>12?k.slice(0,10)+'…':k),datasets:['Torre','Cabezal','Paleta','Exhibición'].map((t,i)=>({label:t,data:promE.map(([,v])=>v[t]||0),backgroundColor:cols[i],borderRadius:3,borderSkipped:false}))},{plugins:{legend:{display:true,labels:{color:tc(),font:{size:10},boxWidth:10}}}});
+  mkChart('c-esp-prom','bar',{labels:promE.map(([k])=>k),datasets:['Torre','Cabezal','Paleta','Exhibición'].map((t,i)=>({label:t,data:promE.map(([,v])=>v[t]||0),backgroundColor:cols[i],borderRadius:3,borderSkipped:false}))},{plugins:{legend:{display:true,labels:{color:tc(),font:{size:10},boxWidth:10}}}});
 }
 
 // ════════════════════════════════════════
