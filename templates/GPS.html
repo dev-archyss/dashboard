@@ -57,12 +57,12 @@
     </div>
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border border-gray-100 dark:border-slate-700 shadow-sm">
       <p class="text-2xl font-extrabold text-amber-500" id="kpiTiempoPromedio">—</p>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Tiempo prom. por establecimiento</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Tiempo prom. en local</p>
     </div>
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border border-gray-100 dark:border-slate-700 shadow-sm">
       <p class="text-2xl font-extrabold text-red-500" id="kpiSospechosas">—</p>
       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Visitas sospechosas</p>
-      <p class="text-xs text-gray-400 mt-0.5">&lt;5 min entre visitas</p>
+      <p class="text-xs text-gray-400 mt-0.5">&lt;3 min en local</p>
     </div>
   </div>
 
@@ -142,7 +142,7 @@
       <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div>
           <h3 class="text-sm font-bold text-gray-700 dark:text-white">Mapa interactivo de visitas</h3>
-          <p class="text-xs text-gray-400 mt-0.5">Verde = confirmado · Rojo = no confirmado · Naranja = sin coord. cliente</p>
+          <p class="text-xs text-gray-400 mt-0.5">Verde = confirmado · Rojo = no confirmado · Naranja = sin coord. cliente · Morado = sospechosa</p>
         </div>
         <div class="flex items-center gap-4 text-xs text-gray-500">
           <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>Confirmada</span>
@@ -159,7 +159,7 @@
       <div class="flex items-center justify-between mb-5 flex-wrap gap-4">
         <div>
           <h3 class="text-sm font-bold text-gray-700 dark:text-white mb-1">Ruta del día por promotor</h3>
-          <p class="text-xs text-gray-400">Secuencia de visitas en orden cronológico con tiempos estimados</p>
+          <p class="text-xs text-gray-400">Secuencia de visitas en orden cronológico · ⏱ tiempo en local · 🚗 estimado de viaje</p>
         </div>
         <select id="promotorRutaSelect"
           class="h-9 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm min-w-52"
@@ -172,12 +172,10 @@
       <div id="resumenDia" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6"></div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Mapa de ruta -->
         <div>
           <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Ruta en mapa</p>
           <div id="mapRuta" style="height:380px;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb"></div>
         </div>
-        <!-- Timeline -->
         <div>
           <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Timeline del día</p>
           <div id="timeline" class="space-y-1 max-h-96 overflow-y-auto pr-2"></div>
@@ -189,11 +187,14 @@
     <div id="tab-tiempos" class="hidden p-5">
       <div class="mb-4">
         <h3 class="text-sm font-bold text-gray-700 dark:text-white mb-1">Análisis de tiempos por establecimiento</h3>
-        <p class="text-xs text-gray-400">Tiempo estimado de permanencia = diferencia entre visita actual y siguiente del mismo promotor ese día</p>
+        <p class="text-xs text-gray-400">
+          <span class="text-amber-500 font-semibold">Tiempo en local</span> = tiempo total entre visitas menos el viaje estimado ·
+          <span class="text-blue-500 font-semibold">Viaje prom.</span> = estimado según distancia GPS (pie &lt;500m · ciudad &lt;20km · carretera ≥20km)
+        </p>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div>
-          <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Tiempo promedio por promotor (min)</p>
+          <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Tiempo en local por promotor (min)</p>
           <div style="position:relative;height:260px"><canvas id="chartTiempoPromotor"></canvas></div>
         </div>
         <div>
@@ -201,14 +202,14 @@
           <div style="position:relative;height:260px"><canvas id="chartHoraDia"></canvas></div>
         </div>
       </div>
-      <!-- Tabla comercios con más tiempo -->
-      <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Top comercios por tiempo de permanencia promedio</p>
+      <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Top comercios por tiempo de permanencia</p>
       <div class="overflow-x-auto rounded-xl border border-gray-100 dark:border-slate-700 max-h-72">
         <table class="min-w-full divide-y divide-gray-100 dark:divide-slate-700 text-sm">
           <thead class="table-header-sticky">
             <tr>
               <th class="py-2 px-4 text-left text-xs font-bold text-gray-500 uppercase">Comercio</th>
-              <th class="py-2 px-4 text-center text-xs font-bold text-amber-500 uppercase">Tiempo prom.</th>
+              <th class="py-2 px-4 text-center text-xs font-bold text-amber-500 uppercase">⏱ En local</th>
+              <th class="py-2 px-4 text-center text-xs font-bold text-blue-500 uppercase">🚗 Viaje prom.</th>
               <th class="py-2 px-4 text-center text-xs font-bold text-gray-500 uppercase">Visitas</th>
               <th class="py-2 px-4 text-center text-xs font-bold text-gray-500 uppercase">Hora más frecuente</th>
             </tr>
@@ -252,7 +253,8 @@
               <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Comercio</th>
               <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
               <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Dist. (m)</th>
-              <th class="py-3 px-4 text-center text-xs font-bold text-amber-500 uppercase tracking-wider">Tiempo en est.</th>
+              <th class="py-3 px-4 text-center text-xs font-bold text-amber-500 uppercase tracking-wider">⏱ En local</th>
+              <th class="py-3 px-4 text-center text-xs font-bold text-blue-500 uppercase tracking-wider">🚗 Viaje</th>
               <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">GPS</th>
               <th class="py-3 px-4 text-center text-xs font-bold text-red-500 uppercase tracking-wider">Alerta</th>
             </tr>
@@ -271,7 +273,7 @@ if (!empresaId) window.location.replace('/');
 
 // ── Estado global ─────────────────────────────────────────────────
 let allRecords    = [];
-let processed     = [];   // registros con tiempos calculados
+let processed     = [];
 let promoters     = [];
 let estados       = [];
 let mapMain       = null;
@@ -361,20 +363,20 @@ async function loadCatalogs() {
 
 // ── Fetch principal ───────────────────────────────────────────────
 async function cargar() {
-  const fecha  = document.getElementById('fechaSelect').value;
-  const prom   = document.getElementById('promotorSelect').value;
-  const estado = document.getElementById('estadoSelect').value;
+  const fecha   = document.getElementById('fechaSelect').value;
+  const prom    = document.getElementById('promotorSelect').value;
+  const estado  = document.getElementById('estadoSelect').value;
   const lineaId = localStorage.getItem('sp-linea') || '';
 
   const p = new URLSearchParams();
-  if (fecha)   { p.append('date_from', fecha); p.append('date_to', fecha); }
+  if (fecha) { p.append('date_from', fecha); p.append('date_to', fecha); }
   else {
     const hoy = new Date(Date.now() - 4*3600000).toISOString().split('T')[0];
     p.append('date_from', hoy); p.append('date_to', hoy);
     document.getElementById('fechaSelect').value = hoy;
   }
-  if (prom !== 'all')   p.append('promoter_id', prom);
-  if (lineaId)          p.append('linea_id', lineaId);
+  if (prom !== 'all') p.append('promoter_id', prom);
+  if (lineaId)        p.append('linea_id', lineaId);
   p.append('empresa_id', empresaId);
 
   try {
@@ -385,7 +387,6 @@ async function cargar() {
       return true;
     });
 
-    // Poblar selector de promotores de ruta
     const prSet = [...new Set(allRecords.map(r => r.promoter_name).filter(Boolean))].sort();
     const prSel = document.getElementById('promotorRutaSelect');
     prSel.innerHTML = '<option value="">— Selecciona promotor —</option>';
@@ -401,9 +402,17 @@ async function cargar() {
   } catch(e) { console.error(e); }
 }
 
-// ── Procesar: calcular tiempos por promotor/día ───────────────────
+// ── Estimar tiempo de viaje entre dos puntos (minutos) ────────────
+// <500m → a pie 5km/h · <20km → ciudad 25km/h · ≥20km → carretera 60km/h
+function estimarTiempoViaje(distMetros) {
+  if (!distMetros || distMetros <= 0) return 0;
+  const km  = distMetros / 1000;
+  const vel = km < 0.5 ? 5 : km < 20 ? 25 : 60;
+  return (km / vel) * 60;
+}
+
+// ── Procesar: calcular tiempos reales por promotor/día ────────────
 function procesarRegistros() {
-  // Agrupar por promotor
   const byProm = {};
   allRecords.forEach(r => {
     const k = r.promoter_name || '—';
@@ -411,10 +420,15 @@ function procesarRegistros() {
     byProm[k].push(r);
   });
 
-  processed = allRecords.map(r => ({ ...r, tiempoEstablecimiento: null, tiempoDesplazamiento: null, esSospechosa: false }));
+  processed = allRecords.map(r => ({
+    ...r,
+    tiempoEstablecimiento: null,  // tiempo REAL en el local (descontando viaje)
+    tiempoViaje:           null,  // tiempo estimado de desplazamiento al siguiente
+    distanciaAlSiguiente:  null,  // metros entre visitas consecutivas
+    esSospechosa:          false,
+  }));
 
-  // Por cada promotor, ordenar cronológicamente y calcular tiempos
-  Object.entries(byProm).forEach(([prom, recs]) => {
+  Object.entries(byProm).forEach(([, recs]) => {
     const sorted = [...recs].sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
 
     sorted.forEach((r, idx) => {
@@ -422,28 +436,41 @@ function procesarRegistros() {
       if (!procR) return;
 
       if (idx < sorted.length - 1) {
-        const next = sorted[idx + 1];
-        const diffMin = (new Date(next.created_at) - new Date(r.created_at)) / 60000;
-        procR.tiempoEstablecimiento = diffMin;
+        const next     = sorted[idx + 1];
+        const procNext = processed.find(p => p.id === next.id);
 
-        // Sospechosa: menos de 5 minutos entre visitas
-        if (diffMin < 5) {
-          procR.esSospechosa = true;
-          processed.find(p => p.id === next.id).esSospechosa = true;
-        }
+        // Tiempo total entre inicio de esta visita e inicio de la siguiente
+        const totalMin = (new Date(next.created_at) - new Date(r.created_at)) / 60000;
 
-        // Distancia entre visitas consecutivas
+        // Calcular distancia y tiempo de viaje estimado
+        let distMetros = null;
+        let viajeMin   = 0;
+
         if (r.latitude && r.longitude && next.latitude && next.longitude) {
-          const dist = haversineDist(
-            parseFloat(r.latitude), parseFloat(r.longitude),
+          distMetros = haversineDist(
+            parseFloat(r.latitude),   parseFloat(r.longitude),
             parseFloat(next.latitude), parseFloat(next.longitude)
           );
-          // Si la distancia es > 50km en < 10min → sospechoso
-          if (dist > 50000 && diffMin < 10) {
-            procR.esSospechosa = true;
-            processed.find(p => p.id === next.id).esSospechosa = true;
-          }
-          procR.distanciaAlSiguiente = Math.round(dist);
+          procR.distanciaAlSiguiente = Math.round(distMetros);
+          viajeMin = estimarTiempoViaje(distMetros);
+        }
+
+        // Tiempo real en el establecimiento = total − viaje estimado
+        const tiempoRealMin = Math.max(0, totalMin - viajeMin);
+
+        procR.tiempoEstablecimiento = tiempoRealMin;
+        procR.tiempoViaje           = viajeMin;
+
+        // Sospechosa: tiempo real en local < 3 min tras descontar viaje
+        if (tiempoRealMin < 3) {
+          procR.esSospechosa = true;
+          if (procNext) procNext.esSospechosa = true;
+        }
+
+        // Sospechosa: distancia imposible > 50km en < 10 min totales
+        if (distMetros && distMetros > 50000 && totalMin < 10) {
+          procR.esSospechosa = true;
+          if (procNext) procNext.esSospechosa = true;
         }
       }
     });
@@ -458,9 +485,9 @@ function isConfirmado(r) {
 
 // ── KPIs ──────────────────────────────────────────────────────────
 function actualizarKPIs() {
-  const total    = processed.length;
-  const conf     = processed.filter(isConfirmado).length;
-  const sosp     = processed.filter(r => r.esSospechosa).length;
+  const total     = processed.length;
+  const conf      = processed.filter(isConfirmado).length;
+  const sosp      = processed.filter(r => r.esSospechosa).length;
   const conTiempo = processed.filter(r => r.tiempoEstablecimiento != null);
   const avgTiempo = conTiempo.length
     ? conTiempo.reduce((s,r) => s + r.tiempoEstablecimiento, 0) / conTiempo.length
@@ -506,18 +533,23 @@ function updateMapaMain() {
     });
 
     const tiempoTxt = r.tiempoEstablecimiento != null
-      ? `<p style="color:#6b7280;font-size:.72rem">⏱ ${fmtMin(r.tiempoEstablecimiento)} en establecimiento</p>`
+      ? `<div style="margin-top:4px;font-size:.72rem;line-height:1.7">
+           <div style="color:#f59e0b;font-weight:600">⏱ ${fmtMin(r.tiempoEstablecimiento)} en local</div>
+           ${r.tiempoViaje > 0
+             ? `<div style="color:#9ca3af">🚗 ${fmtMin(r.tiempoViaje)} de viaje al siguiente</div>`
+             : ''}
+         </div>`
       : '';
     const sosTxt = r.esSospechosa
-      ? `<p style="color:#8B5CF6;font-weight:700;font-size:.72rem">⚠ Visita sospechosa</p>` : '';
+      ? `<p style="color:#8B5CF6;font-weight:700;font-size:.72rem;margin-top:4px">⚠ Visita sospechosa</p>` : '';
 
     L.marker([lat, lng], { icon }).addTo(mapMain).bindPopup(`
-      <div style="font-family:sans-serif;min-width:170px">
+      <div style="font-family:sans-serif;min-width:180px">
         <p style="font-weight:700;margin-bottom:4px">${r.promoter_name || '—'}</p>
         <p style="color:#6b7280;font-size:.8rem;margin-bottom:2px">${r.trade || '—'}</p>
         <p style="color:#6b7280;font-size:.75rem;margin-bottom:4px">${fmtHora(r.created_at)}</p>
         ${tiempoTxt}
-        ${r.distance > 0 ? `<p style="font-size:.72rem;color:#9ca3af">📍 ${r.distance} m del comercio</p>` : ''}
+        ${r.distance > 0 ? `<p style="font-size:.72rem;color:#9ca3af;margin-top:4px">📍 ${r.distance} m del comercio</p>` : ''}
         ${sosTxt}
       </div>`);
 
@@ -543,13 +575,16 @@ function renderRuta() {
     return;
   }
 
-  // ── Resumen del día ──────────────────────────────────────────────
-  const inicio   = recs[0];
-  const fin      = recs[recs.length - 1];
+  // ── Resumen del día ───────────────────────────────────────────────
+  const inicio     = recs[0];
+  const fin        = recs[recs.length - 1];
   const jornadaMin = (new Date(fin.created_at) - new Date(inicio.created_at)) / 60000;
   const conTiempo  = recs.filter(r => r.tiempoEstablecimiento != null);
   const avgTiempo  = conTiempo.length
     ? conTiempo.reduce((s,r) => s + r.tiempoEstablecimiento, 0) / conTiempo.length : null;
+  const conViaje   = recs.filter(r => r.tiempoViaje != null && r.tiempoViaje > 0);
+  const avgViaje   = conViaje.length
+    ? conViaje.reduce((s,r) => s + r.tiempoViaje, 0) / conViaje.length : null;
   const sosp       = recs.filter(r => r.esSospechosa).length;
   const conf       = recs.filter(isConfirmado).length;
 
@@ -557,21 +592,21 @@ function renderRuta() {
   resumenEl.classList.remove('hidden');
   resumenEl.className = 'grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6';
   resumenEl.innerHTML = [
-    { lbl:'Inicio jornada',        val: fmtHora(inicio.created_at), color:'text-indigo-600' },
-    { lbl:'Fin jornada',           val: fmtHora(fin.created_at),    color:'text-indigo-600' },
-    { lbl:'Duración total',        val: fmtMin(jornadaMin),          color:'text-green-600' },
-    { lbl:'Visitas',               val: `${recs.length} · ${conf} conf.`, color:'text-gray-700 dark:text-gray-200' },
-    { lbl:'Tiempo prom. por est.', val: avgTiempo ? fmtMin(avgTiempo) : '—', color:'text-amber-600' },
-    { lbl:'Visitas sospechosas',   val: sosp, color: sosp > 0 ? 'text-red-600' : 'text-green-600' },
-    { lbl:'Primera visita',        val: recs[0].trade || '—', color:'text-gray-600 dark:text-gray-300' },
-    { lbl:'Última visita',         val: recs[recs.length-1].trade || '—', color:'text-gray-600 dark:text-gray-300' },
+    { lbl:'Inicio jornada',      val: fmtHora(inicio.created_at),                  color:'text-indigo-600' },
+    { lbl:'Fin jornada',         val: fmtHora(fin.created_at),                      color:'text-indigo-600' },
+    { lbl:'Duración total',      val: fmtMin(jornadaMin),                            color:'text-green-600' },
+    { lbl:'Visitas',             val: `${recs.length} · ${conf} conf.`,              color:'text-gray-700 dark:text-gray-200' },
+    { lbl:'⏱ Tiempo en local',  val: avgTiempo ? fmtMin(avgTiempo) : '—',           color:'text-amber-600' },
+    { lbl:'🚗 Viaje prom.',      val: avgViaje  ? fmtMin(avgViaje)  : '—',           color:'text-blue-500' },
+    { lbl:'Sospechosas',         val: sosp, color: sosp > 0 ? 'text-red-600' : 'text-green-600' },
+    { lbl:'Primera visita',      val: recs[0].trade || '—',                          color:'text-gray-600 dark:text-gray-300' },
   ].map(k => `
     <div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-gray-100 dark:border-slate-600">
       <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">${k.lbl}</p>
       <p class="text-sm font-bold ${k.color} truncate">${k.val}</p>
     </div>`).join('');
 
-  // ── Mapa de ruta ─────────────────────────────────────────────────
+  // ── Mapa de ruta ──────────────────────────────────────────────────
   if (!mapRuta) {
     mapRuta = L.map('mapRuta').setView([10.5, -66.9], 10);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -584,7 +619,6 @@ function renderRuta() {
     .map(r => [parseFloat(r.latitude), parseFloat(r.longitude)]);
 
   if (coords.length >= 2) {
-    // Línea de ruta
     L.polyline(coords, { color:'#4F46E5', weight:3, opacity:.7, dashArray:'8,4' }).addTo(mapRuta);
   }
 
@@ -605,13 +639,18 @@ function renderRuta() {
     });
 
     L.marker([lat, lng], { icon }).addTo(mapRuta).bindPopup(`
-      <div style="font-family:sans-serif;min-width:160px">
+      <div style="font-family:sans-serif;min-width:170px">
         <p style="font-weight:700;font-size:.85rem">${idx+1}. ${r.trade || '—'}</p>
         <p style="color:#6b7280;font-size:.75rem;margin-top:2px">${fmtHora(r.created_at)}</p>
         ${r.tiempoEstablecimiento != null
-          ? `<p style="color:#f59e0b;font-size:.72rem;margin-top:4px">⏱ ${fmtMin(r.tiempoEstablecimiento)} en establecimiento</p>`
+          ? `<div style="font-size:.72rem;margin-top:5px;line-height:1.8">
+               <div style="color:#f59e0b;font-weight:600">⏱ ${fmtMin(r.tiempoEstablecimiento)} en local</div>
+               ${r.tiempoViaje > 0
+                 ? `<div style="color:#9ca3af">🚗 ${fmtMin(r.tiempoViaje)} de viaje</div>`
+                 : ''}
+             </div>`
           : ''}
-        ${r.esSospechosa ? `<p style="color:#8b5cf6;font-size:.72rem;font-weight:700">⚠ Sospechosa</p>` : ''}
+        ${r.esSospechosa ? `<p style="color:#8b5cf6;font-size:.72rem;font-weight:700;margin-top:4px">⚠ Sospechosa</p>` : ''}
       </div>`);
 
     bounds2.extend([lat, lng]);
@@ -619,19 +658,26 @@ function renderRuta() {
 
   if (bounds2.isValid()) mapRuta.fitBounds(bounds2, { padding:[40,40] });
 
-  // ── Timeline ─────────────────────────────────────────────────────
+  // ── Timeline ──────────────────────────────────────────────────────
   const timelineEl = document.getElementById('timeline');
   timelineEl.innerHTML = recs.map((r, idx) => {
-    const isLast  = idx === recs.length - 1;
-    const dotColor = r.esSospechosa ? '#8B5CF6'
-      : isConfirmado(r) ? '#10B981' : '#EF4444';
+    const isLast   = idx === recs.length - 1;
+    const dotColor = r.esSospechosa ? '#8B5CF6' : isConfirmado(r) ? '#10B981' : '#EF4444';
+
     const tiempoTxt = !isLast && r.tiempoEstablecimiento != null
-      ? `<div class="flex items-center gap-2 mt-2 text-xs text-amber-600 dark:text-amber-400 font-semibold">
-          <i class="fas fa-clock text-xs"></i> ${fmtMin(r.tiempoEstablecimiento)} en establecimiento
-        </div>`
+      ? `<div class="mt-2 space-y-1">
+           <div class="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+             <i class="fas fa-clock text-xs"></i> ${fmtMin(r.tiempoEstablecimiento)} en establecimiento
+           </div>
+           ${r.tiempoViaje > 0
+             ? `<div class="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+                  <i class="fas fa-car text-xs"></i> ${fmtMin(r.tiempoViaje)} estimado de viaje al siguiente
+                </div>`
+             : ''}
+         </div>`
       : '';
-    const nextRec = !isLast ? recs[idx+1] : null;
-    const desplazTxt = nextRec && r.distanciaAlSiguiente != null
+
+    const desplazTxt = !isLast && r.distanciaAlSiguiente != null
       ? `<div class="ml-4 my-1 flex items-center gap-2 text-xs text-gray-400">
           <i class="fas fa-arrow-down text-xs"></i>
           ${r.distanciaAlSiguiente >= 1000
@@ -639,8 +685,9 @@ function renderRuta() {
             : `${r.distanciaAlSiguiente} m hasta siguiente`}
         </div>`
       : '';
+
     const alertaTxt = r.esSospechosa
-      ? `<div class="mt-1 text-xs font-bold text-purple-500">⚠ Visita sospechosa — tiempo muy corto</div>` : '';
+      ? `<div class="mt-1 text-xs font-bold text-purple-500">⚠ Visita sospechosa — menos de 3 min en local</div>` : '';
 
     return `
       <div class="timeline-item pb-3">
@@ -667,7 +714,7 @@ function renderTiempos() {
   const { tc, gc } = chartColors();
   const conT = processed.filter(r => r.tiempoEstablecimiento != null);
 
-  // Por promotor
+  // Por promotor — tiempo en local
   const byProm = {};
   conT.forEach(r => {
     if (!byProm[r.promoter_name]) byProm[r.promoter_name] = [];
@@ -682,9 +729,9 @@ function renderTiempos() {
       document.getElementById('chartTiempoPromotor').getContext('2d'), {
       type:'bar',
       data: {
-        labels: promE.map(x => x.k.length>14 ? x.k.slice(0,12)+'…' : x.k),
+        labels: promE.map(x => x.k),
         datasets: [{
-          label:'Minutos prom.',
+          label:'Min en local',
           data: promE.map(x => +x.avg.toFixed(1)),
           backgroundColor: promE.map(x =>
             x.avg < 10 ? 'rgba(239,68,68,.75)' :
@@ -696,29 +743,22 @@ function renderTiempos() {
       options: { responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{display:false},
           tooltip:{ callbacks:{ label: i => `  ${fmtMin(i.raw)}` }}},
-        scales:{ x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},
+        scales:{ x:{ticks:{color:tc,font:{size:10},maxRotation:40,autoSkip:false},grid:{color:gc}},
                  y:{ticks:{color:tc,font:{size:10},callback:v=>v+'m'},grid:{color:gc}} } }
     });
   }
 
   // Por hora del día
   const byHora = Array(24).fill(0);
-  processed.forEach(r => {
-    const h = new Date(r.created_at).getHours();
-    byHora[h]++;
-  });
+  processed.forEach(r => { byHora[new Date(r.created_at).getHours()]++; });
+
   destroyChart('chartHoraDia');
   charts['chartHoraDia'] = new Chart(
     document.getElementById('chartHoraDia').getContext('2d'), {
     type:'bar',
     data: {
       labels: [...Array(24)].map((_,i) => `${i}:00`),
-      datasets: [{
-        label:'Visitas',
-        data: byHora,
-        backgroundColor:'rgba(79,70,229,.6)',
-        borderRadius:3, borderSkipped:false,
-      }]
+      datasets: [{ label:'Visitas', data:byHora, backgroundColor:'rgba(79,70,229,.6)', borderRadius:3, borderSkipped:false }]
     },
     options: { responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false} },
@@ -726,32 +766,32 @@ function renderTiempos() {
                y:{ticks:{color:tc,font:{size:10}},grid:{color:gc}} } }
   });
 
-  // Tabla por comercio
+  // Tabla por comercio con tiempo en local Y viaje promedio
   const byComercio = {};
   conT.forEach(r => {
-    if (!byComercio[r.trade]) byComercio[r.trade] = { tiempos:[], horas:[] };
+    if (!byComercio[r.trade]) byComercio[r.trade] = { tiempos:[], viajes:[], horas:[] };
     byComercio[r.trade].tiempos.push(r.tiempoEstablecimiento);
+    if (r.tiempoViaje > 0) byComercio[r.trade].viajes.push(r.tiempoViaje);
     byComercio[r.trade].horas.push(new Date(r.created_at).getHours());
   });
-  const comercioArr = Object.entries(byComercio)
-    .map(([k,v]) => ({
-      comercio: k,
-      avg: avg(v.tiempos),
-      n: v.tiempos.length,
-      horaFrec: v.horas.sort((a,b) =>
-        v.horas.filter(h=>h===b).length - v.horas.filter(h=>h===a).length)[0]
-    }))
-    .sort((a,b) => b.avg - a.avg)
-    .slice(0,20);
 
-  const tbody = document.getElementById('tbodyTiempos');
-  tbody.innerHTML = comercioArr.map(r => {
+  const comercioArr = Object.entries(byComercio).map(([k,v]) => ({
+    comercio: k,
+    avg:      avg(v.tiempos),
+    avgViaje: v.viajes.length ? avg(v.viajes) : null,
+    n:        v.tiempos.length,
+    horaFrec: v.horas.sort((a,b) =>
+      v.horas.filter(h=>h===b).length - v.horas.filter(h=>h===a).length)[0]
+  })).sort((a,b) => b.avg - a.avg).slice(0,20);
+
+  document.getElementById('tbodyTiempos').innerHTML = comercioArr.map(r => {
     const cls = r.avg < 10 ? 'text-red-500 font-bold'
               : r.avg > 60 ? 'text-amber-500 font-bold'
               : 'text-green-600 font-bold';
     return `<tr class="row-hover">
       <td class="py-2 px-4 font-semibold text-gray-800 dark:text-white">${r.comercio}</td>
       <td class="py-2 px-4 text-center ${cls}">${fmtMin(r.avg)}</td>
+      <td class="py-2 px-4 text-center text-xs font-semibold text-blue-500">${r.avgViaje ? fmtMin(r.avgViaje) : '—'}</td>
       <td class="py-2 px-4 text-center text-gray-500">${r.n}</td>
       <td class="py-2 px-4 text-center text-gray-500">${r.horaFrec}:00 – ${r.horaFrec+1}:00</td>
     </tr>`;
@@ -762,7 +802,6 @@ function renderTiempos() {
 function renderEficiencia() {
   const { tc, gc } = chartColors();
 
-  // Agrupar por promotor
   const byProm = {};
   processed.forEach(r => {
     const k = r.promoter_name || '—';
@@ -773,25 +812,26 @@ function renderEficiencia() {
   });
 
   const promData = Object.entries(byProm).map(([nombre, d]) => {
-    const sorted  = [...d.recs].sort((a,b) => new Date(a.created_at)-new Date(b.created_at));
-    const inicio  = sorted[0];
-    const fin     = sorted[sorted.length-1];
-    const jornada = (new Date(fin.created_at)-new Date(inicio.created_at))/60000;
-    const conT    = sorted.filter(r => r.tiempoEstablecimiento != null);
-    const avgT    = conT.length ? conT.reduce((s,r)=>s+r.tiempoEstablecimiento,0)/conT.length : null;
-    const pctConf = d.recs.length ? Math.round(d.confs/d.recs.length*100) : 0;
+    const sorted   = [...d.recs].sort((a,b) => new Date(a.created_at)-new Date(b.created_at));
+    const inicio   = sorted[0];
+    const fin      = sorted[sorted.length-1];
+    const jornada  = (new Date(fin.created_at)-new Date(inicio.created_at))/60000;
+    const conT     = sorted.filter(r => r.tiempoEstablecimiento != null);
+    const avgT     = conT.length ? conT.reduce((s,r)=>s+r.tiempoEstablecimiento,0)/conT.length : null;
+    const conV     = sorted.filter(r => r.tiempoViaje != null && r.tiempoViaje > 0);
+    const avgViaje = conV.length ? conV.reduce((s,r)=>s+r.tiempoViaje,0)/conV.length : null;
+    const pctConf  = d.recs.length ? Math.round(d.confs/d.recs.length*100) : 0;
     return { nombre, total:d.recs.length, confs:d.confs, sosp:d.sosp,
-      jornada, inicio, fin, avgT, pctConf };
+      jornada, inicio, fin, avgT, avgViaje, pctConf };
   }).sort((a,b) => b.pctConf - a.pctConf);
 
-  // Tarjetas
-  const container = document.getElementById('tarjetasEficiencia');
-  container.innerHTML = promData.map(p => {
+  // Tarjetas de eficiencia
+  document.getElementById('tarjetasEficiencia').innerHTML = promData.map(p => {
     const confColor = p.pctConf >= 80 ? 'text-green-600' : p.pctConf >= 50 ? 'text-amber-500' : 'text-red-500';
     const alerts = [];
-    if (p.sosp > 0)    alerts.push(`<span class="text-xs bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-0.5 rounded-full font-bold">${p.sosp} sospechosa${p.sosp!==1?'s':''}</span>`);
+    if (p.sosp > 0)       alerts.push(`<span class="text-xs bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-0.5 rounded-full font-bold">${p.sosp} sospechosa${p.sosp!==1?'s':''}</span>`);
     if (p.avgT && p.avgT < 8) alerts.push(`<span class="text-xs bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 rounded-full font-bold">Tiempo muy corto</span>`);
-    if (p.jornada > 600) alerts.push(`<span class="text-xs bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold">Jornada larga</span>`);
+    if (p.jornada > 600)  alerts.push(`<span class="text-xs bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold">Jornada larga</span>`);
 
     return `
       <div class="bg-white dark:bg-slate-700 rounded-2xl border border-gray-100 dark:border-slate-600 shadow-sm overflow-hidden">
@@ -809,8 +849,12 @@ function renderEficiencia() {
             <span class="font-semibold text-gray-700 dark:text-gray-300">${fmtMin(p.jornada)}</span>
           </div>
           <div class="flex items-center justify-between text-xs">
-            <span class="text-gray-500">Tiempo prom. por est.</span>
-            <span class="font-semibold text-gray-700 dark:text-gray-300">${p.avgT ? fmtMin(p.avgT) : '—'}</span>
+            <span class="text-gray-500">⏱ Tiempo en local</span>
+            <span class="font-semibold text-amber-600">${p.avgT ? fmtMin(p.avgT) : '—'}</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-500">🚗 Viaje prom.</span>
+            <span class="font-semibold text-blue-500">${p.avgViaje ? fmtMin(p.avgViaje) : '—'}</span>
           </div>
           ${alerts.length ? `<div class="flex flex-wrap gap-1 pt-2 border-t border-gray-100 dark:border-slate-600">${alerts.join('')}</div>` : ''}
         </div>
@@ -824,17 +868,15 @@ function renderEficiencia() {
       document.getElementById('chartEficienciaConf').getContext('2d'), {
       type:'bar',
       data: {
-        labels: promData.map(p => p.nombre.length>12?p.nombre.slice(0,10)+'…':p.nombre),
+        labels: promData.map(p => p.nombre),
         datasets: [
-          { label:'Confirmadas', data:promData.map(p=>p.confs),
-            backgroundColor:'rgba(16,185,129,.75)', borderRadius:4, borderSkipped:false },
-          { label:'No conf.', data:promData.map(p=>p.total-p.confs),
-            backgroundColor:'rgba(239,68,68,.6)', borderRadius:4, borderSkipped:false },
+          { label:'Confirmadas', data:promData.map(p=>p.confs),         backgroundColor:'rgba(16,185,129,.75)', borderRadius:4, borderSkipped:false },
+          { label:'No conf.',    data:promData.map(p=>p.total-p.confs), backgroundColor:'rgba(239,68,68,.6)',   borderRadius:4, borderSkipped:false },
         ]
       },
       options: { responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{ labels:{color:tc,font:{size:10},boxWidth:10} }},
-        scales:{ x:{stacked:true,ticks:{color:tc,font:{size:9}},grid:{color:gc}},
+        scales:{ x:{stacked:true,ticks:{color:tc,font:{size:9},maxRotation:40,autoSkip:false},grid:{color:gc}},
                  y:{stacked:true,ticks:{color:tc,font:{size:10}},grid:{color:gc}} } }
     });
   }
@@ -846,7 +888,7 @@ function renderEficiencia() {
       document.getElementById('chartHoraInicio').getContext('2d'), {
       type:'bar',
       data: {
-        labels: promData.map(p => p.nombre.length>12?p.nombre.slice(0,10)+'…':p.nombre),
+        labels: promData.map(p => p.nombre),
         datasets: [{
           label:'Hora inicio',
           data: promData.map(p => new Date(p.inicio.created_at).getHours() +
@@ -858,7 +900,7 @@ function renderEficiencia() {
         plugins:{ legend:{display:false},
           tooltip:{ callbacks:{ label: i => `  Inicio: ${fmtHora(promData[i.dataIndex].inicio.created_at)}` }}},
         scales:{
-          x:{ticks:{color:tc,font:{size:9}},grid:{color:gc}},
+          x:{ticks:{color:tc,font:{size:9},maxRotation:40,autoSkip:false},grid:{color:gc}},
           y:{min:5,max:20,ticks:{color:tc,font:{size:10},callback:v=>`${Math.floor(v)}:${String(Math.round((v%1)*60)).padStart(2,'0')}`},grid:{color:gc}}
         }
       }
@@ -878,14 +920,14 @@ function renderDetalle() {
 
   const tbody = document.getElementById('tbodyDetalle');
   if (!recs.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10 text-gray-400">Sin visitas</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10 text-gray-400">Sin visitas</td></tr>';
     return;
   }
 
-  const sorted = [...recs].sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
-  tbody.innerHTML = sorted.map(r => {
+  tbody.innerHTML = [...recs].sort((a,b) => new Date(b.created_at)-new Date(a.created_at)).map(r => {
     const gpsColor = isConfirmado(r) ? 'text-green-600' : 'text-red-500';
-    const gpsTxt   = isConfirmado(r) ? '✓ Confirmado' : (!r.client_coords||r.client_coords==='N/A') ? 'Sin coord.' : 'No conf.';
+    const gpsTxt   = isConfirmado(r) ? '✓ Confirmado'
+      : (!r.client_coords || r.client_coords==='N/A') ? 'Sin coord.' : 'No conf.';
     const alertaTxt = r.esSospechosa
       ? '<span class="text-xs font-bold text-purple-500 bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 rounded-full">⚠ Sospechosa</span>'
       : '—';
@@ -901,13 +943,16 @@ function renderDetalle() {
       <td class="py-2 px-4 text-center text-xs font-bold text-amber-600">
         ${r.tiempoEstablecimiento!=null ? fmtMin(r.tiempoEstablecimiento) : '—'}
       </td>
+      <td class="py-2 px-4 text-center text-xs font-semibold text-blue-500">
+        ${r.tiempoViaje!=null && r.tiempoViaje>0 ? fmtMin(r.tiempoViaje) : '—'}
+      </td>
       <td class="py-2 px-4 text-center text-xs font-bold ${gpsColor}">${gpsTxt}</td>
       <td class="py-2 px-4 text-center">${alertaTxt}</td>
     </tr>`;
   }).join('');
 }
 
-// ── Búsqueda y limpiar ────────────────────────────────────────────
+// ── Limpiar ───────────────────────────────────────────────────────
 function limpiar() {
   document.getElementById('promotorSelect').value = 'all';
   document.getElementById('estadoSelect').value   = 'all';
