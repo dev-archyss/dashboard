@@ -319,7 +319,6 @@ select.inp option{background:var(--card2)}
         <div class="page-sub">Registra y monitorea anualidades, mensualidades y pagos de desarrollo. El sistema alerta o bloquea según vencimiento.</div>
       </div>
 
-      <!-- KPIs pagos -->
       <div class="stats-grid">
         <div class="stat-card stat-green"><div class="stat-num" id="pk0">—</div><div class="stat-lbl">Al día</div></div>
         <div class="stat-card stat-amber"><div class="stat-num" id="pk1">—</div><div class="stat-lbl">En alerta</div></div>
@@ -327,7 +326,6 @@ select.inp option{background:var(--card2)}
         <div class="stat-card"><div class="stat-num" id="pk3" style="color:var(--muted)">—</div><div class="stat-lbl">Pendientes</div></div>
       </div>
 
-      <!-- Filtros -->
       <div class="card" style="padding:14px 18px;margin-bottom:14px">
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <select class="inp" id="fPagoEmpresa" style="width:220px" onchange="renderPagos()">
@@ -375,7 +373,6 @@ select.inp option{background:var(--card2)}
         </div>
       </div>
 
-      <!-- Reglas de alerta -->
       <div class="card">
         <div class="card-hdr">
           <div class="card-title"><i class="fas fa-bell" style="color:var(--amber);margin-right:6px"></i>Reglas de alerta y bloqueo</div>
@@ -436,9 +433,9 @@ select.inp option{background:var(--card2)}
       </div>
     </div>
 
-  </div><!-- /content -->
-</div><!-- /main -->
-</div><!-- /app -->
+  </div>
+</div>
+</div>
 
 <!-- ══ MODAL EDITAR EMPRESA ══════════════════ -->
 <div class="overlay" id="editOverlay">
@@ -452,15 +449,11 @@ select.inp option{background:var(--card2)}
     </div>
     <div class="modal-body">
       <input type="hidden" id="e_id">
-
-      <!-- Tabs dentro del modal -->
       <div class="tab-nav">
         <button class="tab-btn active" onclick="switchModalTab('general',this)">General</button>
         <button class="tab-btn" onclick="switchModalTab('modulos',this)">Módulos</button>
         <button class="tab-btn" onclick="switchModalTab('pagos_empresa',this)">Pagos</button>
       </div>
-
-      <!-- Tab: General -->
       <div class="tab-pane active" id="etab-general">
         <div class="g2">
           <div class="field" style="grid-column:1/-1">
@@ -496,12 +489,8 @@ select.inp option{background:var(--card2)}
             </div>
           </div>
         </div>
-
-        <!-- Estado de pagos actual -->
         <div id="e_alertas_pago" style="margin-top:8px"></div>
       </div>
-
-      <!-- Tab: Módulos -->
       <div class="tab-pane" id="etab-modulos">
         <div class="field">
           <label>Plan</label>
@@ -517,8 +506,6 @@ select.inp option{background:var(--card2)}
           <div class="mod-grid" id="e_mods" style="margin-top:10px"></div>
         </div>
       </div>
-
-      <!-- Tab: Pagos de la empresa -->
       <div class="tab-pane" id="etab-pagos_empresa">
         <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
           <button class="btn btn-primary btn-sm" onclick="openNuevoPagoEmpresa()">
@@ -531,7 +518,6 @@ select.inp option{background:var(--card2)}
           </div>
         </div>
       </div>
-
     </div>
     <div class="modal-footer">
       <button class="btn btn-sec" onclick="closeEdit()">Cancelar</button>
@@ -611,9 +597,6 @@ select.inp option{background:var(--card2)}
 <div class="toast" id="toast"><i class="fas fa-check-circle"></i><span id="toastMsg"></span></div>
 
 <script>
-/* ══════════════════════════════════════════════
-   CONSTANTES
-══════════════════════════════════════════════ */
 const SB_URL = 'https://djjylikkocemrlsjxscr.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqanlsaWtrb2NlbXJsc2p4c2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNjUyNDEsImV4cCI6MjA3ODc0MTI0MX0.fnv1BKn_o-PYEAPljG0V3dt3b2Uifwn8EEzkP8Aab3M';
 const SB_H = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
@@ -625,19 +608,20 @@ const AU = 'admincapta123', AP = 'archys123';
    label = nombre exacto que aparece en el navbar
 */
 const MODS = [
-  {key:'dashboard',          label:'Dashboard',           icon:'fas fa-gauge-high'},
-  {key:'analisis',           label:'Análisis de Precios', icon:'fas fa-chart-line'},
-  {key:'caras',              label:'Caras en Anaquel',    icon:'fas fa-eye'},
-  {key:'metros_espacios',    label:'Metros de Anaquel',   icon:'fas fa-ruler-horizontal'},
-  {key:'espacios_adicionales',label:'Espacios Adicionales',icon:'fas fa-store'},
-  {key:'stock',              label:'Control de Stock',    icon:'fas fa-boxes-stacked'},
-  {key:'gps',                label:'Seguimiento GPS',     icon:'fas fa-map-location-dot'},
-  {key:'planograma',         label:'Planogramas',         icon:'fas fa-image'},
-  {key:'promotores',         label:'Promotores',          icon:'fas fa-users'},
-  {key:'clientes',           label:'Clientes',            icon:'fas fa-store'},
-  {key:'lineas',             label:'Líneas',              icon:'fas fa-sitemap'},
-  {key:'productos',          label:'Mis Productos',       icon:'fas fa-tag'},
-  {key:'competencia',        label:'Competencia',         icon:'fas fa-chess'},
+  {key:'dashboard',           label:'Dashboard',            icon:'fas fa-gauge-high'},
+  {key:'analisis',            label:'Análisis de Precios',  icon:'fas fa-chart-line'},
+  {key:'caras',               label:'Caras en Anaquel',     icon:'fas fa-eye'},
+  {key:'metros_espacios',     label:'Metros de Anaquel',    icon:'fas fa-ruler-horizontal'},
+  {key:'espacios_adicionales',label:'Espacios Adicionales', icon:'fas fa-store'},
+  {key:'stock',               label:'Control de Stock',     icon:'fas fa-boxes-stacked'},
+  {key:'gps',                 label:'Seguimiento GPS',      icon:'fas fa-map-location-dot'},
+  {key:'planograma',          label:'Planogramas',          icon:'fas fa-image'},
+  {key:'promotores',          label:'Promotores',           icon:'fas fa-users'},
+  {key:'clientes',            label:'Clientes',             icon:'fas fa-store'},
+  {key:'lineas',              label:'Líneas',               icon:'fas fa-sitemap'},
+  {key:'productos',           label:'Mis Productos',        icon:'fas fa-tag'},
+  {key:'competencia',         label:'Competencia',          icon:'fas fa-chess'},
+  {key:'reportes',            label:'Reportes',             icon:'fas fa-file-chart-column'},  /* ← NUEVO */
 ];
 
 /* ══ PLANES DEFAULT ══ */
@@ -645,12 +629,12 @@ const PLANES_DEFAULT = {
   full: {
     label:'Full', cls:'plan-full',
     desc:'Acceso completo a todos los módulos del sistema',
-    mods: MODS.map(m => m.key)
+    mods: MODS.map(m => m.key)   /* auto-incluye reportes */
   },
   mid: {
     label:'Mid', cls:'plan-mid',
     desc:'Módulos operativos y de análisis esenciales',
-    mods: ['dashboard','analisis','caras','stock','gps','planograma','promotores','clientes','lineas','productos']
+    mods: ['dashboard','analisis','caras','stock','gps','planograma','promotores','clientes','lineas','productos','reportes']  /* ← AGREGADO */
   },
   basic: {
     label:'Básico', cls:'plan-basic',
@@ -674,9 +658,7 @@ const REGLAS_PAGO = {
 
 let allE = [], filtE = [], allPagos = [], editId = null, editingPlan = null, currentPagoEmpresaId = null;
 
-/* ══════════════════════════════════════════════
-   LOGIN
-══════════════════════════════════════════════ */
+/* ══ LOGIN ══ */
 function doLogin() {
   const u = document.getElementById('adminUser').value.trim();
   const p = document.getElementById('adminPass').value.trim();
@@ -716,9 +698,7 @@ async function boot() {
   renderReglasInfo();
 }
 
-/* ══════════════════════════════════════════════
-   NAVEGACIÓN
-══════════════════════════════════════════════ */
+/* ══ NAVEGACIÓN ══ */
 const navTitles = {
   empresas: 'Empresas registradas',
   planes:   'Planes de suscripción',
@@ -734,9 +714,7 @@ function nav(name, btn) {
   document.getElementById('topTitle').textContent = navTitles[name] || '';
 }
 
-/* ══════════════════════════════════════════════
-   API SUPABASE
-══════════════════════════════════════════════ */
+/* ══ API SUPABASE ══ */
 async function sb(path, opts = {}) {
   const r = await fetch(SB_URL + '/rest/v1/' + path, {headers: SB_H, ...opts});
   if (!r.ok) {
@@ -747,9 +725,7 @@ async function sb(path, opts = {}) {
   return t ? JSON.parse(t) : [];
 }
 
-/* ══════════════════════════════════════════════
-   CARGA DE PLANES DESDE SUPABASE
-══════════════════════════════════════════════ */
+/* ══ PLANES DESDE DB ══ */
 async function loadPlanesFromDB() {
   try {
     const res = await sb('capta_planes?select=id,label,descripcion,modulos&order=id.asc');
@@ -768,7 +744,6 @@ async function loadPlanesFromDB() {
   }
 }
 
-/* ── GUARDAR PLAN EN DB ── */
 async function savePlanToDB(key) {
   const pl = PLANES[key];
   return sb(`capta_planes?id=eq.${key}`, {
@@ -781,9 +756,7 @@ async function savePlanToDB(key) {
   });
 }
 
-/* ══════════════════════════════════════════════
-   CARGA DE EMPRESAS
-══════════════════════════════════════════════ */
+/* ══ EMPRESAS ══ */
 async function loadE() {
   try {
     allE = await sb('empresas?select=id,nombre,clave_acceso,clave_pwa,estatus,fecha_vencimiento,modulos_activos,dias_gracia&order=nombre.asc');
@@ -818,47 +791,37 @@ function getPlan(e) {
   return 'custom';
 }
 
-/* ── ESTADO DE PAGOS DE UNA EMPRESA ── */
 function getEstadoPagosEmpresa(empresaId) {
   const pagosEmpresa = allPagos.filter(p => p.empresa_id === empresaId);
   if (!pagosEmpresa.length) return { estado: 'sin_pagos', label: 'Sin pagos', cls: '' };
-
   const hoy = new Date();
   let hayBloqueo = false, hayAlerta = false;
-
   for (const pago of pagosEmpresa) {
     if (!pago.vencimiento) continue;
     const venc = new Date(pago.vencimiento);
     const diasVencido = Math.floor((hoy - venc) / 86400000);
     const regla = REGLAS_PAGO[pago.tipo];
     if (!regla) continue;
-
     if (diasVencido > regla.bloqueo_dias) hayBloqueo = true;
     else if (diasVencido > 0 || diasVencido > -regla.alerta_dias) hayAlerta = true;
   }
-
   if (hayBloqueo) return { estado: 'vencido', label: 'Bloqueado', cls: 'pago-vencido' };
   if (hayAlerta)  return { estado: 'alerta',  label: 'Alerta',    cls: 'pago-alerta' };
   return { estado: 'al_dia', label: 'Al día', cls: 'pago-ok' };
 }
 
 function renderStats() {
-  const hoy = new Date();
   let conAlerta = 0, bloqueadas = 0;
-
   allE.forEach(e => {
     const ep = getEstadoPagosEmpresa(e.id);
     if (ep.estado === 'vencido') bloqueadas++;
     else if (ep.estado === 'alerta') conAlerta++;
   });
-
   document.getElementById('st0').textContent = allE.length;
   document.getElementById('st1').textContent = allE.filter(e => e.estatus === 'activa').length;
   document.getElementById('st2').textContent = conAlerta;
   document.getElementById('st3').textContent = bloqueadas;
   document.getElementById('st4').textContent = allE.filter(e => getPlan(e) === 'full').length;
-
-  // Puntito rojo en sidebar si hay bloqueadas o alertas
   const dot = document.getElementById('sb-pagos').querySelector('.alert-dot');
   if (conAlerta + bloqueadas > 0) {
     if (!dot) {
@@ -905,7 +868,6 @@ function renderTbl() {
     const pagoBadge = ep.cls
       ? `<span class="pago-badge ${ep.cls}">${ep.label}</span>`
       : `<span style="color:var(--muted);font-size:.72rem">—</span>`;
-
     return `<tr>
       <td>
         <div style="font-weight:600;font-size:.84rem">${e.nombre}</div>
@@ -943,16 +905,10 @@ function renderTbl() {
 
 function filterE(q) {
   const t = q.toLowerCase();
-  filtE = allE.filter(e =>
-    e.nombre.toLowerCase().includes(t) ||
-    e.estatus.toLowerCase().includes(t)
-  );
+  filtE = allE.filter(e => e.nombre.toLowerCase().includes(t) || e.estatus.toLowerCase().includes(t));
   renderTbl();
 }
 
-/* ══════════════════════════════════════════════
-   ACCIONES RÁPIDAS EMPRESAS
-══════════════════════════════════════════════ */
 async function quickPlan(id, pk) {
   const m = {};
   PLANES[pk].mods.forEach(k => m[k] = true);
@@ -975,9 +931,7 @@ async function toggleStatus(id) {
   } catch(e) { toast('Error: ' + e.message, 'err'); }
 }
 
-/* ══════════════════════════════════════════════
-   MOD GRID
-══════════════════════════════════════════════ */
+/* ══ MOD GRID ══ */
 function buildModGrid(containerId, activeMods, planKey) {
   const c = document.getElementById(containerId);
   if (!c) return;
@@ -1019,9 +973,7 @@ function getModsFromGrid(cid) {
   return m;
 }
 
-/* ══════════════════════════════════════════════
-   MODAL EDITAR EMPRESA
-══════════════════════════════════════════════ */
+/* ══ MODAL EDITAR EMPRESA ══ */
 function switchModalTab(name, btn) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1034,7 +986,6 @@ function openEdit(id) {
   const e = allE.find(x => x.id === id);
   if (!e) return;
   editId = id;
-
   document.getElementById('editModalTitle').textContent = e.nombre;
   document.getElementById('e_id').value = e.id;
   document.getElementById('e_nombre').value = e.nombre;
@@ -1043,20 +994,14 @@ function openEdit(id) {
   document.getElementById('e_estatus').value = e.estatus || 'activa';
   document.getElementById('e_venc').value = e.fecha_vencimiento ? e.fecha_vencimiento.split('T')[0] : '';
   document.getElementById('e_dias_gracia').value = e.dias_gracia ?? 15;
-
   const pl = getPlan(e);
   document.getElementById('e_plan').value = pl;
   buildModGrid('e_mods', parseMods(e.modulos_activos));
-
-  // Alertas de pago en tab general
   renderAlertasPagoModal(id);
-
-  // Reset tabs
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('etab-general').classList.add('active');
   document.querySelectorAll('.tab-btn')[0].classList.add('active');
-
   document.getElementById('editOverlay').classList.add('open');
 }
 
@@ -1064,17 +1009,14 @@ function renderAlertasPagoModal(empresaId) {
   const cont = document.getElementById('e_alertas_pago');
   const pagosEmp = allPagos.filter(p => p.empresa_id === empresaId);
   if (!pagosEmp.length) { cont.innerHTML = ''; return; }
-
   const hoy = new Date();
   const alertas = [];
-
   pagosEmp.forEach(pago => {
     if (!pago.vencimiento) return;
     const venc = new Date(pago.vencimiento);
     const diasVencido = Math.floor((hoy - venc) / 86400000);
     const regla = REGLAS_PAGO[pago.tipo];
     if (!regla) return;
-
     if (diasVencido > regla.bloqueo_dias) {
       alertas.push({tipo:'bloqueo', msg:`${regla.label} vencida hace ${diasVencido} días — ACCESO BLOQUEADO`, pago});
     } else if (diasVencido > 0) {
@@ -1083,9 +1025,7 @@ function renderAlertasPagoModal(empresaId) {
       alertas.push({tipo:'info', msg:`${regla.label} vence en ${Math.abs(diasVencido)} días`, pago});
     }
   });
-
   if (!alertas.length) { cont.innerHTML = ''; return; }
-
   cont.innerHTML = alertas.map(a => {
     const cls = a.tipo === 'bloqueo' ? 'bloqueo-banner' : 'alerta-banner';
     const ico = a.tipo === 'bloqueo' ? 'fas fa-lock' : 'fas fa-exclamation-triangle';
@@ -1115,17 +1055,11 @@ async function saveEdit() {
   const venc = document.getElementById('e_venc').value || null;
   const dias_gracia = parseInt(document.getElementById('e_dias_gracia').value) || 15;
   const mods = getModsFromGrid('e_mods');
-
   if (!nombre || !clave) { toast('Nombre y clave son requeridos', 'err'); return; }
-
   try {
     await sb('empresas?id=eq.' + id, {
       method: 'PATCH',
-      body: JSON.stringify({
-        nombre, clave_acceso: clave, clave_pwa: clavepwa,
-        estatus, fecha_vencimiento: venc,
-        modulos_activos: mods, dias_gracia
-      })
+      body: JSON.stringify({nombre, clave_acceso: clave, clave_pwa: clavepwa, estatus, fecha_vencimiento: venc, modulos_activos: mods, dias_gracia})
     });
     toast('Empresa actualizada correctamente', 'ok');
     closeEdit();
@@ -1137,9 +1071,7 @@ document.getElementById('editOverlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeEdit();
 });
 
-/* ══════════════════════════════════════════════
-   NUEVA EMPRESA
-══════════════════════════════════════════════ */
+/* ══ NUEVA EMPRESA ══ */
 function onNuevoPlan(pk) {
   if (pk !== 'custom') buildModGrid('n_mods', {}, pk);
 }
@@ -1156,19 +1088,13 @@ async function crearEmpresa() {
   const clavepwa = document.getElementById('n_clavepwa').value.trim();
   const venc = document.getElementById('n_venc').value || null;
   const mods = getModsFromGrid('n_mods');
-
   if (!nombre) { toast('El nombre es requerido', 'err'); return; }
   if (!clave || clave.length < 6) { toast('Clave mínimo 6 caracteres', 'err'); return; }
   if (!clavepwa) { toast('La clave PWA es requerida', 'err'); return; }
-
   try {
     await sb('empresas', {
       method: 'POST',
-      body: JSON.stringify({
-        nombre, clave_acceso: clave, clave_pwa: clavepwa,
-        estatus: 'activa', fecha_vencimiento: venc,
-        modulos_activos: mods, dias_gracia: 15
-      })
+      body: JSON.stringify({nombre, clave_acceso: clave, clave_pwa: clavepwa, estatus: 'activa', fecha_vencimiento: venc, modulos_activos: mods, dias_gracia: 15})
     });
     toast('Empresa creada exitosamente', 'ok');
     resetNueva();
@@ -1177,20 +1103,16 @@ async function crearEmpresa() {
   } catch(e) { toast('Error: ' + e.message, 'err'); }
 }
 
-/* ══════════════════════════════════════════════
-   PLANES (VIEW + EDICIÓN)
-══════════════════════════════════════════════ */
+/* ══ PLANES ══ */
 function renderPlanes() {
   const c = document.getElementById('planesContainer');
   c.innerHTML = '';
-
   Object.entries(PLANES).forEach(([key, pl]) => {
     const isCustom = key === 'custom';
     const isEditing = editingPlan === key;
     const div = document.createElement('div');
     div.className = 'plan-section';
     div.id = 'plan-sec-' + key;
-
     if (isEditing) {
       div.innerHTML = `
         <div class="plan-hdr">
@@ -1234,7 +1156,6 @@ function renderPlanes() {
             return m ? `<span class="plan-mod-chip"><i class="${m.icon}" style="color:var(--accent2);font-size:.62rem"></i>${m.label}</span>` : '';
           }).join('');
       const cnt = isCustom ? 'Variable' : pl.mods.length + ' módulos';
-
       div.innerHTML = `
         <div class="plan-hdr">
           <div>
@@ -1250,12 +1171,8 @@ function renderPlanes() {
         </div>
         <div class="plan-mods">${chips}</div>`;
     }
-
     c.appendChild(div);
-
-    if (isEditing && !isCustom) {
-      buildPlanModGrid(key, pl.mods);
-    }
+    if (isEditing && !isCustom) buildPlanModGrid(key, pl.mods);
   });
 }
 
@@ -1303,25 +1220,19 @@ function cancelEditPlan() {
 async function savePlan(key) {
   const btn = document.getElementById('btn-save-plan-' + key);
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando…'; }
-
-  // Leer módulos del grid
   const mods = [];
   MODS.forEach(m => {
     const cb = document.querySelector(`#PMI_${key}_${m.key} input[type=checkbox]`);
     if (cb && cb.checked) mods.push(m.key);
   });
   const desc = document.getElementById('plan-desc-' + key)?.value.trim() || PLANES[key].desc;
-
   if (mods.length === 0) {
     toast('El plan debe tener al menos 1 módulo', 'err');
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Guardar'; }
     return;
   }
-
-  // Actualizar en memoria ANTES de guardar en DB
   PLANES[key].mods = mods;
   PLANES[key].desc = desc;
-
   try {
     await savePlanToDB(key);
     toast(`Plan ${PLANES[key].label} guardado — ${mods.length} módulos`, 'ok');
@@ -1362,9 +1273,7 @@ async function resetPlanDefault(key) {
   }
 }
 
-/* ══════════════════════════════════════════════
-   CATÁLOGO DE MÓDULOS
-══════════════════════════════════════════════ */
+/* ══ CATÁLOGO ══ */
 function renderCatalog() {
   const c = document.getElementById('catalogGrid');
   c.innerHTML = MODS.map(m => `
@@ -1379,15 +1288,12 @@ function renderCatalog() {
     </div>`).join('');
 }
 
-/* ══════════════════════════════════════════════
-   PAGOS
-══════════════════════════════════════════════ */
+/* ══ PAGOS ══ */
 async function loadPagos() {
   try {
     allPagos = await sb('capta_pagos?select=*&order=vencimiento.asc');
     renderPagosKPIs();
   } catch(e) {
-    // Si la tabla no existe aún, ignorar silenciosamente
     allPagos = [];
     console.warn('capta_pagos no disponible:', e.message);
   }
@@ -1401,7 +1307,6 @@ function calcEstadoPago(pago) {
   const diasVencido = Math.floor((hoy - venc) / 86400000);
   const regla = REGLAS_PAGO[pago.tipo];
   if (!regla) return { label: pago.estado || '—', cls: '' };
-
   if (diasVencido > regla.bloqueo_dias) return { label: 'Vencido (bloq.)', cls: 'pago-vencido' };
   if (diasVencido > 0)                   return { label: `Vencido (${diasVencido}d)`, cls: 'pago-alerta' };
   if (diasVencido > -regla.alerta_dias)  return { label: 'Por vencer', cls: 'pago-alerta' };
@@ -1409,9 +1314,7 @@ function calcEstadoPago(pago) {
 }
 
 function renderPagosKPIs() {
-  const hoy = new Date();
   let alDia = 0, enAlerta = 0, vencidos = 0, pendientes = 0;
-
   allPagos.forEach(p => {
     const est = calcEstadoPago(p);
     if (est.cls === 'pago-ok') alDia++;
@@ -1419,7 +1322,6 @@ function renderPagosKPIs() {
     else if (est.cls === 'pago-vencido') vencidos++;
     else pendientes++;
   });
-
   document.getElementById('pk0').textContent = alDia;
   document.getElementById('pk1').textContent = enAlerta;
   document.getElementById('pk2').textContent = vencidos;
@@ -1430,7 +1332,6 @@ function renderPagos() {
   const fEmpresa = document.getElementById('fPagoEmpresa').value;
   const fTipo = document.getElementById('fPagoTipo').value;
   const fEstado = document.getElementById('fPagoEstado').value;
-
   let filtered = allPagos.filter(p => {
     if (fEmpresa && p.empresa_id !== fEmpresa) return false;
     if (fTipo && p.tipo !== fTipo) return false;
@@ -1441,26 +1342,18 @@ function renderPagos() {
     }
     return true;
   });
-
   const tb = document.getElementById('pagosTbody');
   if (!filtered.length) {
     tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">Sin pagos para los filtros seleccionados</td></tr>';
     return;
   }
-
   const tipoIcon = { mensualidad:'💳', anualidad:'📅', desarrollo:'🛠️' };
-
   tb.innerHTML = filtered.map(p => {
     const empresa = allE.find(e => e.id === p.empresa_id);
     const est = calcEstadoPago(p);
     const regla = REGLAS_PAGO[p.tipo];
-    const diasVencido = p.vencimiento
-      ? Math.floor((new Date() - new Date(p.vencimiento)) / 86400000)
-      : null;
-    const diasGraciaRestantes = (regla && diasVencido > 0)
-      ? Math.max(0, regla.bloqueo_dias - diasVencido)
-      : null;
-
+    const diasVencido = p.vencimiento ? Math.floor((new Date() - new Date(p.vencimiento)) / 86400000) : null;
+    const diasGraciaRestantes = (regla && diasVencido > 0) ? Math.max(0, regla.bloqueo_dias - diasVencido) : null;
     return `<tr>
       <td style="font-weight:600;font-size:.82rem">${empresa?.nombre || p.empresa_id?.slice(0,8)}</td>
       <td>${tipoIcon[p.tipo] || ''} <span style="font-size:.78rem;text-transform:capitalize">${p.tipo || '—'}</span></td>
@@ -1476,12 +1369,8 @@ function renderPagos() {
       </td>
       <td style="text-align:center">
         <div style="display:inline-flex;gap:5px">
-          <button class="btn btn-sec btn-sm" onclick="editPago('${p.id}')" title="Editar">
-            <i class="fas fa-pen"></i>
-          </button>
-          <button class="btn btn-danger btn-sm" onclick="deletePago('${p.id}')" title="Eliminar">
-            <i class="fas fa-trash"></i>
-          </button>
+          <button class="btn btn-sec btn-sm" onclick="editPago('${p.id}')"><i class="fas fa-pen"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="deletePago('${p.id}')"><i class="fas fa-trash"></i></button>
         </div>
       </td>
     </tr>`;
@@ -1504,7 +1393,6 @@ function populatePagoEmpresaSelect() {
 function renderPagosEmpresa(empresaId) {
   const cont = document.getElementById('e_pagos_list');
   const pagosEmp = allPagos.filter(p => p.empresa_id === empresaId);
-
   if (!pagosEmp.length) {
     cont.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted)">
       <i class="fas fa-receipt" style="font-size:1.3rem;display:block;margin-bottom:8px;opacity:.3"></i>
@@ -1512,7 +1400,6 @@ function renderPagosEmpresa(empresaId) {
     </div>`;
     return;
   }
-
   const tipoIcon = { mensualidad:'💳', anualidad:'📅', desarrollo:'🛠️' };
   cont.innerHTML = pagosEmp.map(p => {
     const est = calcEstadoPago(p);
@@ -1534,7 +1421,6 @@ function renderPagosEmpresa(empresaId) {
   }).join('');
 }
 
-/* ── NUEVO PAGO ── */
 function openNuevoPago(empresaId = null) {
   document.getElementById('p_id').value = '';
   document.getElementById('p_empresa').innerHTML = allE.map(e =>
@@ -1547,15 +1433,12 @@ function openNuevoPago(empresaId = null) {
   document.getElementById('p_estado').value = 'al_dia';
   document.getElementById('p_notas').value = '';
   document.getElementById('p_fecha_pago').value = new Date().toISOString().split('T')[0];
-  // Auto-vencimiento por tipo
   const v = new Date(); v.setMonth(v.getMonth() + 1);
   document.getElementById('p_vencimiento').value = v.toISOString().split('T')[0];
   document.getElementById('pagoOverlay').classList.add('open');
 }
 
-function openNuevoPagoEmpresa() {
-  openNuevoPago(editId);
-}
+function openNuevoPagoEmpresa() { openNuevoPago(editId); }
 
 function editPago(id) {
   const p = allPagos.find(x => x.id === id);
@@ -1574,9 +1457,7 @@ function editPago(id) {
   document.getElementById('pagoOverlay').classList.add('open');
 }
 
-function closePago() {
-  document.getElementById('pagoOverlay').classList.remove('open');
-}
+function closePago() { document.getElementById('pagoOverlay').classList.remove('open'); }
 
 async function guardarPago() {
   const id = document.getElementById('p_id').value;
@@ -1588,14 +1469,8 @@ async function guardarPago() {
   const notas = document.getElementById('p_notas').value.trim();
   const fecha_pago = document.getElementById('p_fecha_pago').value || null;
   const vencimiento = document.getElementById('p_vencimiento').value || null;
-
-  if (!empresa_id || !tipo || !vencimiento) {
-    toast('Empresa, tipo y vencimiento son requeridos', 'err');
-    return;
-  }
-
+  if (!empresa_id || !tipo || !vencimiento) { toast('Empresa, tipo y vencimiento son requeridos', 'err'); return; }
   const payload = { empresa_id, tipo, monto, concepto, estado, notas, fecha_pago, vencimiento };
-
   try {
     if (id) {
       await sb('capta_pagos?id=eq.' + id, {method:'PATCH', body: JSON.stringify(payload)});
@@ -1608,7 +1483,7 @@ async function guardarPago() {
     await loadPagos();
     renderPagos();
     renderPagosKPIs();
-    renderStats(); // Actualizar dots de alerta
+    renderStats();
     if (editId) renderPagosEmpresa(editId);
   } catch(e) { toast('Error: ' + e.message, 'err'); }
 }
@@ -1630,7 +1505,6 @@ document.getElementById('pagoOverlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) closePago();
 });
 
-// Auto-ajustar vencimiento al cambiar tipo
 document.getElementById('p_tipo').addEventListener('change', function() {
   const v = new Date();
   if (this.value === 'mensualidad') v.setMonth(v.getMonth() + 1);
@@ -1639,13 +1513,12 @@ document.getElementById('p_tipo').addEventListener('change', function() {
   document.getElementById('p_vencimiento').value = v.toISOString().split('T')[0];
 });
 
-/* ── REGLAS DE ALERTA ── */
+/* ══ REGLAS INFO ══ */
 function renderReglasInfo() {
   const cont = document.getElementById('reglasContainer');
-  const tipos = Object.entries(REGLAS_PAGO);
   cont.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
-      ${tipos.map(([tipo, regla]) => `
+      ${Object.entries(REGLAS_PAGO).map(([tipo, regla]) => `
         <div style="background:var(--card2);border:1px solid var(--brd);border-radius:var(--r2);padding:14px 16px">
           <div style="font-size:.78rem;font-weight:700;text-transform:capitalize;margin-bottom:10px;color:${regla.color}">
             ${tipo === 'mensualidad' ? '💳' : tipo === 'anualidad' ? '📅' : '🛠️'} ${regla.label}
@@ -1666,15 +1539,12 @@ function renderReglasInfo() {
       <i class="fas fa-info-circle" style="color:var(--accent2);margin-right:4px"></i>
       Cuando un pago vence, el login del dashboard muestra una <strong style="color:var(--amber)">alerta visible</strong> durante el período de gracia.
       Una vez superado el período de bloqueo, el acceso queda <strong style="color:var(--red)">completamente restringido</strong>.
-      El campo "Días de gracia" en cada empresa puede personalizar este comportamiento.
       <br><br>
       <strong>El navbar del dashboard consulta el estado de pagos al iniciar</strong> y aplica la restricción correspondiente de forma automática.
     </div>`;
 }
 
-/* ══════════════════════════════════════════════
-   TOAST
-══════════════════════════════════════════════ */
+/* ══ TOAST ══ */
 let toastT = null;
 function toast(msg, type = 'ok') {
   const t = document.getElementById('toast');
