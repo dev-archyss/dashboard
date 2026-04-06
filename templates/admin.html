@@ -609,12 +609,12 @@ const AU = 'admincapta123', AP = 'archys123';
 */
 const MODS = [
   {key:'dashboard',           label:'Dashboard',            icon:'fas fa-gauge-high'},
-  {key:'analisis',            label:'Análisis de Precios',  icon:'fas fa-chart-line'},
+  {key:'analisis_precios',    label:'Análisis de Precios',  icon:'fas fa-chart-line'},
   {key:'caras',               label:'Caras en Anaquel',     icon:'fas fa-eye'},
   {key:'metros_espacios',     label:'Metros de Anaquel',    icon:'fas fa-ruler-horizontal'},
   {key:'espacios_adicionales',label:'Espacios Adicionales', icon:'fas fa-store'},
   {key:'stock',               label:'Control de Stock',     icon:'fas fa-boxes-stacked'},
-  {key:'gps',                 label:'Seguimiento GPS',      icon:'fas fa-map-location-dot'},
+  {key:'gps_verificacion',    label:'Seguimiento GPS',      icon:'fas fa-map-location-dot'},
   {key:'planograma',          label:'Planogramas',          icon:'fas fa-image'},
   {key:'promotores',          label:'Promotores',           icon:'fas fa-users'},
   {key:'clientes',            label:'Clientes',             icon:'fas fa-store'},
@@ -634,7 +634,7 @@ const PLANES_DEFAULT = {
   mid: {
     label:'Mid', cls:'plan-mid',
     desc:'Módulos operativos y de análisis esenciales',
-    mods: ['dashboard','analisis','caras','stock','gps','planograma','promotores','clientes','lineas','productos','reportes']  /* ← AGREGADO */
+    mods: ['dashboard','analisis_precios','caras','metros_espacios','stock','gps_verificacion','planograma','promotores','clientes','lineas','productos','reportes']  /* ← AGREGADO */
   },
   basic: {
     label:'Básico', cls:'plan-basic',
