@@ -666,17 +666,26 @@ async function updateWeeklyProgress(pName = 'all') {
         </div>`;
     });
 
-  // Contar solo confirmadas globalmente
-const totalConf = listaFinal
-  .filter(p => pName === 'all' || p.promoter_name === pName)
-  .reduce((s, p) => {
-    const myGroups = weekGroups.filter(g => g.promoter_id === p.promoter_id || g.promoter_name === p.promoter_name);
-    return s + myGroups.filter(isConfirmed).length;
-  }, 0);
-const totalPct = totalGoal > 0 ? (totalConf / totalGoal) * 100 : 0;
-document.getElementById('metaDetalle').textContent = `${totalConf} conf. GPS / ${totalGoal} meta`;
-document.getElementById('totalGoalProgressBar').style.width = `${Math.min(100, totalPct)}%`;
-document.getElementById('metaDetalle').textContent = `${totalUniq} únicas / ${totalGoal} meta`;
+  // ── KPI de meta global (arriba del dashboard) ────────────────────
+  // Se calcula sobre visitas ÚNICAS vs meta total (no confirmadas GPS,
+  // porque la meta es de visitas, no de GPS)
+  const pctUniq   = totalGoal > 0 ? (totalUniq / totalGoal) * 100 : 0;
+  const pctColor  = pctUniq >= 80 ? '#22c55e' : pctUniq >= 50 ? '#eab308' : '#a855f7';
+
+  // Actualizar el span del texto "Meta: X%"
+  const progSpan = document.getElementById('totalGoalProgress');
+  if (progSpan) progSpan.textContent = `${Math.round(pctUniq)}%`;
+
+  // Actualizar la barra de progreso
+  const progBar = document.getElementById('totalGoalProgressBar');
+  if (progBar) {
+    progBar.style.width = `${Math.min(100, pctUniq)}%`;
+    progBar.style.background = pctColor;
+  }
+
+  // Texto de detalle: visitas únicas / meta
+  const detalle = document.getElementById('metaDetalle');
+  if (detalle) detalle.textContent = `${totalUniq} únicas / ${totalGoal} meta`;
 }
 
 // ── Tabla ─────────────────────────────────────────────────────────
