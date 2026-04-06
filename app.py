@@ -195,27 +195,37 @@ def get_empresa_modulos():
         pass
     return {}
  
-# Mapa de aliases: key nueva → keys antiguas que significan lo mismo
-# Necesario porque el admin viejo guardaba 'gps' y 'analisis',
-# el admin nuevo guarda 'gps_verificacion' y 'analisis_precios'
+# ─── ALIASES DE MÓDULOS (Compatibilidad vieja ↔ nueva) ─────────────────────
 _MOD_ALIASES = {
+    # GPS
+    'gps':              ['gps_verificacion'],
     'gps_verificacion': ['gps'],
+    
+    # Análisis
     'analisis_precios': ['analisis'],
+    'analisis':         ['analisis_precios'],
 }
 
-def modulo_activo(key):
-    """True si el módulo está activo para la empresa en sesión (o si no hay restricciones).
-    Acepta tanto keys nuevas (gps_verificacion) como antiguas (gps) para compatibilidad."""
+def modulo_activo(key: str) -> bool:
+    """
+    Retorna True si el módulo está activo para la empresa actual.
+    Soporta tanto las claves antiguas como las nuevas.
+    """
     mods = get_empresa_modulos()
-    if not mods:  # sin restricciones => acceso total (empresa legacy)
+    
+    # Si no hay restricciones de módulos (empresas antiguas), dar acceso total
+    if not mods or len(mods) == 0:
         return True
-    # Verificar la key exacta
-    if mods.get(key, False) is True:
+    
+    # 1. Verificar clave exacta
+    if mods.get(key) is True:
         return True
-    # Verificar aliases (keys antiguas que significan lo mismo)
+    
+    # 2. Verificar aliases (compatibilidad)
     for alias in _MOD_ALIASES.get(key, []):
-        if mods.get(alias, False) is True:
+        if mods.get(alias) is True:
             return True
+    
     return False
  
 def require_modulo(key):
@@ -361,7 +371,7 @@ def stock():
     return render_template('stock.html')
  
 @app.route('/gps')
-@require_modulo('gps')
+@require_modulo('gps_verificacion')
 def gps():
     return render_template('GPS.html')
  
