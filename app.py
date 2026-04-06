@@ -195,12 +195,28 @@ def get_empresa_modulos():
         pass
     return {}
  
+# Mapa de aliases: key nueva → keys antiguas que significan lo mismo
+# Necesario porque el admin viejo guardaba 'gps' y 'analisis',
+# el admin nuevo guarda 'gps_verificacion' y 'analisis_precios'
+_MOD_ALIASES = {
+    'gps_verificacion': ['gps'],
+    'analisis_precios': ['analisis'],
+}
+
 def modulo_activo(key):
-    """True si el módulo está activo para la empresa en sesión (o si no hay restricciones)."""
+    """True si el módulo está activo para la empresa en sesión (o si no hay restricciones).
+    Acepta tanto keys nuevas (gps_verificacion) como antiguas (gps) para compatibilidad."""
     mods = get_empresa_modulos()
     if not mods:  # sin restricciones => acceso total (empresa legacy)
         return True
-    return mods.get(key, False) is True
+    # Verificar la key exacta
+    if mods.get(key, False) is True:
+        return True
+    # Verificar aliases (keys antiguas que significan lo mismo)
+    for alias in _MOD_ALIASES.get(key, []):
+        if mods.get(alias, False) is True:
+            return True
+    return False
  
 def require_modulo(key):
     """Decorador que bloquea una ruta si el módulo no está activo."""
