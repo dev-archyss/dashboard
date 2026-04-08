@@ -771,6 +771,35 @@ function updateSelected() {
 }
 
 // ── MODAL DETALLE — adaptado a campos nueva PWA ───────────────────
+// ── Obtener caras de competencia — compatible app móvil + PWA vieja ──
+// App móvil: competitoritems[].faces (suma de items)
+// PWA vieja: competitor_faces (campo global del registro)
+function getCompetitorFaces(r) {
+  // Prioridad 1: suma de faces por ítem (app móvil nueva)
+  const items = parseJ(r.competitoritems);
+  if (items && items.length > 0) {
+    const sumaItems = items
+      .filter(i => !i.sin_stock && i.faces != null)
+      .reduce((s, i) => s + (parseFloat(i.faces) || 0), 0);
+    if (sumaItems > 0) return sumaItems;
+  }
+  // Fallback: campo global (PWA vieja)
+  const global = parseFloat(getCompetitorFaces(r));
+  return !isNaN(global) ? global : 0;
+}
+
+// ── Formatear presentación con gramaje ────────────────────────────
+// Input: { presentation: "SAL XXX", gramaje: 500, unidad: "g" }
+// Output: "SAL XXX — 500g"
+function fmtPresentacion(item) {
+  if (!item) return '—';
+  const base = item.presentation || '—';
+  if (item.gramaje && item.gramaje > 0) {
+    return `${base} — ${item.gramaje}${item.unidad || ''}`;
+  }
+  return base;
+}
+
 function parseJ(v) {
   if (Array.isArray(v)) return v;
   try { return JSON.parse(v) || []; } catch { return []; }
@@ -847,7 +876,7 @@ function showDetails(group) {
           ${myItems.map(item => {
             if (item.sin_stock) return `
               <div class="prod-card border-red-200 dark:border-red-800 bg-white dark:bg-slate-800">
-                <p class="text-sm font-bold text-red-500 mb-1">${item.presentation || '—'}</p>
+                <p class="text-sm font-bold text-red-500 mb-1">${fmtPresentacion(item)}</p>
                 <span class="badge badge-destructive">SIN STOCK</span>
               </div>`;
 
@@ -862,7 +891,7 @@ function showDetails(group) {
 
             return `
               <div class="prod-card ${lowStock ? 'border-red-300 dark:border-red-700' : 'border-green-200 dark:border-green-800'} bg-white dark:bg-slate-800">
-                <p class="text-sm font-bold text-gray-800 dark:text-white mb-2">${item.presentation || '—'}</p>
+                <p class="text-sm font-bold text-gray-800 dark:text-white mb-2">${fmtPresentacion(item)}</p>
                 <div class="grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <p class="text-gray-400 uppercase mb-0.5">Precio</p>
@@ -912,7 +941,7 @@ function showDetails(group) {
             const caras = item.faces_after != null ? item.faces_after : '—';
             return `
               <div class="prod-card border-red-200 dark:border-red-800 bg-white dark:bg-slate-800">
-                <p class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">${item.presentation || '—'}</p>
+                <p class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">${fmtPresentacion(item)}</p>
                 <div class="flex items-center justify-between text-xs">
                   <div>
                     <p class="text-gray-400 uppercase mb-0.5">Precio</p>
