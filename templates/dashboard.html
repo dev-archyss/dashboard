@@ -938,7 +938,7 @@ function showDetails(group) {
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-2">
           ${compItems.filter(i => !i.sin_stock).map(item => {
-            const caras = item.faces_after != null ? item.faces_after : '—';
+            const caras = item.faces != null ? item.faces : item.faces_after != null ? item.faces_after : '—';
             return `
               <div class="prod-card border-red-200 dark:border-red-800 bg-white dark:bg-slate-800">
                 <p class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">${fmtPresentacion(item)}</p>
