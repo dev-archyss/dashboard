@@ -569,6 +569,23 @@ async function _loadLineas() {
   } catch(e) { console.warn('Nav líneas:', e); }
 }
 
+
+/* ── HELPERS GLOBALES: nombre de producto con gramaje ── */
+window.fmtProd = function(item) {
+  if (!item) return '—';
+  const name = item.presentation || '—';
+  if (!item.gramaje) return name;
+  const g = item.gramaje % 1 === 0 ? parseInt(item.gramaje) : item.gramaje;
+  return `${name} <span style="font-size:.8em;opacity:.6;font-weight:500">${g}${item.unidad || ''}</span>`;
+};
+window.fmtProdTxt = function(item) {
+  if (!item) return '—';
+  const name = item.presentation || '—';
+  if (!item.gramaje) return name;
+  const g = item.gramaje % 1 === 0 ? parseInt(item.gramaje) : item.gramaje;
+  return `${name} ${g}${item.unidad || ''}`;
+};
+
 /* ── TOAST ── */
 window.captaToast = function(msg, type = 'info') {
   const t = document.createElement('div');

@@ -718,7 +718,7 @@ function renderPrecios(){
       const ci=cis.find(x=>x.price&&x.currency&&!x.sin_stock);
       const cUSD=ci?toUSD(ci.price,ci.currency,r.created_at):null;
       const diff=cUSD?((nUSD-cUSD)/cUSD*100):null;
-      rows.push([fmtD(r.created_at),r.promoter_name||'—',r.trade||'—',mi.presentation,`${mi.currency} ${mi.price}`,fmtUSD(nUSD),ci?.presentation||'—',cUSD?fmtUSD(cUSD):'—',diff!=null?(diff>0?`<span class="badge badge-red">+${diff.toFixed(1)}%</span>`:`<span class="badge badge-grn">${diff.toFixed(1)}%</span>`):'—']);
+      rows.push([fmtD(r.created_at),r.promoter_name||'—',r.trade||'—',fmtProdTxt(mi),`${mi.currency} ${mi.price}`,fmtUSD(nUSD),ci?.presentation||'—',cUSD?fmtUSD(cUSD):'—',diff!=null?(diff>0?`<span class="badge badge-red">+${diff.toFixed(1)}%</span>`:`<span class="badge badge-grn">${diff.toFixed(1)}%</span>`):'—']);
     });
   });
   document.querySelector('#t-pre-detalle tbody').innerHTML=rows.slice(0,200).map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="9" class="empty">Sin datos de precios</td></tr>';
@@ -800,7 +800,7 @@ function renderStock(){
       if(i.presentation==='SIN STOCK'||i.stock_shelf===0||i.stock_shelf===null){
         byProd[i.presentation||'N/A']=(byProd[i.presentation||'N/A']||0)+1;
         byTrade[r.trade||'N/A']=(byTrade[r.trade||'N/A']||0)+1;
-        rows.push([fmtD(r.created_at),r.promoter_name||'—',r.trade||'—',i.presentation||'—',i.stock_shelf??'SIN STOCK',i.stock_warehouse??'SIN STOCK']);
+        rows.push([fmtD(r.created_at),r.promoter_name||'—',r.trade||'—',fmtProdTxt(i)||'—',i.stock_shelf??'SIN STOCK',i.stock_warehouse??'SIN STOCK']);
       }
     });
   });

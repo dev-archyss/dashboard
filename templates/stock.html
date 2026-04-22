@@ -529,6 +529,8 @@ function procesarDatos() {
         state:    r.state || '—',
         zone:     r.zone  || '—',
         producto: prod,
+        gramaje:  item.gramaje  ?? null,
+        unidad:   item.unidad   ?? null,
         anaquel:  isNaN(sa) ? null : sa,
         bodega:   isNaN(sb) ? null : sb,
         ua: u.anaquel, ub: u.bodega,
@@ -612,6 +614,7 @@ function renderAlertas(f) {
     const key = `${r.comercio}|||${r.producto}`;
     if (!grupos[key]) grupos[key] = {
       comercio: r.comercio, producto: r.producto,
+      gramaje: r.gramaje, unidad: r.unidad,
       state: r.state, historial: [], quiebres: 0,
     };
     grupos[key].historial.push({ fecha: r.fecha, stock: r.anaquel });
@@ -693,7 +696,7 @@ function renderAlertas(f) {
           </span>
         </div>
         <p class="font-bold text-sm text-gray-800 dark:text-white truncate">${item.comercio}</p>
-        <p class="text-xs text-indigo-600 dark:text-indigo-300 font-semibold mt-0.5">${item.producto}</p>
+        <p class="text-xs text-indigo-600 dark:text-indigo-300 font-semibold mt-0.5">${fmtProdTxt({presentation:item.producto,gramaje:item.gramaje,unidad:item.unidad})}</p>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${item.state}</p>
         <div class="mt-3 pt-3 border-t border-black/5 dark:border-white/10 space-y-1">
           <div class="flex items-center justify-between text-xs">
@@ -786,7 +789,7 @@ function renderTablaProducto(f) {
   const byP = {};
   f.forEach(r => {
     if (!byP[r.producto]) byP[r.producto] = {
-      quiebres:0, comercios:new Set(), stocksA:[], stocksB:[] };
+      quiebres:0, comercios:new Set(), stocksA:[], stocksB:[], gramaje:r.gramaje||null, unidad:r.unidad||null };
     if (r.alertaA || r.alertaB || r.sinStock) byP[r.producto].quiebres++;
     byP[r.producto].comercios.add(r.comercio);
     if (r.anaquel != null) byP[r.producto].stocksA.push(r.anaquel);
@@ -846,7 +849,7 @@ function renderTablaProducto(f) {
     const fmtStock = v => v != null ? v.toFixed(1) : '—';
     const stockCls = r.avgA != null && r.avgA <= DEFAULT_ANAQUEL*2 ? 'text-red-600 font-bold' : 'text-gray-600 dark:text-gray-300';
     return `<tr class="row-hover">
-      <td class="py-3 px-4 font-semibold text-gray-800 dark:text-white">${r.prod}</td>
+      <td class="py-3 px-4 font-semibold text-gray-800 dark:text-white">${fmtProdTxt({presentation:r.prod,gramaje:r.gramaje,unidad:r.unidad})}</td>
       <td class="py-3 px-4 text-center font-extrabold text-red-500">${r.quiebres}</td>
       <td class="py-3 px-4 text-center font-bold text-amber-600">${r.comercios}</td>
       <td class="py-3 px-4 text-center ${stockCls}">${fmtStock(r.avgA)}</td>
@@ -1046,7 +1049,7 @@ function renderTablaDetalle(f) {
       <td class="py-3 px-4 text-xs text-indigo-600 dark:text-indigo-400 font-medium">${r.promotor}</td>
       <td class="py-3 px-4 text-sm font-semibold text-gray-800 dark:text-white">${r.comercio}</td>
       <td class="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
-        ${r.producto}
+        ${fmtProdTxt(r)}
         <div class="text-xs text-gray-400 font-normal">umbral: anaquel≤${r.ua} · bodega≤${r.ub}</div>
       </td>
       <td class="py-3 px-4 text-center">${badgeAnaq(r.anaquel, r.ua)}</td>

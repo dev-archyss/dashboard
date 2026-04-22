@@ -310,8 +310,9 @@ function getCarasComp(i) {
   return parseFloat(i.faces) || parseFloat(i.faces_after) || parseFloat(i.facesStr) || 0;
 }
 
-// Helper: label con gramaje
-function labelConGramaje(i) {
+// Helper: label con gramaje (delegado a helper global)
+function labelConGramaje(i) { return fmtProdTxt(i); }
+function _labelConGramaje_legacy(i) {
   const base = i.presentation || '—';
   if (i.gramaje && parseFloat(i.gramaje) > 0) {
     return base + ' — ' + parseFloat(i.gramaje) + (i.unidad || '');
