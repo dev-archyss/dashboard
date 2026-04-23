@@ -791,6 +791,20 @@ function getCompetitorFaces(r) {
 // ── Formatear presentación con gramaje ────────────────────────────
 // Input: { presentation: "SAL XXX", gramaje: 500, unidad: "g" }
 // Output: "SAL XXX — 500g"  (delegado a helper global)
+function fmtProdTxt(item) {
+  if (!item) return '—';
+  const name = item.presentation || '—';
+  if (!item.gramaje) return name;
+  const g = item.gramaje % 1 === 0 ? parseInt(item.gramaje) : item.gramaje;
+  return name + ' — ' + g + (item.unidad || '');
+}
+function fmtProdTxt(item) {
+  if (!item) return '—';
+  const name = item.presentation || '—';
+  if (!item.gramaje) return name;
+  const g = item.gramaje % 1 === 0 ? parseInt(item.gramaje) : item.gramaje;
+  return name + ' — ' + g + (item.unidad || '');
+}
 function fmtPresentacion(item) { return fmtProdTxt(item); }
 function _fmtPresentacion_legacy(item) {
   if (!item) return '—';
