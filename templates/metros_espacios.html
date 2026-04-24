@@ -403,9 +403,14 @@ function procesarDatos() {
 function aplicar() {
   const comercio = document.getElementById('fComercioVal').value;
   const nivel    = document.getElementById('fNivel').value;
+  const fecha    = document.getElementById('fFecha')?.value;
 
   let filtered = comercioData;
 
+  if (fecha) {
+    const [y, m, d] = fecha.split('-');
+    filtered = filtered.filter(c => c.fecha?.substring(0, 10) === d + '-' + m + '-' + y);
+  }
   if (comercio) filtered = filtered.filter(c => c.comercio === comercio);
 
   if (nivel === 'alto')  filtered = filtered.filter(c => c.pct != null && c.pct >= 40);
@@ -729,14 +734,13 @@ function setDefaultDates() {
 }
 
 window.onLineaChanged = () => {
-  // Limpiar filtros cuando cambia línea
   document.getElementById('fPromotor').value = '';
-  document.getElementById('fProducto').value = '';
-  document.getElementById('fComercio').value = '';
-  document.getElementById('fComercioVal').value = '';
-  document.getElementById('fAlerta').value = '';
+  document.getElementById('fEstado').value = '';
+  document.getElementById('fZona').value = '';
+  document.getElementById('fNivel').value = '';
   loadData().then(aplicarFiltros);
 };
+
 
 function waitDb(fn) {
   if (window.db) { fn(); return; }
