@@ -604,20 +604,20 @@ function limpiar() {
 }
 
 function setDefaultDates() {
-  const hoy  = new Date();
-  const d30  = new Date(hoy); d30.setDate(hoy.getDate() - 30);
-  document.getElementById('fHasta').value = hoy.toISOString().split('T')[0];
-  document.getElementById('fDesde').value = d30.toISOString().split('T')[0];
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('fHasta').value = hoy;
+  document.getElementById('fDesde').value = hoy;
 }
 
 window.onLineaChanged = () => {
-  // Limpiar filtros cuando cambia línea
   document.getElementById('fPromotor').value = '';
-  document.getElementById('fProducto').value = '';
+  document.getElementById('fEstado').value = '';
+  document.getElementById('fTipo').value = '';
   document.getElementById('fComercio').value = '';
   document.getElementById('fComercioVal').value = '';
-  document.getElementById('fAlerta').value = '';
-  loadData().then(aplicarFiltros);
+  document.getElementById('fProducto').value = '';
+  document.getElementById('fProductoVal').value = '';
+  cargar();
 };
 
 function waitDb(fn) {

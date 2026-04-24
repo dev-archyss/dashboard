@@ -50,43 +50,39 @@
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Desde</label>
-        <input type="date" id="fDesde" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <input type="date" id="fDesde" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" onchange="aplicarFiltros()">
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Hasta</label>
-        <input type="date" id="fHasta" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <input type="date" id="fHasta" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" onchange="aplicarFiltros()">
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estado</label>
-        <select id="fEstado" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <select id="fEstado" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" onchange="aplicarFiltros()">
           <option value="">Todos</option>
         </select>
-        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Fecha</label>
-        <input type="date" id="fFecha" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"
-          onchange="aplicarFiltros()">
-
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Zona</label>
-        <select id="fZona" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <select id="fZona" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" onchange="aplicarFiltros()">
           <option value="">Todas</option>
         </select>
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Promotor</label>
-        <select id="fPromotor" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <select id="fPromotor" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" onchange="aplicarFiltros()">
           <option value="">Todos</option>
         </select>
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Nuestro producto</label>
-        <select id="fNuestroProducto" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <select id="fNuestroProducto" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" onchange="aplicarFiltros()">
           <option value="">Todos</option>
         </select>
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Tipo de comercio</label>
-        <select id="fTipoComercio" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <select id="fTipoComercio" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" onchange="aplicarFiltros()">
           <option>Todos</option><option>Detal</option><option>Mayorista</option>
         </select>
       </div>
@@ -94,7 +90,7 @@
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Comercio</label>
         <input type="text" id="fComercioSearch" placeholder="Buscar comercio…"
           class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"
-          oninput="buscarComercio(this.value)" autocomplete="off">
+          oninput="buscarComercio(this.value)" onchange="aplicarFiltros()" autocomplete="off">
         <div id="comercioDropdown" class="com-dd" style="display:none"></div>
         <input type="hidden" id="fComercioSelected">
       </div>
@@ -476,6 +472,11 @@ function poblarSelectProductos() {
 }
 
 // ── Fetch principal ───────────────────────────────────────────────
+// ── Aplicar filtros ──────────────────────────────────────────────────
+function aplicarFiltros() {
+  fetchDataAnalisis();
+}
+
 async function fetchDataAnalisis() {
   const btn = $('btnFiltrar');
   btn.disabled = true;
@@ -484,9 +485,8 @@ async function fetchDataAnalisis() {
   try {
     await cargarTasas();
 
-    const fecha        = $('fFecha')?.value;
-    const desde        = fecha ? fecha.split('-').reverse().join('-') : $('fDesde').value;
-    const hasta        = fecha ? fecha.split('-').reverse().join('-') : $('fHasta').value;
+    const desde        = $('fDesde').value;
+    const hasta        = $('fHasta').value;
     const est          = $('fEstado').value;
     const zona         = $('fZona').value;
     const prom         = $('fPromotor').value;
@@ -496,8 +496,8 @@ async function fetchDataAnalisis() {
     const lineaId      = localStorage.getItem('sp-linea') || '';
 
     let q = supabaseClient.from('web_precios').select('*').eq('empresa_id', empresaId);
-    if (desde)   q = q.gte('created_at', new Date(desde).toISOString());
-    if (hasta)   { const t = new Date(hasta); t.setDate(t.getDate()+1); q = q.lt('created_at', t.toISOString()); }
+    if (desde)   q = q.gte('created_at', new Date(desde + 'T00:00:00').toISOString());
+    if (hasta)   q = q.lte('created_at', new Date(hasta + 'T23:59:59').toISOString());
     if (est)     q = q.eq('state', est);
     if (zona)    q = q.eq('zone', zona);
     if (prom)    q = q.eq('promoter_name', prom);
@@ -996,20 +996,24 @@ function limpiarFiltros() {
 }
 
 function setDefaultDates() {
-  const t = new Date(), s = new Date(t);
-  s.setDate(t.getDate() - 30);
-  $('fDesde').value = s.toISOString().split('T')[0];
-  $('fHasta').value = t.toISOString().split('T')[0];
+  const t = new Date();
+  const hoy = t.toISOString().split('T')[0];
+  $('fDesde').value = hoy;
+  $('fHasta').value = hoy;
 }
 
 window.onLineaChanged = () => {
-  // Limpiar filtros cuando cambia línea
   document.getElementById('fPromotor').value = '';
-  document.getElementById('fProducto').value = '';
-  document.getElementById('fComercio').value = '';
-  document.getElementById('fComercioVal').value = '';
-  document.getElementById('fAlerta').value = '';
-  loadData().then(aplicarFiltros);
+  document.getElementById('fNuestroProducto').value = '';
+  document.getElementById('fEstado').value = '';
+  document.getElementById('fZona').value = '';
+  document.getElementById('fTipoComercio').value = 'Todos';
+  document.getElementById('fComercioSearch').value = '';
+  document.getElementById('fComercioSelected').value = '';
+  cargarMapaCompDirecta().then(() => {
+    poblarSelectProductos();
+    fetchDataAnalisis();
+  });
 };
 waitDb(() => { setDefaultDates(); loadCatalogs(); });
 </script>

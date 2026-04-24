@@ -403,14 +403,8 @@ function procesarDatos() {
 function aplicar() {
   const comercio = document.getElementById('fComercioVal').value;
   const nivel    = document.getElementById('fNivel').value;
-  const fecha    = document.getElementById('fFecha')?.value;
 
   let filtered = comercioData;
-
-  if (fecha) {
-    const [y, m, d] = fecha.split('-');
-    filtered = filtered.filter(c => c.fecha?.substring(0, 10) === d + '-' + m + '-' + y);
-  }
   if (comercio) filtered = filtered.filter(c => c.comercio === comercio);
 
   if (nivel === 'alto')  filtered = filtered.filter(c => c.pct != null && c.pct >= 40);
@@ -727,18 +721,20 @@ function limpiar() {
 }
 
 function setDefaultDates() {
-  const hoy = new Date();
-  const d30 = new Date(hoy); d30.setDate(hoy.getDate() - 30);
-  document.getElementById('fHasta').value = hoy.toISOString().split('T')[0];
-  document.getElementById('fDesde').value = d30.toISOString().split('T')[0];
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('fHasta').value = hoy;
+  document.getElementById('fDesde').value = hoy;
 }
 
 window.onLineaChanged = () => {
   document.getElementById('fPromotor').value = '';
   document.getElementById('fEstado').value = '';
   document.getElementById('fZona').value = '';
+  document.getElementById('fZona').disabled = true;
   document.getElementById('fNivel').value = '';
-  loadData().then(aplicarFiltros);
+  document.getElementById('fComercio').value = '';
+  document.getElementById('fComercioVal').value = '';
+  cargar();
 };
 
 

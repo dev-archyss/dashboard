@@ -104,10 +104,6 @@
         <select id="fPromotor" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
           <option value="">Todos</option>
         </select>
-        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Fecha</label>
-        <input type="date" id="fFecha" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"
-          onchange="aplicarFiltros()">
-
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Producto</label>
@@ -1202,10 +1198,9 @@ async function upsertUmbral(prod, ua, ub) {
 
 // ── Init ──────────────────────────────────────────────────────────
 function setDefaultDates() {
-  const hoy = new Date();
-  const d60 = new Date(hoy); d60.setDate(hoy.getDate() - 60);
-  document.getElementById('fHasta').value = hoy.toISOString().split('T')[0];
-  document.getElementById('fDesde').value = d60.toISOString().split('T')[0];
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('fHasta').value = hoy;
+  document.getElementById('fDesde').value = hoy;
 }
 
 window.onLineaChanged = () => {
