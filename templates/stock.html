@@ -570,11 +570,13 @@ function procesarDatos() {
 
 // ── Aplicar filtros ───────────────────────────────────────────────
 function aplicarFiltros() {
+  const promotor = document.getElementById('fPromotor').value;
   const comercio = document.getElementById('fComercioVal').value;
   const producto = document.getElementById('fProducto').value;
   const alerta   = document.getElementById('fAlerta').value;
 
   let f = filas;
+  if (promotor) f = f.filter(r => r.promotor === promotor);
   if (comercio) f = f.filter(r => r.comercio === comercio);
   if (producto) f = f.filter(r => r.producto === producto);
   if (alerta === 'anaquel')    f = f.filter(r => r.alertaA);
