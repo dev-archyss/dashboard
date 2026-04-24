@@ -997,7 +997,15 @@ function setDefaultDates() {
   $('fHasta').value = t.toISOString().split('T')[0];
 }
 
-window.onLineaChanged = () => fetchDataAnalisis();
+window.onLineaChanged = () => {
+  // Limpiar filtros cuando cambia línea
+  document.getElementById('fPromotor').value = '';
+  document.getElementById('fProducto').value = '';
+  document.getElementById('fComercio').value = '';
+  document.getElementById('fComercioVal').value = '';
+  document.getElementById('fAlerta').value = '';
+  loadData().then(aplicarFiltros);
+};
 waitDb(() => { setDefaultDates(); loadCatalogs(); });
 </script>
 </body>

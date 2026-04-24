@@ -1156,11 +1156,19 @@ async function init() {
     if (e.target === e.currentTarget) document.getElementById('detailsModal').classList.remove('open');
   });
 
-  window.onLineaChanged = (lineaId) => {
+  window.onLineaChanged = () => {
+  // Limpiar filtros cuando cambia línea
+  document.getElementById('fPromotor').value = '';
+  document.getElementById('fProducto').value = '';
+  document.getElementById('fComercio').value = '';
+  document.getElementById('fComercioVal').value = '';
+  document.getElementById('fAlerta').value = '';
+  loadData().then(aplicarFiltros);
+};
     const sel = document.getElementById('linea_filter');
     if (sel) sel.value = lineaId || 'all';
     filterRecords();
-  };
+  
   const savedLinea = localStorage.getItem('sp-linea') || '';
   if (savedLinea) {
     const sel = document.getElementById('linea_filter');

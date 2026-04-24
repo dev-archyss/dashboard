@@ -828,8 +828,15 @@ document.addEventListener('keydown', e => {
 //  INIT — patrón estándar del proyecto
 // ══════════════════════════════════════════════════════════
 // Ignorar el filtro de línea del navbar — planogramas siempre muestra todo
-window.onLineaChanged = () => { /* no recargar */ };
-
+window.onLineaChanged = () => {
+  // Limpiar filtros cuando cambia línea
+  document.getElementById('fPromotor').value = '';
+  document.getElementById('fProducto').value = '';
+  document.getElementById('fComercio').value = '';
+  document.getElementById('fComercioVal').value = '';
+  document.getElementById('fAlerta').value = '';
+  loadData().then(aplicarFiltros);
+};
 function waitDb(fn) {
   if (window.db) { fn(); return; }
   const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);

@@ -966,7 +966,15 @@ function setDefaultDate() {
   document.getElementById('fechaSelect').value = hoy;
 }
 
-window.onLineaChanged = () => cargar();
+window.onLineaChanged = () => {
+  // Limpiar filtros cuando cambia línea
+  document.getElementById('fPromotor').value = '';
+  document.getElementById('fProducto').value = '';
+  document.getElementById('fComercio').value = '';
+  document.getElementById('fComercioVal').value = '';
+  document.getElementById('fAlerta').value = '';
+  loadData().then(aplicarFiltros);
+};
 
 async function init() {
   setDefaultDate();

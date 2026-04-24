@@ -1204,7 +1204,15 @@ function setDefaultDates() {
   document.getElementById('fDesde').value = d60.toISOString().split('T')[0];
 }
 
-window.onLineaChanged = () => loadData().then(aplicarFiltros);
+window.onLineaChanged = () => {
+  // Limpiar filtros cuando cambia línea
+  document.getElementById('fPromotor').value = '';
+  document.getElementById('fProducto').value = '';
+  document.getElementById('fComercio').value = '';
+  document.getElementById('fComercioVal').value = '';
+  document.getElementById('fAlerta').value = '';
+  loadData().then(aplicarFiltros);
+};
 
 function waitDb(fn) {
   if (window.db) { fn(); return; }
