@@ -294,20 +294,16 @@ function pctBadgeCls(pct) {
 
 // ── Catálogos ─────────────────────────────────────────────────────
 async function loadCatalogs() {
-  const lineaId = localStorage.getItem('sp-linea') || '';
-  let qPromos = window.db.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId);
-  if (lineaId) qPromos = qPromos.eq('linea_id', lineaId);
-  
   const [{ data: promos }, { data: estados }, { data: zonas }] = await Promise.all([
-    qPromos.order('promoter_name'),
+    window.db.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId).order('promoter_name'),
     window.db.from('web_estados').select('id, nombre').order('nombre'),
     window.db.from('web_zonas').select('id, nombre, estado_id').order('nombre'),
   ]);
   allZonas = zonas || [];
   const ps = document.getElementById('fPromotor');
-  (promos || []).forEach(p => ps.innerHTML += `<option value="${p.promoter_name}">${p.promoter_name}</option>`);
+  ps.innerHTML = '<option value="">Todos</option>' + (promos || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
   const es = document.getElementById('fEstado');
-  (estados || []).forEach(e => es.innerHTML += `<option value="${e.id}">${e.nombre}</option>`);
+  es.innerHTML = '<option value="">Todos</option>' + (estados || []).map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
 
   document.getElementById('fEstado').addEventListener('change', function() {
     const zSel = document.getElementById('fZona');

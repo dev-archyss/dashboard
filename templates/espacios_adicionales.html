@@ -79,11 +79,11 @@
 
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Desde</label>
-        <input type="date" id="fDesde" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <input type="date" id="fDesde" onchange="cargar()" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Hasta</label>
-        <input type="date" id="fHasta" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <input type="date" id="fHasta" onchange="cargar()" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
       </div>
 
       <div>
@@ -238,12 +238,9 @@ function fmtDate(s) {
 async function loadCatalogs() {
   const db = window.db;
   const eid = empresaId;
-  const lineaId = localStorage.getItem('sp-linea') || '';
-  let qProm = db.from('web_promotores').select('promoter_name').eq('empresa_id', eid);
-  if (lineaId) qProm = qProm.eq('linea_id', lineaId);
   
   const [{ data: prom }, { data: est }] = await Promise.all([
-    qProm.order('promoter_name'),
+    db.from('web_promotores').select('promoter_name').eq('empresa_id', eid).order('promoter_name'),
     db.from('web_estados').select('nombre').order('nombre'),
   ]);
   const ps = document.getElementById('fPromotor');

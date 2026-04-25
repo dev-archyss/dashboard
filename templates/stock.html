@@ -442,16 +442,12 @@ async function loadCatalogs() {
     const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
   }
   waitDb(async () => {
-    const lineaId = localStorage.getItem('sp-linea') || '';
-    let qPromos = window.db.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId);
-    if (lineaId) qPromos = qPromos.eq('linea_id', lineaId);
-    
     const [{ data: promos }, { data: estados }] = await Promise.all([
-      qPromos.order('promoter_name'),
+      window.db.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId).order('promoter_name'),
       window.db.from('web_estados').select('nombre').order('nombre'),
     ]);
     const ps = document.getElementById('fPromotor');
-    (promos || []).forEach(p => ps.innerHTML += `<option value="${p.promoter_name}">${p.promoter_name}</option>`);
+    ps.innerHTML = '<option value="">Todos</option>' + (promos || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
   });
 }
 

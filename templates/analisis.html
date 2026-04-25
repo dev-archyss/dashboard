@@ -452,12 +452,9 @@ async function loadCatalogs() {
       .forEach(z => $('fZona').innerHTML += `<option value="${z.nombre}">${z.nombre}</option>`);
   });
 
-  // Cargar promotores — siempre de la línea actual si existe
-  const lineaId = localStorage.getItem('sp-linea') || '';
-  let qPromos = supabaseClient.from('web_promotores')
-    .select('promoter_name,linea_id').eq('empresa_id', empresaId);
-  if (lineaId) qPromos = qPromos.eq('linea_id', lineaId);
-  const { data: promos } = await qPromos.order('promoter_name');
+  // Cargar promotores
+  const { data: promos } = await supabaseClient.from('web_promotores')
+    .select('promoter_name').eq('empresa_id', empresaId).order('promoter_name');
   
   $('fPromotor').innerHTML = '<option value="">Todos</option>' +
     (promos || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
@@ -478,11 +475,8 @@ function poblarSelectProductos() {
 
 // ── Recargar promotores cuando cambia línea ───────────────────────
 async function recargarPromotores() {
-  const lineaId = localStorage.getItem('sp-linea') || '';
-  let qPromos = supabaseClient.from('web_promotores')
-    .select('promoter_name').eq('empresa_id', empresaId);
-  if (lineaId) qPromos = qPromos.eq('linea_id', lineaId);
-  const { data: promos } = await qPromos.order('promoter_name');
+  const { data: promos } = await supabaseClient.from('web_promotores')
+    .select('promoter_name').eq('empresa_id', empresaId).order('promoter_name');
   $('fPromotor').innerHTML = '<option value="">Todos</option>' +
     (promos || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
 }
