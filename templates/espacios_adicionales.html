@@ -88,7 +88,7 @@
 
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Tipo de espacio</label>
-        <select id="fTipo" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <select id="fTipo" onchange="aplicar()" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
           <option value="">Todos</option>
           <option value="Torre">🗼 Torre</option>
           <option value="Cabezal">📐 Cabezal</option>
@@ -99,14 +99,14 @@
 
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Promotor</label>
-        <select id="fPromotor" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <select id="fPromotor" onchange="aplicar()" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
           <option value="">Todos</option>
         </select>
       </div>
 
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estado</label>
-        <select id="fEstado" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <select id="fEstado" onchange="cargar()" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
           <option value="">Todos</option>
         </select>
       </div>
@@ -247,9 +247,10 @@ async function loadCatalogs() {
     db.from('web_estados').select('nombre').order('nombre'),
   ]);
   const ps = document.getElementById('fPromotor');
-  (prom || []).forEach(p => ps.innerHTML += `<option value="${p.promoter_name}">${p.promoter_name}</option>`);
+  ps.innerHTML = '<option value="">Todos</option>' + (prom || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
+  
   const es = document.getElementById('fEstado');
-  (est || []).forEach(e => es.innerHTML += `<option value="${e.nombre}">${e.nombre}</option>`);
+  es.innerHTML = '<option value="">Todos</option>' + (est || []).map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
 }
 
 // ── Load data ─────────────────────────────────────────────────────
@@ -264,16 +265,15 @@ async function cargar() {
       <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando...
     </td></tr>`;
 
-  // Traer TODOS los registros con espacios para poder quedarnos
-  // con el más reciente por comercio
+  // Traer TODOS los registros con espacios (no filtrar por promotor aquí)
+  // porque necesitamos TODOS para hacer estadísticas después
   let q = window.db.from('web_precios')
     .select('id, created_at, promoter_name, trade, state, zone, espacios_adicionales')
     .eq('empresa_id', empresaId)
     .not('espacios_adicionales', 'is', null)
     .order('created_at', { ascending: false }); // más reciente primero
 
-  // Filtros de promotor y estado se aplican al fetch
-  if (prom)   q = q.eq('promoter_name', prom);
+  // Filtro de estado se aplica al fetch
   if (estado) q = q.eq('state', estado);
 
   const lineaId = localStorage.getItem('sp-linea') || '';
@@ -343,11 +343,13 @@ function aplicar() {
   const tipo     = document.getElementById('fTipo').value;
   const comercio = document.getElementById('fComercioVal').value;
   const producto = document.getElementById('fProductoVal').value;
+  const prom     = document.getElementById('fPromotor').value;
 
   let filtered = allRows;
   if (tipo)     filtered = filtered.filter(r => r.tipo === tipo);
   if (comercio) filtered = filtered.filter(r => r.comercio === comercio);
   if (producto) filtered = filtered.filter(r => r.producto.toLowerCase().includes(producto.toLowerCase()));
+  if (prom)     filtered = filtered.filter(r => r.promotor === prom);
 
   renderKPIs(filtered);
   renderTabla(filtered);
