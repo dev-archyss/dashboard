@@ -452,8 +452,13 @@ async function loadCatalogs() {
       .forEach(z => $('fZona').innerHTML += `<option value="${z.nombre}">${z.nombre}</option>`);
   });
 
-  const { data: promos } = await supabaseClient.from('web_promotores')
-    .select('promoter_name').eq('empresa_id', empresaId).order('promoter_name');
+  // Cargar promotores — siempre de la línea actual si existe
+  const lineaId = localStorage.getItem('sp-linea') || '';
+  let qPromos = supabaseClient.from('web_promotores')
+    .select('promoter_name,linea_id').eq('empresa_id', empresaId);
+  if (lineaId) qPromos = qPromos.eq('linea_id', lineaId);
+  const { data: promos } = await qPromos.order('promoter_name');
+  
   $('fPromotor').innerHTML = '<option value="">Todos</option>' +
     (promos || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
 
@@ -469,6 +474,17 @@ function poblarSelectProductos() {
   // También poblar el selector de evolución
   $('selectorProductoEvol').innerHTML = '<option value="">— Selecciona producto —</option>' +
     opts.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+// ── Recargar promotores cuando cambia línea ───────────────────────
+async function recargarPromotores() {
+  const lineaId = localStorage.getItem('sp-linea') || '';
+  let qPromos = supabaseClient.from('web_promotores')
+    .select('promoter_name').eq('empresa_id', empresaId);
+  if (lineaId) qPromos = qPromos.eq('linea_id', lineaId);
+  const { data: promos } = await qPromos.order('promoter_name');
+  $('fPromotor').innerHTML = '<option value="">Todos</option>' +
+    (promos || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
 }
 
 // ── Fetch principal ───────────────────────────────────────────────
@@ -1002,7 +1018,8 @@ function setDefaultDates() {
   $('fHasta').value = hoy;
 }
 
-window.onLineaChanged = () => {
+window.onLineaChanged = (lineaId) => {
+  if (lineaId) localStorage.setItem('sp-linea', lineaId);
   document.getElementById('fPromotor').value = '';
   document.getElementById('fNuestroProducto').value = '';
   document.getElementById('fEstado').value = '';
@@ -1010,11 +1027,14 @@ window.onLineaChanged = () => {
   document.getElementById('fTipoComercio').value = 'Todos';
   document.getElementById('fComercioSearch').value = '';
   document.getElementById('fComercioSelected').value = '';
-  cargarMapaCompDirecta().then(() => {
-    poblarSelectProductos();
-    fetchDataAnalisis();
+  recargarPromotores().then(() => {
+    cargarMapaCompDirecta().then(() => {
+      poblarSelectProductos();
+      fetchDataAnalisis();
+    });
   });
 };
+
 waitDb(() => { setDefaultDates(); loadCatalogs(); });
 </script>
 </body>

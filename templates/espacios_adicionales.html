@@ -126,7 +126,7 @@
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Producto</label>
         <input type="text" id="fProducto" placeholder="Buscar producto…"
           class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm"
-          oninput="buscarProducto(this.value)" autocomplete="off">
+          oninput="buscarProducto(this.value)" onchange="aplicar()" autocomplete="off">
         <input type="hidden" id="fProductoVal">
         <div id="productoDD" class="com-dd" style="display:none"></div>
       </div>
@@ -238,8 +238,12 @@ function fmtDate(s) {
 async function loadCatalogs() {
   const db = window.db;
   const eid = empresaId;
+  const lineaId = localStorage.getItem('sp-linea') || '';
+  let qProm = db.from('web_promotores').select('promoter_name').eq('empresa_id', eid);
+  if (lineaId) qProm = qProm.eq('linea_id', lineaId);
+  
   const [{ data: prom }, { data: est }] = await Promise.all([
-    db.from('web_promotores').select('promoter_name').eq('empresa_id', eid).order('promoter_name'),
+    qProm.order('promoter_name'),
     db.from('web_estados').select('nombre').order('nombre'),
   ]);
   const ps = document.getElementById('fPromotor');
@@ -396,9 +400,13 @@ function renderTabla(rows) {
       <td class="py-3 px-4 text-center">
         <span class="badge ${cfg.cls}">${cfg.icon} ${r.tipo}</span>
       </td>
-      <td class="py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-200">${r.producto}</td>
-      <td class="py-3 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
-        ${r.capacidad != null ? r.capacidad + ' unid.' : '<span class="text-gray-300">—</span>'}
+      <td class="py-3 px-4">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm font-semibold">
+          <i class="fas fa-cube text-xs"></i> ${r.producto}
+        </span>
+      </td>
+      <td class="py-3 px-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">
+        ${r.capacidad != null ? '<span class="text-indigo-600 dark:text-indigo-400">' + r.capacidad + '</span> unid.' : '<span class="text-gray-300">—</span>'}
       </td>
     </tr>`;
   }).join('');
@@ -609,15 +617,17 @@ function setDefaultDates() {
   document.getElementById('fDesde').value = hoy;
 }
 
-window.onLineaChanged = () => {
+window.onLineaChanged = (lineaId) => {
+  if (lineaId) localStorage.setItem('sp-linea', lineaId);
   document.getElementById('fPromotor').value = '';
+  document.getElementById('fPromotor').innerHTML = '<option value="">Todos</option>';
   document.getElementById('fEstado').value = '';
   document.getElementById('fTipo').value = '';
   document.getElementById('fComercio').value = '';
   document.getElementById('fComercioVal').value = '';
   document.getElementById('fProducto').value = '';
   document.getElementById('fProductoVal').value = '';
-  cargar();
+  loadCatalogs().then(() => cargar());
 };
 
 function waitDb(fn) {

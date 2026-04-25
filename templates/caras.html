@@ -321,8 +321,12 @@ function _labelConGramaje_legacy(i) {
 }
 
 async function loadCatalogs() {
+  const lineaId = localStorage.getItem('sp-linea') || '';
+  let qPromos = window.db.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId);
+  if (lineaId) qPromos = qPromos.eq('linea_id', lineaId);
+  
   const [{ data: promos }, { data: estados }, { data: zonas }] = await Promise.all([
-    window.db.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId).order('promoter_name'),
+    qPromos.order('promoter_name'),
     window.db.from('web_estados').select('id, nombre').order('nombre'),
     window.db.from('web_zonas').select('id, nombre, estado_id').order('nombre'),
   ]);
@@ -759,14 +763,16 @@ function setDefaultDates() {
   document.getElementById('fDesde').value = hoy;
 }
 
-window.onLineaChanged = () => {
+window.onLineaChanged = (lineaId) => {
+  if (lineaId) localStorage.setItem('sp-linea', lineaId);
   document.getElementById('fPromotor').value = '';
+  document.getElementById('fPromotor').innerHTML = '<option value="">Todos</option>';
   document.getElementById('fEstado').value = '';
   document.getElementById('fZona').value = '';
   document.getElementById('fZona').disabled = true;
   document.getElementById('fComercio').value = '';
   document.getElementById('fComercioVal').value = '';
-  cargar();
+  loadCatalogs().then(() => cargar());
 };
 
 function waitDb(fn) {

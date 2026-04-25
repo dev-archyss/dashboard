@@ -442,8 +442,12 @@ async function loadCatalogs() {
     const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
   }
   waitDb(async () => {
+    const lineaId = localStorage.getItem('sp-linea') || '';
+    let qPromos = window.db.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId);
+    if (lineaId) qPromos = qPromos.eq('linea_id', lineaId);
+    
     const [{ data: promos }, { data: estados }] = await Promise.all([
-      window.db.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId).order('promoter_name'),
+      qPromos.order('promoter_name'),
       window.db.from('web_estados').select('nombre').order('nombre'),
     ]);
     const ps = document.getElementById('fPromotor');
@@ -1203,14 +1207,15 @@ function setDefaultDates() {
   document.getElementById('fDesde').value = hoy;
 }
 
-window.onLineaChanged = () => {
-  // Limpiar filtros cuando cambia línea
+window.onLineaChanged = (lineaId) => {
+  if (lineaId) localStorage.setItem('sp-linea', lineaId);
   document.getElementById('fPromotor').value = '';
+  document.getElementById('fPromotor').innerHTML = '<option value="">Todos</option>';
   document.getElementById('fProducto').value = '';
   document.getElementById('fComercio').value = '';
   document.getElementById('fComercioVal').value = '';
   document.getElementById('fAlerta').value = '';
-  loadData().then(aplicarFiltros);
+  loadCatalogs().then(() => loadData().then(aplicarFiltros));
 };
 
 function waitDb(fn) {
