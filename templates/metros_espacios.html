@@ -75,27 +75,27 @@
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Desde</label>
-        <input type="date" id="fDesde" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <input type="date" id="fDesde" onchange="cargar()" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Hasta</label>
-        <input type="date" id="fHasta" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <input type="date" id="fHasta" onchange="cargar()" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Promotor</label>
-        <select id="fPromotor" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <select id="fPromotor" onchange="cargar()" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
           <option value="">Todos</option>
         </select>
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estado</label>
-        <select id="fEstado" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <select id="fEstado" onchange="onEstadoChange()" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
           <option value="">Todos</option>
         </select>
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Zona</label>
-        <select id="fZona" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" disabled>
+        <select id="fZona" onchange="cargar()" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" disabled>
           <option value="">Todas</option>
         </select>
       </div>
@@ -109,7 +109,7 @@
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">% Participación</label>
-        <select id="fNivel" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
+        <select id="fNivel" onchange="aplicar()" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm">
           <option value="">Todos</option>
           <option value="alto">Alto ≥ 40%</option>
           <option value="medio">Medio 20–39%</option>
@@ -293,6 +293,8 @@ function pctBadgeCls(pct) {
 }
 
 // ── Catálogos ─────────────────────────────────────────────────────
+let allEstados = [];
+
 async function loadCatalogs() {
   const [{ data: promos }, { data: estados }, { data: zonas }] = await Promise.all([
     window.db.from('web_promotores').select('promoter_name').eq('empresa_id', empresaId).order('promoter_name'),
@@ -300,20 +302,23 @@ async function loadCatalogs() {
     window.db.from('web_zonas').select('id, nombre, estado_id').order('nombre'),
   ]);
   allZonas = zonas || [];
+  allEstados = estados || [];
   const ps = document.getElementById('fPromotor');
   ps.innerHTML = '<option value="">Todos</option>' + (promos || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
   const es = document.getElementById('fEstado');
-  es.innerHTML = '<option value="">Todos</option>' + (estados || []).map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+  es.innerHTML = '<option value="">Todos</option>' + allEstados.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+}
 
-  document.getElementById('fEstado').addEventListener('change', function() {
-    const zSel = document.getElementById('fZona');
-    zSel.innerHTML = '<option value="">Todas</option>';
-    zSel.disabled = !this.value;
-    if (this.value) {
-      allZonas.filter(z => String(z.estado_id) === this.value)
-        .forEach(z => zSel.innerHTML += `<option value="${z.nombre}">${z.nombre}</option>`);
-    }
-  });
+function onEstadoChange() {
+  const val = document.getElementById('fEstado').value;
+  const zSel = document.getElementById('fZona');
+  zSel.innerHTML = '<option value="">Todas</option>';
+  zSel.disabled = !val;
+  if (val) {
+    allZonas.filter(z => String(z.estado_id) === val)
+      .forEach(z => zSel.innerHTML += `<option value="${z.nombre}">${z.nombre}</option>`);
+  }
+  cargar();
 }
 
 // ── Cargar datos ──────────────────────────────────────────────────
@@ -709,15 +714,15 @@ document.addEventListener('click', e => {
 });
 
 function limpiar() {
-  ['fDesde','fHasta','fComercio','fComercioVal'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
+  setDefaultDates();
+  document.getElementById('fComercio').value = '';
+  document.getElementById('fComercioVal').value = '';
   document.getElementById('fPromotor').value = '';
   document.getElementById('fEstado').value   = '';
   document.getElementById('fZona').value     = '';
   document.getElementById('fZona').disabled  = true;
   document.getElementById('fNivel').value    = '';
-  aplicar();
+  cargar();
 }
 
 function setDefaultDates() {

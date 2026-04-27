@@ -58,7 +58,7 @@
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estado</label>
-        <select id="fEstado" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" onchange="aplicarFiltros()">
+        <select id="fEstado" class="w-full h-10 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm" onchange="onEstadoChange()">
           <option value="">Todos</option>
         </select>
       </div>
@@ -445,13 +445,6 @@ async function loadCatalogs() {
   const { data: zonas } = await supabaseClient.from('web_zonas').select('id,nombre,estado_id').order('nombre');
   zonasData = zonas || [];
 
-  $('fEstado').addEventListener('change', () => {
-    const eid = estadosData.find(e => e.nombre === $('fEstado').value)?.id;
-    $('fZona').innerHTML = '<option value="">Todas</option>';
-    if (eid) zonasData.filter(z => z.estado_id === eid)
-      .forEach(z => $('fZona').innerHTML += `<option value="${z.nombre}">${z.nombre}</option>`);
-  });
-
   // Cargar promotores
   const { data: promos } = await supabaseClient.from('web_promotores')
     .select('promoter_name').eq('empresa_id', empresaId).order('promoter_name');
@@ -462,6 +455,14 @@ async function loadCatalogs() {
   await cargarMapaCompDirecta();
   poblarSelectProductos();
   await fetchDataAnalisis();
+}
+
+function onEstadoChange() {
+  const eid = estadosData.find(e => e.nombre === $('fEstado').value)?.id;
+  $('fZona').innerHTML = '<option value="">Todas</option>';
+  if (eid) zonasData.filter(z => z.estado_id === eid)
+    .forEach(z => $('fZona').innerHTML += `<option value="${z.nombre}">${z.nombre}</option>`);
+  aplicarFiltros();
 }
 
 function poblarSelectProductos() {
@@ -506,8 +507,8 @@ async function fetchDataAnalisis() {
     const lineaId      = localStorage.getItem('sp-linea') || '';
 
     let q = supabaseClient.from('web_precios').select('*').eq('empresa_id', empresaId);
-    if (desde)   q = q.gte('created_at', new Date(desde + 'T00:00:00').toISOString());
-    if (hasta)   q = q.lte('created_at', new Date(hasta + 'T23:59:59').toISOString());
+    if (desde)   q = q.gte('created_at', desde + 'T00:00:00+00:00');
+    if (hasta)   q = q.lte('created_at', hasta + 'T23:59:59+00:00');
     if (est)     q = q.eq('state', est);
     if (zona)    q = q.eq('zone', zona);
     if (prom)    q = q.eq('promoter_name', prom);

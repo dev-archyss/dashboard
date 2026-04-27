@@ -268,9 +268,11 @@ async function cargar() {
     .select('id, created_at, promoter_name, trade, state, zone, espacios_adicionales')
     .eq('empresa_id', empresaId)
     .not('espacios_adicionales', 'is', null)
-    .order('created_at', { ascending: false }); // más reciente primero
+    .order('created_at', { ascending: false });
 
-  // Filtro de estado se aplica al fetch
+  if (desde)  q = q.gte('created_at', desde + 'T00:00:00+00:00');
+  if (hasta)  q = q.lte('created_at', hasta + 'T23:59:59+00:00');
+  if (prom)   q = q.eq('promoter_name', prom);
   if (estado) q = q.eq('state', estado);
 
   const lineaId = localStorage.getItem('sp-linea') || '';
@@ -301,10 +303,6 @@ async function cargar() {
 
   // Aplicar filtro de fechas sobre el último registro del comercio
   ultimoPorComercio.forEach((r) => {
-    // Filtro de fecha: la visita más reciente debe estar dentro del rango
-    if (desde && new Date(r.created_at) < new Date(desde + 'T00:00:00')) return;
-    if (hasta && new Date(r.created_at) > new Date(hasta + 'T23:59:59')) return;
-
     let esp = r.espacios_adicionales;
     if (typeof esp === 'string') { try { esp = JSON.parse(esp); } catch { esp = []; } }
     if (!Array.isArray(esp) || esp.length === 0) return;
@@ -598,8 +596,7 @@ document.addEventListener('click', e => {
 });
 
 function limpiar() {
-  document.getElementById('fDesde').value = '';
-  document.getElementById('fHasta').value = '';
+  setDefaultDates();
   document.getElementById('fTipo').value = '';
   document.getElementById('fPromotor').value = '';
   document.getElementById('fEstado').value = '';
@@ -607,7 +604,7 @@ function limpiar() {
   document.getElementById('fComercioVal').value = '';
   document.getElementById('fProducto').value = '';
   document.getElementById('fProductoVal').value = '';
-  aplicar();
+  cargar();
 }
 
 function setDefaultDates() {
