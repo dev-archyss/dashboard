@@ -298,10 +298,8 @@
 </div>
 
 <script>
-function waitDb(fn) {
-  if (window.db) { fn(); return; }
-  const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
-}
+const waitDb         = window.captaWaitDb;
+const captaParseJ    = window.captaParseJ;
 const supabaseClient = { from: (...a) => window.db.from(...a) };
 const empresaId = localStorage.getItem('empresa_id') || await (async()=>{
   try { const r=await fetch('/api/dashboard/config'); if(r.ok){const d=await r.json();localStorage.setItem('empresa_id',d.empresa_id);localStorage.setItem('empresa_nombre',d.empresa_nombre);return d.empresa_id;} return null; } catch { return null; }
@@ -478,8 +476,11 @@ async function fetchDataAnalisis() {
     if (lineaId) q = q.eq('linea_id', lineaId);
     if (tipoComercio !== 'Todos') q = q.eq('p_mayorista', tipoComercio === 'Detal' ? 'No' : 'Si');
 
-    const { data, error } = await q.order('created_at', { ascending: false });
+    const { data: rawData, error } = await q.order('created_at', { ascending: false });
     if (error) throw error;
+
+    // Enriquecer gramaje/unidad desde catálogo (registros legacy sin gramaje)
+    const data = await window.captaEnrichItems(rawData || [], empresaId, supabaseClient);
 
     const filasComparacion = [];
     const filasNuestros = [];
