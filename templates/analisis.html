@@ -527,12 +527,12 @@ async function fetchDataAnalisis() {
       const mi  = parseJSON(row.myitems);
       const ci  = parseJSON(row.competitoritems);
       const ciIdx = {};
-      ci.forEach(c => { if (c.presentation) ciIdx[c.presentation] = c; });
+      ci.forEach(c => { if (c.presentation) ciIdx[buildKey(c.presentation, c.gramaje, c.unidad)] = c; });
 
       mi.forEach(m => {
         if (!m.presentation) return;
-        if (filtroProd && m.presentation !== filtroProd) return;
-        const keyN = m.presentation;
+        const keyN = buildKey(m.presentation, m.gramaje, m.unidad);
+        if (filtroProd && keyN !== filtroProd) return;
         const competidoresVinculados = mapCompDirecta[keyN];
         if (!competidoresVinculados || competidoresVinculados.size === 0) {
           sinCompAsignada.add(keyN); return;

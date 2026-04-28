@@ -373,6 +373,14 @@ const empresaId = localStorage.getItem('empresa_id');
 if (!empresaId) window.location.replace('/');
 
 // ── Estado global ─────────────────────────────────────────────────
+function fmtProdTxt(item) {
+  if (!item) return '—';
+  const name = item.presentation || '—';
+  if (!item.gramaje) return name;
+  const g = item.gramaje % 1 === 0 ? parseInt(item.gramaje) : item.gramaje;
+  return name + ' — ' + g + (item.unidad || '');
+}
+
 let allData     = [];   // registros raw
 let filas       = [];   // items expandidos
 let umbrales    = {};
@@ -520,7 +528,7 @@ function procesarDatos() {
       if (!item.presentation) return;
       const sa = item.stock_shelf     != null ? parseFloat(item.stock_shelf)     : null;
       const sb = item.stock_warehouse != null ? parseFloat(item.stock_warehouse) : null;
-      const prod = item.presentation;
+      const prod = fmtProdTxt(item);
       const u = getUmbral(prod);
       filas.push({
         fecha:    r.created_at,
