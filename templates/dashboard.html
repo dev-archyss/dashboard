@@ -435,9 +435,16 @@ async function fetchRecordsFromAPI(filters) {
     mergePromoters(data.promoters);
     estados = data.estados || []; zonas = data.zonas || [];
     lineas  = data.lineas  || [];
-    apiCache.set(cacheKey, data);
+
+    // Enriquecer gramaje/unidad (necesario para registros legacy sin gramaje)
+    const enrichedRecords = await window.captaEnrichItems(
+      data.records || [],
+      empresaId,
+      window.db
+    );
+    apiCache.set(cacheKey, { ...data, records: enrichedRecords });
     document.getElementById('loadingMessage').classList.add('hidden');
-    return data.records || [];
+    return enrichedRecords;
   } catch(err) {
     document.getElementById('loadingMessage').innerHTML =
       `<span class="text-red-500"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${err.message}</span>`;
@@ -588,9 +595,7 @@ function populateYears() {
     if (y === cur) o.selected = true;
     sel.appendChild(o);
   }
-}
-
-async function populateWeeks(year) {
+}async function populateWeeks(year) {
   const sel = document.getElementById('weekSelect');
   sel.innerHTML = '<option value="">Selecciona una semana</option>';
   sel.disabled  = true;
@@ -775,50 +780,21 @@ function updateSelected() {
 // App móvil: competitoritems[].faces (suma de items)
 // PWA vieja: competitor_faces (campo global del registro)
 function getCompetitorFaces(r) {
-  // Prioridad 1: suma de faces por ítem (app móvil nueva)
   const items = parseJ(r.competitoritems);
-  if (items && items.length > 0) {
+  if (items.length > 0) {
     const sumaItems = items
       .filter(i => !i.sin_stock && i.faces != null)
       .reduce((s, i) => s + (parseFloat(i.faces) || 0), 0);
     if (sumaItems > 0) return sumaItems;
   }
-  // Fallback: campo global (PWA vieja)
-  const global = parseFloat(getCompetitorFaces(r));
-  return !isNaN(global) ? global : 0;
+  // Fallback: campo global del record (registros PWA legacy)
+  const globalVal = parseFloat(r.competitor_faces);
+  return !isNaN(globalVal) ? globalVal : 0;
 }
 
-// ── Formatear presentación con gramaje ────────────────────────────
-// Input: { presentation: "SAL XXX", gramaje: 500, unidad: "g" }
-// Output: "SAL XXX — 500g"  (delegado a helper global)
-function fmtProdTxt(item) {
-  if (!item) return '—';
-  const name = item.presentation || '—';
-  if (!item.gramaje) return name;
-  const g = item.gramaje % 1 === 0 ? parseInt(item.gramaje) : item.gramaje;
-  return name + ' — ' + g + (item.unidad || '');
-}
-function fmtProdTxt(item) {
-  if (!item) return '—';
-  const name = item.presentation || '—';
-  if (!item.gramaje) return name;
-  const g = item.gramaje % 1 === 0 ? parseInt(item.gramaje) : item.gramaje;
-  return name + ' — ' + g + (item.unidad || '');
-}
-function fmtPresentacion(item) { return fmtProdTxt(item); }
-function _fmtPresentacion_legacy(item) {
-  if (!item) return '—';
-  const base = item.presentation || '—';
-  if (item.gramaje && item.gramaje > 0) {
-    return `${base} — ${item.gramaje}${item.unidad || ''}`;
-  }
-  return base;
-}
-
-function parseJ(v) {
-  if (Array.isArray(v)) return v;
-  try { return JSON.parse(v) || []; } catch { return []; }
-}
+const fmtProdTxt      = window.captaFmtProdTxt;
+const fmtPresentacion = window.captaFmtProdTxt;
+const parseJ          = window.captaParseJ;
 
 function showDetails(group) {
   // Usar el primer registro del grupo como representante
@@ -1156,19 +1132,25 @@ async function init() {
     if (e.target === e.currentTarget) document.getElementById('detailsModal').classList.remove('open');
   });
 
-  window.onLineaChanged = () => {
-  // Limpiar filtros cuando cambia línea
-  document.getElementById('fPromotor').value = '';
-  document.getElementById('fProducto').value = '';
-  document.getElementById('fComercio').value = '';
-  document.getElementById('fComercioVal').value = '';
-  document.getElementById('fAlerta').value = '';
-  loadData().then(aplicarFiltros);
-};
-    const sel = document.getElementById('linea_filter');
-    if (sel) sel.value = lineaId || 'all';
+  window.onLineaChanged = (lineaId) => {
+    if (lineaId !== undefined) localStorage.setItem('sp-linea', lineaId || '');
+
+    const promoterSel = document.getElementById('promoter');
+    const stateSel    = document.getElementById('state');
+    const zoneSel     = document.getElementById('zone');
+    const lineaSel    = document.getElementById('linea_filter');
+    const clienteSel  = document.getElementById('cliente_filter');
+
+    if (promoterSel) promoterSel.value = 'all';
+    if (stateSel)    stateSel.value    = 'all';
+    if (zoneSel)     { zoneSel.value = 'all'; zoneSel.disabled = true; }
+    if (lineaSel)    lineaSel.value    = lineaId || 'all';
+    if (clienteSel)  clienteSel.value  = 'all';
+
+    apiCache.clear();
     filterRecords();
-  
+  };
+
   const savedLinea = localStorage.getItem('sp-linea') || '';
   if (savedLinea) {
     const sel = document.getElementById('linea_filter');

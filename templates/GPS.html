@@ -966,14 +966,18 @@ function setDefaultDate() {
   document.getElementById('fechaSelect').value = hoy;
 }
 
-window.onLineaChanged = () => {
-  // Limpiar filtros cuando cambia línea
-  document.getElementById('fPromotor').value = '';
-  document.getElementById('fProducto').value = '';
-  document.getElementById('fComercio').value = '';
-  document.getElementById('fComercioVal').value = '';
-  document.getElementById('fAlerta').value = '';
-  loadData().then(aplicarFiltros);
+window.onLineaChanged = (lineaId) => {
+  if (lineaId !== undefined) localStorage.setItem('sp-linea', lineaId || '');
+
+  const promotorSel = document.getElementById('promotorSelect');
+  const estadoSel   = document.getElementById('estadoSelect');
+  const confirmSel  = document.getElementById('confirmSelect');
+
+  if (promotorSel) promotorSel.value = 'all';
+  if (estadoSel)   estadoSel.value   = 'all';
+  if (confirmSel)  confirmSel.value  = 'all';
+
+  cargar();
 };
 
 async function init() {
@@ -987,7 +991,6 @@ async function init() {
     renderDetalle();
   });
 }
-
 init();
 </script>
 </body>
