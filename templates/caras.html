@@ -300,32 +300,15 @@ function fmtDate(s) {
 function fmtShort(s) {
   return new Date(s).toLocaleDateString('es-ES', { day:'2-digit', month:'short' });
 }
-function parseJ(v) {
-  if (Array.isArray(v)) return v;
-  try { return JSON.parse(v) || []; } catch { return []; }
-}
+const parseJ = window.captaParseJ;
 
 // Helper: obtener caras de un item competencia (app movil + PWA vieja)
 function getCarasComp(i) {
   return parseFloat(i.faces) || parseFloat(i.faces_after) || parseFloat(i.facesStr) || 0;
 }
 
-// Helper: label con gramaje (delegado a helper global)
-function fmtProdTxt(i) {
-  if (!i) return '—';
-  const name = i.presentation || '—';
-  if (!i.gramaje) return name;
-  const g = i.gramaje % 1 === 0 ? parseInt(i.gramaje) : i.gramaje;
-  return name + ' — ' + g + (i.unidad || '');
-}
-function labelConGramaje(i) { return fmtProdTxt(i); }
-function _labelConGramaje_legacy(i) {
-  const base = i.presentation || '—';
-  if (i.gramaje && parseFloat(i.gramaje) > 0) {
-    return base + ' — ' + parseFloat(i.gramaje) + (i.unidad || '');
-  }
-  return base;
-}
+const fmtProdTxt      = window.captaFmtProdTxt;
+const labelConGramaje = window.captaFmtProdTxt;
 
 let allEstados = [];
 
@@ -392,7 +375,7 @@ async function cargar() {
     return;
   }
 
-  allData = data || [];
+  allData = await window.captaEnrichItems(data || [], empresaId, window.db);
   renderTodo();
 }
 
@@ -783,10 +766,7 @@ window.onLineaChanged = (lineaId) => {
   loadCatalogs().then(() => cargar());
 };
 
-function waitDb(fn) {
-  if (window.db) { fn(); return; }
-  const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
-}
+const waitDb = window.captaWaitDb;
 
 waitDb(async () => {
   setDefaultDates();

@@ -373,13 +373,7 @@ const empresaId = localStorage.getItem('empresa_id');
 if (!empresaId) window.location.replace('/');
 
 // ── Estado global ─────────────────────────────────────────────────
-function fmtProdTxt(item) {
-  if (!item) return '—';
-  const name = item.presentation || '—';
-  if (!item.gramaje) return name;
-  const g = item.gramaje % 1 === 0 ? parseInt(item.gramaje) : item.gramaje;
-  return name + ' — ' + g + (item.unidad || '');
-}
+const fmtProdTxt = window.captaFmtProdTxt;
 
 let allData     = [];   // registros raw
 let filas       = [];   // items expandidos
@@ -510,7 +504,7 @@ async function loadData() {
 
     const { data, error } = await q;
     if (error) { console.error(error); resolve(); return; }
-    allData = data || [];
+    allData = await window.captaEnrichItems(data || [], empresaId, window.db);
     resolve();
   }));
 
@@ -624,7 +618,7 @@ function renderAlertas(f) {
     const key = `${r.comercio}|||${r.producto}`;
     if (!grupos[key]) grupos[key] = {
       comercio: r.comercio, producto: r.producto,
-      gramaje: r.gramaje, unidad: r.unidad,
+            gramaje: r.gramaje, unidad: r.unidad,
       state: r.state, historial: [], quiebres: 0,
     };
     grupos[key].historial.push({ fecha: r.fecha, stock: r.anaquel });
@@ -1221,10 +1215,7 @@ window.onLineaChanged = (lineaId) => {
   loadCatalogs().then(() => loadData().then(aplicarFiltros));
 };
 
-function waitDb(fn) {
-  if (window.db) { fn(); return; }
-  const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
-}
+const waitDb = window.captaWaitDb;
 
 waitDb(async () => {
   setDefaultDates();
