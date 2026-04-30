@@ -143,7 +143,7 @@
         <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span>&lt; 20%</span>
       </div>
     </div>
-        <div style="position:relative; height:340px">
+    <div style="position:relative; height:340px">
       <canvas id="chartParticipacion"></canvas>
       <p id="chartNoData" class="text-center py-10 text-gray-400 text-sm" style="display:none">
         Sin datos con medición de metros para los filtros seleccionados
@@ -168,6 +168,7 @@
             <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado / Zona</th>
             <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Promotor</th>
             <th class="py-3 px-4 text-center text-xs font-bold text-indigo-500 uppercase tracking-wider">Metros nuestros</th>
+            <th class="py-3 px-4 text-center text-xs font-bold text-red-400 uppercase tracking-wider">Competencia (m)</th>
             <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total anaquel</th>
             <th class="py-3 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:160px">% Participación</th>
             <th class="py-3 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Visitas</th>
@@ -176,7 +177,7 @@
         </thead>
         <tbody id="tbody" class="bg-white dark:bg-slate-800 divide-y divide-gray-50 dark:divide-slate-700">
           <tr>
-            <td colspan="8" class="text-center py-12 text-gray-400 dark:text-gray-500">
+            <td colspan="9" class="text-center py-12 text-gray-400 dark:text-gray-500">
               <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando...
             </td>
           </tr>
@@ -216,6 +217,7 @@
               <th class="py-2 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Fecha</th>
               <th class="py-2 px-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Promotor</th>
               <th class="py-2 px-4 text-center text-xs font-bold text-indigo-500 uppercase">Metros nuestros</th>
+              <th class="py-2 px-4 text-center text-xs font-bold text-red-400 uppercase">Competencia (m)</th>
               <th class="py-2 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Total anaquel</th>
               <th class="py-2 px-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">% Participación</th>
             </tr>
@@ -253,8 +255,6 @@ function parseJ(v) {
 }
 
 // ── Calcular metros nuestros de una visita ────────────────────────
-// Suma shelf_meters de cada item propio (del visitaService normalizadO)
-// Si no hay metros por ítem, usa shelf_meters global
 function calcMetrosNuestros(r) {
   const items = parseJ(r.myitems);
   if (items.length > 0) {
@@ -301,6 +301,26 @@ function calcMetrosTotal(r, mn, mc) {
   return (!isNaN(v) && v > 0) ? v : null;
 }
 
+// ── Calcular % participación ──────────────────────────────────────
+function calcPct(nuestros, total) {
+  if (nuestros == null || total == null || total === 0) return null;
+  return Math.min(100, (nuestros / total) * 100);
+}
+
+// ── Color según % ─────────────────────────────────────────────────
+function pctColor(pct) {
+  if (pct == null) return '#9CA3AF';
+  if (pct >= 40)   return '#10B981';
+  if (pct >= 20)   return '#F59E0B';
+  return '#EF4444';
+}
+function pctBadgeCls(pct) {
+  if (pct == null) return 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400';
+  if (pct >= 40)   return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300';
+  if (pct >= 20)   return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+  return 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300';
+}
+
 // ── Catálogos ─────────────────────────────────────────────────────
 let allEstados = [];
 
@@ -333,7 +353,7 @@ function onEstadoChange() {
 // ── Cargar datos ──────────────────────────────────────────────────
 async function cargar() {
   document.getElementById('tbody').innerHTML = `
-    <tr><td colspan="8" class="text-center py-12 text-gray-400">
+    <tr><td colspan="9" class="text-center py-12 text-gray-400">
       <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando...
     </td></tr>`;
 
@@ -359,11 +379,11 @@ async function cargar() {
   const { data, error } = await q;
   if (error) {
     document.getElementById('tbody').innerHTML =
-      `<tr><td colspan="8" class="text-center py-8 text-red-400">Error: ${error.message}</td></tr>`;
+      `<tr><td colspan="9" class="text-center py-8 text-red-400">Error: ${error.message}</td></tr>`;
     return;
   }
 
-  allVisitas = data || [];
+  allVisitas = await window.captaEnrichItems(data || [], empresaId, window.db);
   procesarDatos();
   aplicar();
 }
@@ -383,20 +403,21 @@ function procesarDatos() {
       };
     }
     const mn = calcMetrosNuestros(r);
-    const mt = calcMetrosTotal(r);
+    const mc = calcMetrosCompetencia(r, mn.valor);
+    const mt = calcMetrosTotal(r, mn.valor, mc);
     const pct = calcPct(mn.valor, mt);
 
     porComercio[trade].visitas.push({
       fecha:    r.created_at,
       promotor: r.promoter_name || '—',
       mn:       mn.valor,
+      mc:       mc,
       mt:       mt,
       pct:      pct,
     });
   });
 
-  // Para cada comercio: calcular métricas sobre la visita más reciente
-  // (no promediar — la más reciente = estado actual)
+  // Para cada comercio: usar la visita más reciente como estado actual
   comercioData = Object.values(porComercio).map(c => {
     const sorted = [...c.visitas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
     const ultima = sorted[0];
@@ -406,6 +427,7 @@ function procesarDatos() {
       ultimaFecha: ultima.fecha,
       ultimoProm:  ultima.promotor,
       mn:          ultima.mn,
+      mc:          ultima.mc,
       mt:          ultima.mt,
       pct:         ultima.pct,
       numVisitas:  sorted.length,
@@ -426,7 +448,6 @@ function aplicar() {
   if (nivel === 'bajo')  filtered = filtered.filter(c => c.pct != null && c.pct < 20);
   if (nivel === 'sin')   filtered = filtered.filter(c => c.pct == null);
 
-  // Ordenar: mayor participación primero; sin medición al final
   filtered.sort((a, b) => {
     if (a.pct == null && b.pct == null) return 0;
     if (a.pct == null) return 1;
@@ -453,7 +474,6 @@ function renderKPIs(rows) {
   document.getElementById('kMejorComercio').textContent    = mejor ? mejor.pct.toFixed(1) + '%' : '—';
   document.getElementById('kPeorComercio').textContent     = peor  ? peor.pct.toFixed(1) + '%'  : '—';
 
-  // Color dinámico
   document.getElementById('kPctPromedio').style.color = prom != null ? pctColor(prom) : '';
   document.getElementById('kMejorComercio').style.color = mejor ? pctColor(mejor.pct) : '';
   document.getElementById('kPeorComercio').style.color  = peor  ? pctColor(peor.pct)  : '';
@@ -463,7 +483,7 @@ function renderKPIs(rows) {
 function renderTabla(rows) {
   const tbody = document.getElementById('tbody');
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-gray-400 dark:text-gray-500">
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-gray-400 dark:text-gray-500">
       <i class="fas fa-inbox text-2xl block mb-2 opacity-30"></i>Sin datos para los filtros aplicados
     </td></tr>`;
     return;
@@ -475,6 +495,7 @@ function renderTabla(rows) {
     const badge  = pctBadgeCls(pct);
     const pctVal = pct != null ? pct.toFixed(1) + '%' : '—';
     const mnVal  = c.mn  != null ? c.mn.toFixed(2) + ' m'  : '—';
+    const mcVal  = c.mc  != null ? c.mc.toFixed(2) + ' m'  : '—';
     const mtVal  = c.mt  != null ? c.mt.toFixed(2) + ' m'  : '—';
 
     return `<tr class="row-hover transition-colors cursor-pointer"
@@ -489,6 +510,11 @@ function renderTabla(rows) {
       <td class="py-3 px-4 text-center">
         <span class="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-sm font-bold px-3 py-1 rounded-lg">
           <i class="fas fa-ruler-horizontal text-xs"></i> ${mnVal}
+        </span>
+      </td>
+      <td class="py-3 px-4 text-center">
+        <span class="inline-flex items-center gap-1 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 text-sm font-bold px-3 py-1 rounded-lg">
+          <i class="fas fa-store text-xs"></i> ${mcVal}
         </span>
       </td>
       <td class="py-3 px-4 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">${mtVal}</td>
@@ -508,6 +534,7 @@ function renderTabla(rows) {
   }).join('');
 }
 
+// ── Gráfico barras participación ──────────────────────────────────
 function renderChart(rows) {
   const dark = document.documentElement.classList.contains('dark');
   const tc   = dark ? '#94a3b8' : '#6b7280';
@@ -592,13 +619,15 @@ function abrirHistorial(nombreComercio) {
   // Mini KPIs
   const conPct = c.visitas.filter(v => v.pct != null);
   const pctProm = conPct.length ? conPct.reduce((s,v) => s + v.pct, 0) / conPct.length : null;
-  const pctMax  = conPct.length ? Math.max(...conPct.map(v => v.pct)) : null;
-  const mnProm  = c.visitas.filter(v => v.mn != null).reduce((s,v,_,a) => s + v.mn/a.length, 0);
+  const mnVis  = c.visitas.filter(v => v.mn != null);
+  const mnProm = mnVis.length ? mnVis.reduce((s,v) => s + v.mn, 0) / mnVis.length : 0;
+  const mcVis  = c.visitas.filter(v => v.mc != null);
+  const mcProm = mcVis.length ? mcVis.reduce((s,v) => s + v.mc, 0) / mcVis.length : 0;
 
   document.getElementById('modalKpis').innerHTML = [
     { lbl:'% Participación prom.', val: pctProm != null ? pctProm.toFixed(1)+'%' : '—', color: pctColor(pctProm) },
-    { lbl:'Máxima participación',  val: pctMax  != null ? pctMax.toFixed(1)+'%'  : '—', color: pctColor(pctMax) },
     { lbl:'Metros nuestros prom.', val: mnProm > 0 ? mnProm.toFixed(2)+'m' : '—', color:'#4F46E5' },
+    { lbl:'Metros comp. prom.',    val: mcProm > 0 ? mcProm.toFixed(2)+'m' : '—', color:'#EF4444' },
   ].map(k => `
     <div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 text-center border border-gray-100 dark:border-slate-600">
       <p class="text-xl font-extrabold" style="color:${k.color}">${k.val}</p>
@@ -635,6 +664,15 @@ function abrirHistorial(nombreComercio) {
           spanGaps: true,
           yAxisID: 'yM',
         },
+        {
+          label: 'Metros competencia',
+          data: cronologico.map(v => v.mc != null ? +v.mc.toFixed(2) : null),
+          borderColor: '#EF4444',
+          backgroundColor: 'transparent',
+          tension: .4, pointRadius: 4, borderDash: [3,3],
+          spanGaps: true,
+          yAxisID: 'yM',
+        },
       ]
     },
     options: {
@@ -668,6 +706,11 @@ function abrirHistorial(nombreComercio) {
       <td class="py-2 px-4 text-center">
         ${v.mn != null
           ? `<span class="text-xs font-bold text-indigo-600 dark:text-indigo-300">${v.mn.toFixed(2)} m</span>`
+          : '<span class="text-gray-300 text-xs">—</span>'}
+      </td>
+      <td class="py-2 px-4 text-center">
+        ${v.mc != null
+          ? `<span class="text-xs font-bold text-red-500 dark:text-red-400">${v.mc.toFixed(2)} m</span>`
           : '<span class="text-gray-300 text-xs">—</span>'}
       </td>
       <td class="py-2 px-4 text-center text-xs text-gray-500 dark:text-gray-400">
@@ -754,10 +797,7 @@ window.onLineaChanged = (lineaId) => {
 };
 
 
-function waitDb(fn) {
-  if (window.db) { fn(); return; }
-  const t = setInterval(() => { if (window.db) { clearInterval(t); fn(); } }, 50);
-}
+const waitDb = window.captaWaitDb;
 
 waitDb(async () => {
   setDefaultDates();
