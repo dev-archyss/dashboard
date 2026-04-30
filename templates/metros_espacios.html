@@ -143,8 +143,11 @@
         <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span>&lt; 20%</span>
       </div>
     </div>
-    <div style="position:relative; height:340px">
+        <div style="position:relative; height:340px">
       <canvas id="chartParticipacion"></canvas>
+      <p id="chartNoData" class="text-center py-10 text-gray-400 text-sm" style="display:none">
+        Sin datos con medición de metros para los filtros seleccionados
+      </p>
     </div>
   </div>
 
@@ -266,30 +269,36 @@ function calcMetrosNuestros(r) {
   return { valor: null, fuente: null };
 }
 
+// ── Calcular metros competencia de una visita ─────────────────────
+// 1) Suma shelf_meters de competitoritems si están llenos
+// 2) Fallback: r.shelf_meters (total anaquel) − mn → metros que NO son nuestros
+function calcMetrosCompetencia(r, mn) {
+  const items = parseJ(r.competitoritems);
+  if (items.length > 0) {
+    const suma = items
+      .filter(i => !i.sin_stock)
+      .reduce((s, i) => s + (parseFloat(i.shelf_meters) || 0), 0);
+    if (suma > 0) return suma;
+  }
+  // Fallback: si hay total global del anaquel y es mayor que mn,
+  // la diferencia son metros de competencia
+  const global = parseFloat(r.shelf_meters);
+  if (!isNaN(global) && mn != null && global > mn) {
+    return +(global - mn).toFixed(2);
+  }
+  return null;
+}
+
 // ── Calcular metros totales del anaquel ───────────────────────────
-function calcMetrosTotal(r) {
+function calcMetrosTotal(r, mn, mc) {
+  if (mn != null && mc != null) return mn + mc;
+  if (mn != null && mc == null) {
+    const global = parseFloat(r.shelf_meters);
+    if (!isNaN(global) && global > mn) return global;
+    return mn;
+  }
   const v = parseFloat(r.shelf_meters);
   return (!isNaN(v) && v > 0) ? v : null;
-}
-
-// ── Calcular % participación ──────────────────────────────────────
-function calcPct(nuestros, total) {
-  if (nuestros == null || total == null || total === 0) return null;
-  return Math.min(100, (nuestros / total) * 100);
-}
-
-// ── Color según % ─────────────────────────────────────────────────
-function pctColor(pct) {
-  if (pct == null) return '#9CA3AF';
-  if (pct >= 40)   return '#10B981';
-  if (pct >= 20)   return '#F59E0B';
-  return '#EF4444';
-}
-function pctBadgeCls(pct) {
-  if (pct == null) return 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400';
-  if (pct >= 40)   return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300';
-  if (pct >= 20)   return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
-  return 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300';
 }
 
 // ── Catálogos ─────────────────────────────────────────────────────
@@ -499,24 +508,27 @@ function renderTabla(rows) {
   }).join('');
 }
 
-// ── Gráfico barras participación ──────────────────────────────────
 function renderChart(rows) {
   const dark = document.documentElement.classList.contains('dark');
   const tc   = dark ? '#94a3b8' : '#6b7280';
   const gc   = dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
 
-  const top = rows.filter(c => c.pct != null).slice(0, 20);
+  const top = rows.filter(c => c.mn != null || c.mc != null).slice(0, 20);
 
-  if (chartPart) chartPart.destroy();
+  if (chartPart) { chartPart.destroy(); chartPart = null; }
+
+  const canvas = document.getElementById('chartParticipacion');
+  const noDataEl = document.getElementById('chartNoData');
 
   if (!top.length) {
-    document.getElementById('chartParticipacion').parentElement.innerHTML =
-      '<p class="text-center py-10 text-gray-400 text-sm">Sin datos con medición de metros</p>';
+    canvas.style.display = 'none';
+    if (noDataEl) noDataEl.style.display = 'block';
     return;
   }
+  canvas.style.display = '';
+  if (noDataEl) noDataEl.style.display = 'none';
 
-  chartPart = new Chart(
-    document.getElementById('chartParticipacion').getContext('2d'), {
+  chartPart = new Chart(canvas.getContext('2d'), {
     type: 'bar',
     data: {
       labels: top.map(c => c.comercio.length > 20 ? c.comercio.slice(0,18) + '…' : c.comercio),
@@ -529,12 +541,9 @@ function renderChart(rows) {
           borderSkipped: false,
         },
         {
-          label: 'Competencia / Resto (m)',
-          data: top.map(c => {
-            if (c.mt == null || c.mn == null) return 0;
-            return +(Math.max(0, c.mt - c.mn)).toFixed(2);
-          }),
-          backgroundColor: 'rgba(239,68,68,.45)',
+          label: 'Competencia (m)',
+          data: top.map(c => c.mc != null ? +c.mc.toFixed(2) : 0),
+          backgroundColor: 'rgba(239,68,68,.6)',
           borderRadius: 4,
           borderSkipped: false,
         },

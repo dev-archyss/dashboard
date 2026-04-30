@@ -271,6 +271,15 @@
     <div id="modalDetailsContent"></div>
   </div>
 </div>
+<!-- ══ MODAL ESPACIO ADICIONAL ═══════════════════════════════════ -->
+<div id="espacioModal" class="modal" style="z-index:1100">
+  <div class="modal-content p-6 sm:p-8" style="width:560px">
+    <button class="close-btn" id="closeEspacioModal">×</button>
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1 pr-10" id="espacioModalTitulo">—</h2>
+    <p class="text-sm text-gray-400 mb-5" id="espacioModalResumen">—</p>
+    <div id="espacioModalContent"></div>
+  </div>
+</div>
 
 <script>
 tailwind.config = { darkMode:'class' };
@@ -950,34 +959,35 @@ function showDetails(group) {
         </div>`;
     }
 
-    // Espacios adicionales
+        // Espacios adicionales — grouped by tipo (click → modal con detalle)
     const espacios = parseJ(r.espacios_adicionales).filter(e => e.activo !== false);
     if (espacios.length > 0) {
       const iconMap = { Torre:'🗼', Cabezal:'📐', Paleta:'🪵', 'Exhibición':'🏪' };
+      const byTipo = {};
+      espacios.forEach(e => {
+        if (!byTipo[e.tipo]) byTipo[e.tipo] = [];
+        byTipo[e.tipo].push(e);
+      });
       html += `
         <p class="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-2">
           🏪 Espacios adicionales
         </p>
         <div class="flex flex-wrap gap-2 mb-2">
-          ${espacios.map(e => `
-            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
-              bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300
-              border border-purple-200 dark:border-purple-700">
-              ${iconMap[e.tipo] || '📦'} ${e.tipo} — ${e.producto}
-              ${e.capacidad != null ? `<span class="font-normal text-purple-400">(${e.capacidad} unid.)</span>` : ''}
-            </span>`).join('')}
+          ${Object.entries(byTipo).map(([tipo, items]) => {
+            const totalCap = items.reduce((s, e) => s + (e.capacidad != null ? +e.capacidad : 0), 0);
+            const itemsJson = encodeURIComponent(JSON.stringify(items));
+            return `<button type="button"
+              onclick="abrirEspacioModal('${tipo.replace(/'/g,"\\'")}', '${itemsJson}')"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer
+                bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300
+                border border-purple-200 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors">
+              ${iconMap[tipo] || '📦'} ${tipo}
+              <span class="font-normal text-purple-400">${items.length} prod.${totalCap > 0 ? ' · ' + totalCap + ' unid.' : ''}</span>
+              <i class="fas fa-eye text-xs opacity-60 ml-1"></i>
+            </button>`;
+          }).join('')}
         </div>`;
     }
-
-    // Comentarios
-    if (r.comments) {
-      html += `
-        <div class="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-3">
-          <p class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">💬 Comentario</p>
-          <p class="text-sm text-gray-700 dark:text-gray-300">${r.comments}</p>
-        </div>`;
-    }
-
     html += `</div>`; // cierre modal-section línea
   });
 
@@ -1032,6 +1042,51 @@ function showLightbox(src) {
   lb.addEventListener('click', () => lb.remove());
   document.body.appendChild(lb);
 }
+// ── Modal de detalle de espacio adicional (Cabezal, Torre, etc.) ──
+window.abrirEspacioModal = function(tipo, itemsJsonEnc) {
+  const iconMap = { Torre:'🗼', Cabezal:'📐', Paleta:'🪵', 'Exhibición':'🏪' };
+  let items = [];
+  try { items = JSON.parse(decodeURIComponent(itemsJsonEnc)) || []; } catch { items = []; }
+
+  const totalCap = items.reduce((s, e) => s + (e.capacidad != null ? +e.capacidad : 0), 0);
+  const totalUnid = items.length;
+
+  document.getElementById('espacioModalTitulo').innerHTML =
+    `${iconMap[tipo] || '📦'} ${tipo}`;
+  document.getElementById('espacioModalResumen').innerHTML =
+    `<span class="font-semibold text-purple-600 dark:text-purple-300">${totalUnid}</span> producto${totalUnid !== 1 ? 's' : ''}` +
+    (totalCap > 0 ? ` · <span class="font-semibold text-purple-600 dark:text-purple-300">${totalCap}</span> unidades en total` : '');
+
+  const filas = items.map(e => `
+    <tr class="border-b border-gray-100 dark:border-slate-700">
+      <td class="py-2.5 px-3 text-sm font-semibold text-gray-800 dark:text-white">${e.producto || '—'}</td>
+      <td class="py-2.5 px-3 text-center text-sm font-bold text-purple-600 dark:text-purple-300 whitespace-nowrap">
+        ${e.capacidad != null ? `${e.capacidad} unid.` : '—'}
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('espacioModalContent').innerHTML = `
+    <div class="rounded-xl border border-purple-200 dark:border-purple-800 overflow-hidden">
+      <table class="w-full">
+        <thead class="bg-purple-50 dark:bg-purple-900/30">
+          <tr>
+            <th class="py-2 px-3 text-left text-xs font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wide">Producto</th>
+            <th class="py-2 px-3 text-center text-xs font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wide">Capacidad</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-slate-800">${filas}</tbody>
+        ${totalCap > 0 ? `
+          <tfoot class="bg-purple-50 dark:bg-purple-900/30">
+            <tr>
+              <td class="py-2 px-3 text-sm font-bold text-purple-700 dark:text-purple-300">Total</td>
+              <td class="py-2 px-3 text-center text-sm font-extrabold text-purple-700 dark:text-purple-300">${totalCap} unid.</td>
+            </tr>
+          </tfoot>` : ''}
+      </table>
+    </div>`;
+
+  document.getElementById('espacioModal').classList.add('open');
+};
 
 // ── Delete ────────────────────────────────────────────────────────
 async function deleteRecordsSelected(ids) {
@@ -1130,6 +1185,11 @@ async function init() {
     document.getElementById('detailsModal').classList.remove('open'));
   document.getElementById('detailsModal').addEventListener('click', e => {
     if (e.target === e.currentTarget) document.getElementById('detailsModal').classList.remove('open');
+      document.getElementById('closeEspacioModal').addEventListener('click', () =>
+    document.getElementById('espacioModal').classList.remove('open'));
+  document.getElementById('espacioModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) document.getElementById('espacioModal').classList.remove('open');
+  });
   });
 
   window.onLineaChanged = (lineaId) => {

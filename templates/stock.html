@@ -782,7 +782,7 @@ function renderTablaComercio(f) {
       <td class="py-3 px-4 text-center font-extrabold text-red-500">${r.quiebres}</td>
       <td class="py-3 px-4 text-center text-gray-500">${r.visitas}</td>
       <td class="py-3 px-4 text-center ${tasaCls}">${promSinStock} prod/visita</td>
-      <td class="py-3 px-4 text-xs text-gray-500">${r.prods.slice(0,3).join(', ')}${r.prods.length>3?'…':''}</td>
+            <td class="py-3 px-4 text-xs text-gray-700 dark:text-gray-200 font-medium">${r.prods.slice(0,3).join(', ')}${r.prods.length>3?'…':''}</td>
     </tr>`;
   }).join('');
 }

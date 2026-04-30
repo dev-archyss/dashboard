@@ -18,10 +18,12 @@ window.captaParseJ = function parseJ(v) {
 
 window.captaFmtProdTxt = function fmtProdTxt(item) {
   if (!item) return '—';
-  const name = item.presentation || '—';
-  if (!item.gramaje) return name;
+  // Fallbacks: app móvil moderna usa "presentation", PWA legacy "producto" o "name"
+  const name = item.presentation || item.producto || item.name || item.descripcion || '';
+  if (!name && !item.gramaje) return '—';
+  if (!item.gramaje) return name || '—';
   const g = item.gramaje % 1 === 0 ? parseInt(item.gramaje) : item.gramaje;
-  return `${name} — ${g}${item.unidad || ''}`;
+  return name ? `${name} — ${g}${item.unidad || ''}` : `${g}${item.unidad || ''}`;
 };
 
 window.captaFmtDate = function fmtDate(s) {
