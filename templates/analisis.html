@@ -103,6 +103,10 @@
         class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2">
         <i class="fas fa-undo"></i> Limpiar
       </button>
+      <button onclick="exportarExcel()"
+        class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition-all flex items-center gap-2 ml-auto">
+        <i class="fas fa-file-excel"></i> Exportar Excel
+      </button>
     </div>
   </div>
 
@@ -479,7 +483,6 @@ async function fetchDataAnalisis() {
     const { data: rawData, error } = await q.order('created_at', { ascending: false });
     if (error) throw error;
 
-    // Enriquecer gramaje/unidad desde catálogo (registros legacy sin gramaje)
     const data = await window.captaEnrichItems(rawData || [], empresaId, supabaseClient);
 
     const filasComparacion = [];
@@ -682,6 +685,88 @@ function setDefaultDates() {
 
 function aplicarFiltros() {
   fetchDataAnalisis();
+}
+
+// ── Exportar a Excel (3 hojas: Comparaciones, Por promotor, Por comercio) ─
+function exportarExcel() {
+  const filas = analisisData.length ? analisisData : nuestrosPrecios;
+  if (!filas.length) { alert('No hay datos para exportar.'); return; }
+
+  const fmtFecha = s => new Date(s).toLocaleDateString('es-ES');
+
+  // Hoja 1 — Comparaciones
+  const sheet1 = {
+    name: 'Comparaciones',
+    headers: ['Fecha','Comercio','Estado','Zona','Tipo','Promotor','Nuestro producto','USD nuestro','Competidor','USD comp.','Diferencia %'],
+    rows: filas.map(f => [
+      fmtFecha(f.fecha),
+      f.trade,
+      f.state,
+      f.zone === '—' ? '' : f.zone,
+      f.p_mayorista === 'Si' ? 'Mayorista' : 'Detal',
+      f.promotor,
+      f.nuestroProd,
+      f.nUSD != null ? +f.nUSD.toFixed(2) : '',
+      f.compProd || 'Sin competidor',
+      f.cUSD != null ? +f.cUSD.toFixed(2) : '',
+      f.diferencia != null ? +f.diferencia.toFixed(1) : '',
+    ])
+  };
+
+  // Hoja 2 — Por promotor
+  const byProm = {};
+  filas.forEach(f => {
+    if (!byProm[f.promotor]) byProm[f.promotor] = { n: [], c: [], count: 0 };
+    if (f.nUSD != null) byProm[f.promotor].n.push(f.nUSD);
+    if (f.cUSD != null) byProm[f.promotor].c.push(f.cUSD);
+    byProm[f.promotor].count++;
+  });
+  const sheet2 = {
+    name: 'Por promotor',
+    headers: ['Promotor','Precio prom. nuestro (USD)','Precio prom. comp. (USD)','Diferencia %','Registros'],
+    rows: Object.entries(byProm).map(([k,v]) => {
+      const nProm = v.n.length ? avg(v.n) : null;
+      const cProm = v.c.length ? avg(v.c) : null;
+      const dif   = (nProm != null && cProm != null) ? ((nProm - cProm) / cProm) * 100 : null;
+      return [
+        k,
+        nProm != null ? +nProm.toFixed(2) : '',
+        cProm != null ? +cProm.toFixed(2) : '',
+        dif   != null ? +dif.toFixed(1)   : '',
+        v.count,
+      ];
+    })
+  };
+
+  // Hoja 3 — Por comercio
+  const byCom = {};
+  filas.forEach(f => {
+    if (!byCom[f.trade]) byCom[f.trade] = { state: f.state, zone: f.zone, n: [], c: [], visitas: new Set() };
+    if (f.nUSD != null) byCom[f.trade].n.push(f.nUSD);
+    if (f.cUSD != null) byCom[f.trade].c.push(f.cUSD);
+    byCom[f.trade].visitas.add((f.fecha || '').split('T')[0]);
+  });
+  const sheet3 = {
+    name: 'Por comercio',
+    headers: ['Comercio','Estado','Zona','Precio prom. nuestro','Precio prom. comp.','Diferencia %','Visitas'],
+    rows: Object.entries(byCom).map(([k,v]) => {
+      const nProm = v.n.length ? avg(v.n) : null;
+      const cProm = v.c.length ? avg(v.c) : null;
+      const dif   = (nProm != null && cProm != null) ? ((nProm - cProm) / cProm) * 100 : null;
+      return [
+        k,
+        v.state,
+        v.zone === '—' ? '' : v.zone,
+        nProm != null ? +nProm.toFixed(2) : '',
+        cProm != null ? +cProm.toFixed(2) : '',
+        dif   != null ? +dif.toFixed(1)   : '',
+        v.visitas.size,
+      ];
+    })
+  };
+
+  const fechaHoy = new Date().toISOString().split('T')[0];
+  window.captaExportXLSX(`capta_analisis_precios_${fechaHoy}.xlsx`, [sheet1, sheet2, sheet3]);
 }
 
 waitDb(() => { setDefaultDates(); loadCatalogs(); });

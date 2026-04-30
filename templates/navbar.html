@@ -3,6 +3,7 @@
 (function(){var t=localStorage.getItem('sp-theme'),s=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||((!t)&&s))document.documentElement.classList.add('dark');})();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -321,7 +322,7 @@ const _MOD_LINKS = {
 async function _checkCuentaStatus() {
   try {
     const res = await fetch('/api/empresa/status');
-    if (!res.ok) return; // Silencioso — no interrumpir si falla
+    if (!res.ok) return;
     const s = await res.json();
 
     const modal    = document.getElementById('captaModalBloqueo');
@@ -332,7 +333,6 @@ async function _checkCuentaStatus() {
     const banner   = document.getElementById('captaAlertaBanner');
     const bannerMsg= document.getElementById('captaAlertaMsg');
 
-    // ── BLOQUEADA — modal bloqueante sin escape ──────────────────────
     if (s.estatus === 'bloqueada') {
       card.classList.remove('suspendida');
       ico.className = 'fas fa-lock';
@@ -340,10 +340,9 @@ async function _checkCuentaStatus() {
       msg.innerHTML = 'Tu empresa ha sido <strong>bloqueada por incumplimiento de pago</strong>.<br><br>'
         + 'No es posible acceder al sistema hasta regularizar el saldo pendiente con la administración.';
       modal.style.display = 'flex';
-      return; // No procesar más alertas
+      return;
     }
 
-    // ── SUSPENDIDA — modal bloqueante (tono amber) ───────────────────
     if (s.estatus === 'suspendida') {
       card.classList.add('suspendida');
       ico.className = 'fas fa-pause-circle';
@@ -354,7 +353,6 @@ async function _checkCuentaStatus() {
       return;
     }
 
-    // ── ALERTAS DE VENCIMIENTO DEL PLAN ─────────────────────────────
     const alertas = [];
 
     if (s.dias_para_vencer !== null && s.dias_para_vencer !== undefined) {
@@ -373,7 +371,6 @@ async function _checkCuentaStatus() {
       }
     }
 
-    // ── ALERTAS DE PAGOS PENDIENTES / VENCIDOS ──────────────────────
     if (Array.isArray(s.alertas_pagos)) {
       s.alertas_pagos.forEach(p => {
         if (p.nivel === 'vencido') {
@@ -391,7 +388,6 @@ async function _checkCuentaStatus() {
       });
     }
 
-    // ── Mostrar banner si hay alertas ───────────────────────────────
     if (alertas.length > 0) {
       bannerMsg.textContent = alertas.join('  ·  ');
       banner.style.display = 'flex';
@@ -402,9 +398,6 @@ async function _checkCuentaStatus() {
   }
 }
 
-/* ══════════════════════════════════════════════
-   MÓDULOS
-══════════════════════════════════════════════ */
 async function _applyModules(empresaId) {
   const navLinks = document.getElementById('navLinks');
   if (navLinks) navLinks.classList.add('loading-mods');
@@ -451,9 +444,6 @@ async function _applyModules(empresaId) {
   }
 }
 
-/* ══════════════════════════════════════════════
-   INIT SUPABASE
-══════════════════════════════════════════════ */
 async function _initSupabase() {
   try {
     const res = await fetch('/api/config');
@@ -470,7 +460,6 @@ async function _initSupabase() {
     window._captaDbReady = true;
     window.dispatchEvent(new Event('capta:db-ready'));
 
-    // Verificar estado de cuenta DESPUÉS de inicializar todo
     await _checkCuentaStatus();
 
   } catch(e) {
@@ -479,7 +468,6 @@ async function _initSupabase() {
   }
 }
 
-/* ── ANÁLISIS DROPDOWN ── */
 window.toggleAnalisisDropdown = function(e) {
   e.stopPropagation();
   document.getElementById('analisisDropdownWrap').classList.toggle('open');
@@ -489,7 +477,6 @@ document.addEventListener('click', function(e) {
   if (wrap && !wrap.contains(e.target)) wrap.classList.remove('open');
 });
 
-/* ── THEME ── */
 function syncTheme() {
   const d = document.documentElement.classList.contains('dark');
   const s = (id, show) => { const e = document.getElementById(id); if (e) e.style.display = show ? 'inline' : 'none'; };
@@ -504,34 +491,28 @@ window.toggleTheme = function() {
 syncTheme();
 
 
-/* ── NOMBRE EMPRESA ── */
 (function() {
-  // Primero intentar desde localStorage (carga instantánea)
   const cached = localStorage.getItem('empresa_nombre');
   ['navEmpresa', 'drawerEmpresa'].forEach(id => {
     const e = document.getElementById(id);
     if (e) e.textContent = cached || '…';
   });
 
-  // Luego confirmar/actualizar desde el backend (fuente de verdad)
   fetch('/api/dashboard/config')
     .then(r => r.ok ? r.json() : null)
     .then(cfg => {
       if (!cfg) return;
-      // Guardar en localStorage para próximas cargas
       if (cfg.empresa_nombre) localStorage.setItem('empresa_nombre', cfg.empresa_nombre);
       if (cfg.empresa_id)     localStorage.setItem('empresa_id',     cfg.empresa_id);
-      // Actualizar UI
       const nombre = cfg.empresa_nombre || cached || 'Sistema';
       ['navEmpresa', 'drawerEmpresa'].forEach(id => {
         const e = document.getElementById(id);
         if (e) e.textContent = nombre;
       });
     })
-    .catch(() => {}); // Silencioso si falla
+    .catch(() => {});
 })();
 
-/* ── LINK ACTIVO ── */
 (function() {
   const path = window.location.pathname;
   document.querySelectorAll('[data-nav]').forEach(a => {
@@ -543,7 +524,6 @@ syncTheme();
     document.getElementById('analisisNavBtn')?.classList.add('active');
 })();
 
-/* ── LÍNEAS ── */
 window.onLineaChange = function(val) {
   _captaLinea = val;
   localStorage.setItem('sp-linea', val);
@@ -571,7 +551,6 @@ async function _loadLineas() {
 }
 
 
-/* ── HELPERS GLOBALES: nombre de producto con gramaje ── */
 window.fmtProd = function(item) {
   if (!item) return '—';
   const name = item.presentation || '—';
@@ -587,7 +566,6 @@ window.fmtProdTxt = function(item) {
   return `${name} ${g}${item.unidad || ''}`;
 };
 
-/* ── TOAST ── */
 window.captaToast = function(msg, type = 'info') {
   const t = document.createElement('div');
   const c = { success: 'var(--green)', error: 'var(--red)', warn: 'var(--amber)', info: 'var(--accent)' };
@@ -595,7 +573,6 @@ window.captaToast = function(msg, type = 'info') {
   t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3200);
 };
 
-/* ── LIGHTBOX ── */
 window.captaLightbox = function(src) {
   const lb = document.createElement('div');
   lb.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;cursor:zoom-out';
@@ -603,7 +580,6 @@ window.captaLightbox = function(src) {
   lb.onclick = () => lb.remove(); document.body.appendChild(lb);
 };
 
-/* ── OVERFLOW RESPONSIVO ── */
 function _checkNavOverflow() {
   const nav  = document.getElementById('navLinks');
   const more = document.getElementById('navMore'); if (!nav || !more) return;
@@ -644,7 +620,6 @@ function _updateHamburger() {
   if (!nav || !ham) return; ham.style.display = nav.offsetWidth < 200 ? '' : 'none';
 }
 
-/* ── INIT ── */
 window.addEventListener('load', () => {
   _initSupabase();
   _checkNavOverflow();
@@ -653,7 +628,6 @@ window.addEventListener('load', () => {
 window.addEventListener('resize', () => { _checkNavOverflow(); _updateHamburger(); });
 new ResizeObserver(() => { _checkNavOverflow(); _updateHamburger(); }).observe(document.body);
 
-/* ── LOGOUT ── */
 window.captaLogout = function(e) {
   if (e) e.preventDefault();
   localStorage.removeItem('empresa_id');
