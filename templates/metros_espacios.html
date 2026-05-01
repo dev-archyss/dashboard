@@ -5,6 +5,7 @@
 <title>Metros de Anaquel — CAPTA</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
   .table-header-sticky th { position:sticky; top:0; z-index:10; background:#F9FAFB; }
@@ -126,6 +127,10 @@
       <button onclick="limpiar()"
         class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2">
         <i class="fas fa-undo"></i> Limpiar
+      </button>
+      <button onclick="exportXLS()"
+        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2 ml-auto">
+        <i class="fas fa-file-excel"></i> Exportar Excel
       </button>
     </div>
   </div>
@@ -781,6 +786,40 @@ function setDefaultDates() {
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('fHasta').value = hoy;
   document.getElementById('fDesde').value = hoy;
+}
+
+function exportXLS() {
+  try {
+    const wb = XLSX.utils.book_new();
+    const desde = document.getElementById('fDesde').value;
+    const hasta  = document.getElementById('fHasta').value;
+
+    const comercio = document.getElementById('fComercioVal').value;
+    const nivel    = document.getElementById('fNivel').value;
+    let filtered = comercioData;
+    if (comercio) filtered = filtered.filter(c => c.comercio === comercio);
+    if (nivel === 'alto')  filtered = filtered.filter(c => c.pct != null && c.pct >= 40);
+    if (nivel === 'medio') filtered = filtered.filter(c => c.pct != null && c.pct >= 20 && c.pct < 40);
+    if (nivel === 'bajo')  filtered = filtered.filter(c => c.pct != null && c.pct < 20);
+    if (nivel === 'sin')   filtered = filtered.filter(c => c.pct == null);
+
+    const rows = filtered.sort((a,b) => (b.pct||0) - (a.pct||0)).map(c => ({
+      'Comercio': c.comercio,
+      'Estado': c.state || '',
+      'Zona': c.zone || '',
+      'Promotor': c.ultimoProm || '',
+      'MN - Metros Nuestros': +(c.mn || 0).toFixed(2),
+      'MC - Metros Competencia': +(c.mc || 0).toFixed(2),
+      'MT - Metros Totales': +(c.mt || 0).toFixed(2),
+      '% Participación': c.pct != null ? +(c.pct).toFixed(1) : '',
+      'Visitas': c.numVisitas || 0,
+      'Última Visita': c.ultimaFecha ? new Date(c.ultimaFecha).toLocaleDateString('es-ES') : '',
+    }));
+
+    if (!rows.length) { alert('Sin datos para exportar.'); return; }
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Por Comercio');
+    XLSX.writeFile(wb, `CAPTA_MetrosAnaquel_${desde}_${hasta}.xlsx`);
+  } catch(e) { console.error(e); alert('Error al exportar.'); }
 }
 
 window.onLineaChanged = (lineaId) => {

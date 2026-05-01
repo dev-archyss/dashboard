@@ -7,6 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={darkMode:'class'}</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
   .table-header-sticky th { position:sticky; top:0; z-index:10; background:#F9FAFB; }
@@ -111,7 +112,6 @@
         </select>
       </div>
 
-      <!-- Búsqueda comercio con dropdown -->
       <div class="relative" id="comercioWrap">
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Comercio</label>
         <input type="text" id="fComercio" placeholder="Buscar comercio…"
@@ -121,7 +121,6 @@
         <div id="comercioDD" class="com-dd" style="display:none"></div>
       </div>
 
-      <!-- Búsqueda producto -->
       <div class="relative" id="productoWrap">
         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Producto</label>
         <input type="text" id="fProducto" placeholder="Buscar producto…"
@@ -140,6 +139,10 @@
       <button onclick="limpiar()"
         class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2">
         <i class="fas fa-undo"></i> Limpiar
+      </button>
+      <button onclick="exportXLS()"
+        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2 ml-auto">
+        <i class="fas fa-file-excel"></i> Exportar Excel
       </button>
     </div>
   </div>
@@ -217,7 +220,7 @@
 const empresaId = localStorage.getItem('empresa_id');
 if (!empresaId) window.location.replace('/');
 
-let allRows = [];   // filas expandidas: 1 fila = 1 espacio de 1 visita
+let allRows = [];
 let allComercioNames = [];
 let allProductoNames = [];
 let chartTipos = null, chartTop = null;
@@ -234,23 +237,21 @@ function fmtDate(s) {
   return new Date(s).toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' });
 }
 
-// ── Catalogs ──────────────────────────────────────────────────────
 async function loadCatalogs() {
   const db = window.db;
   const eid = empresaId;
-  
+
   const [{ data: prom }, { data: est }] = await Promise.all([
     db.from('web_promotores').select('promoter_name').eq('empresa_id', eid).order('promoter_name'),
     db.from('web_estados').select('nombre').order('nombre'),
   ]);
   const ps = document.getElementById('fPromotor');
   ps.innerHTML = '<option value="">Todos</option>' + (prom || []).map(p => `<option value="${p.promoter_name}">${p.promoter_name}</option>`).join('');
-  
+
   const es = document.getElementById('fEstado');
   es.innerHTML = '<option value="">Todos</option>' + (est || []).map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
 }
 
-// ── Load data ─────────────────────────────────────────────────────
 async function cargar() {
   const desde  = document.getElementById('fDesde').value;
   const hasta  = document.getElementById('fHasta').value;
@@ -262,8 +263,6 @@ async function cargar() {
       <i class="fas fa-spinner fa-spin text-indigo-400 text-2xl block mb-2"></i>Cargando...
     </td></tr>`;
 
-  // Traer TODOS los registros con espacios (no filtrar por promotor aquí)
-  // porque necesitamos TODOS para hacer estadísticas después
   let q = window.db.from('web_precios')
     .select('id, created_at, promoter_name, trade, state, zone, espacios_adicionales')
     .eq('empresa_id', empresaId)
@@ -285,9 +284,6 @@ async function cargar() {
     return;
   }
 
-  // ── Quedarse solo con el registro más reciente por comercio ──
-  // Como ya viene ordenado desc, el primer registro de cada comercio
-  // es el más reciente → ese es el estado actual
   const ultimoPorComercio = new Map();
   (data || []).forEach(r => {
     if (!ultimoPorComercio.has(r.trade)) {
@@ -295,19 +291,15 @@ async function cargar() {
     }
   });
 
-  // Ahora expandir espacios solo del último registro de cada comercio
-  // y solo los que estén activos (activo === true o activo no definido)
   allRows = [];
   const comercioSet = new Set();
   const productoSet = new Set();
 
-  // Aplicar filtro de fechas sobre el último registro del comercio
   ultimoPorComercio.forEach((r) => {
     let esp = r.espacios_adicionales;
     if (typeof esp === 'string') { try { esp = JSON.parse(esp); } catch { esp = []; } }
     if (!Array.isArray(esp) || esp.length === 0) return;
 
-    // Solo espacios activos — si el promotor lo eliminó (activo: false) no aparece
     const activos = esp.filter(e => e.activo !== false && e.tipo && e.producto);
     if (activos.length === 0) return;
 
@@ -333,7 +325,6 @@ async function cargar() {
   aplicar();
 }
 
-// ── Aplicar filtros client-side ───────────────────────────────────
 function aplicar() {
   const tipo     = document.getElementById('fTipo').value;
   const comercio = document.getElementById('fComercioVal').value;
@@ -354,9 +345,7 @@ function aplicar() {
   document.getElementById('infoTabla').textContent  = `${filtered.length} registros`;
 }
 
-// ── KPIs ──────────────────────────────────────────────────────────
 function renderKPIs(rows) {
-  // Contar comercios únicos que tienen cada tipo
   const porTipo = { Torre: new Set(), Cabezal: new Set(), Paleta: new Set(), 'Exhibición': new Set() };
   const comerciosTotal = new Set();
   rows.forEach(r => {
@@ -371,7 +360,7 @@ function renderKPIs(rows) {
   document.getElementById('kEspaciosTotales').textContent = rows.length;
 }
 
-// ── Tabla detalle ─────────────────────────────────────────────────
+// ── Tabla detalle — agrupada por comercio+tipo ────────────────────
 function renderTabla(rows) {
   const tbody = document.getElementById('tbody');
   if (!rows.length) {
@@ -381,40 +370,82 @@ function renderTabla(rows) {
     return;
   }
 
-  tbody.innerHTML = rows.map(r => {
-    const cfg = TIPO_CONFIG[r.tipo] || { icon:'📦', cls:'bg-gray-100 text-gray-600' };
-    return `<tr class="row-hover transition-colors">
-      <td class="py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-        ${fmtDate(r.fecha)}
-      </td>
-      <td class="py-3 px-4 text-sm text-indigo-600 dark:text-indigo-400 font-medium">${r.promotor}</td>
+  const grupos = {};
+  rows.forEach(r => {
+    const key = r.comercio + '||' + r.tipo;
+    if (!grupos[key]) {
+      grupos[key] = { fecha: r.fecha, promotor: r.promotor, comercio: r.comercio,
+                      state: r.state, zone: r.zone, tipo: r.tipo, items: [] };
+    }
+    grupos[key].items.push({ producto: r.producto, capacidad: r.capacidad });
+  });
+
+  let html = '';
+  let idx = 0;
+  Object.values(grupos).forEach(g => {
+    const cfg = TIPO_CONFIG[g.tipo] || { icon:'📦', cls:'bg-gray-100 text-gray-600' };
+    const totalCap = g.items.reduce((s, i) => s + (i.capacidad != null ? Number(i.capacidad) : 0), 0);
+    const hasMulti = g.items.length > 1;
+    const gid = `grp-${idx++}`;
+
+    const prodLabel = hasMulti
+      ? `<span class="font-semibold">${g.items.length} productos</span>`
+      : `<span class="font-semibold">${g.items[0].producto}</span>`;
+    const prodCls = hasMulti
+      ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+      : 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+
+    html += `<tr class="row-hover transition-colors${hasMulti ? ' cursor-pointer' : ''}"
+      ${hasMulti ? `onclick="toggleGrupo('${gid}')"` : ''}>
+      <td class="py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">${fmtDate(g.fecha)}</td>
+      <td class="py-3 px-4 text-sm text-indigo-600 dark:text-indigo-400 font-medium">${g.promotor}</td>
+      <td class="py-3 px-4"><span class="text-sm font-bold text-gray-800 dark:text-white">${g.comercio}</span></td>
+      <td class="py-3 px-4 text-xs text-gray-500 dark:text-gray-400">${g.state}${g.zone && g.zone !== '—' ? ' / ' + g.zone : ''}</td>
+      <td class="py-3 px-4 text-center"><span class="badge ${cfg.cls}">${cfg.icon} ${g.tipo}</span></td>
       <td class="py-3 px-4">
-        <span class="text-sm font-bold text-gray-800 dark:text-white">${r.comercio}</span>
-      </td>
-      <td class="py-3 px-4 text-xs text-gray-500 dark:text-gray-400">
-        ${r.state}${r.zone && r.zone !== '—' ? ' / ' + r.zone : ''}
-      </td>
-      <td class="py-3 px-4 text-center">
-        <span class="badge ${cfg.cls}">${cfg.icon} ${r.tipo}</span>
-      </td>
-      <td class="py-3 px-4">
-        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm font-semibold">
-          <i class="fas fa-cube text-xs"></i> ${r.producto}
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 ${prodCls} rounded-lg text-sm">
+          <i class="fas fa-cube text-xs"></i> ${prodLabel}
+          ${hasMulti ? `<i class="fas fa-chevron-down text-xs ml-1 transition-transform" id="icon-${gid}"></i>` : ''}
         </span>
       </td>
       <td class="py-3 px-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">
-        ${r.capacidad != null ? '<span class="text-indigo-600 dark:text-indigo-400">' + r.capacidad + '</span> unid.' : '<span class="text-gray-300">—</span>'}
+        ${totalCap > 0 ? `<span class="text-indigo-600 dark:text-indigo-400">${totalCap}</span> unid.` : '<span class="text-gray-300">—</span>'}
       </td>
     </tr>`;
-  }).join('');
+
+    if (hasMulti) {
+      html += `<tr id="${gid}" style="display:none">
+        <td colspan="7" class="p-0">
+          <div class="bg-gray-50 dark:bg-slate-700/50">
+            ${g.items.map(i => `
+              <div class="flex items-center justify-between px-16 py-2 border-t border-gray-100 dark:border-slate-600">
+                <span class="text-sm text-gray-700 dark:text-gray-200">
+                  <i class="fas fa-cube text-xs text-green-500 mr-2"></i>${i.producto}
+                </span>
+                <span class="text-xs text-gray-400">${i.capacidad != null ? i.capacidad + ' unid.' : '—'}</span>
+              </div>`).join('')}
+          </div>
+        </td>
+      </tr>`;
+    }
+  });
+
+  tbody.innerHTML = html;
 }
 
-// ── Gráficos ──────────────────────────────────────────────────────
+function toggleGrupo(gid) {
+  const row  = document.getElementById(gid);
+  const icon = document.getElementById('icon-' + gid);
+  if (!row) return;
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  if (icon) icon.style.transform = open ? '' : 'rotate(180deg)';
+}
+
 function renderCharts(rows) {
   const dark = document.documentElement.classList.contains('dark');
   const tc   = dark ? '#94a3b8' : '#6b7280';
 
-  // Donut: comercios únicos por tipo
   const porTipo = {};
   rows.forEach(r => {
     if (!porTipo[r.tipo]) porTipo[r.tipo] = new Set();
@@ -442,7 +473,6 @@ function renderCharts(rows) {
     }
   });
 
-  // Bar: top 10 comercios por cantidad de espacios distintos
   const porComercio = {};
   rows.forEach(r => {
     if (!porComercio[r.comercio]) porComercio[r.comercio] = new Set();
@@ -477,7 +507,6 @@ function renderCharts(rows) {
   });
 }
 
-// ── Resumen agrupado por comercio ─────────────────────────────────
 function renderResumenComercio(rows) {
   const container = document.getElementById('resumenComercio');
 
@@ -488,7 +517,6 @@ function renderResumenComercio(rows) {
     return;
   }
 
-  // Agrupar por comercio
   const porComercio = {};
   rows.forEach(r => {
     if (!porComercio[r.comercio]) {
@@ -500,7 +528,6 @@ function renderResumenComercio(rows) {
   const sorted = Object.entries(porComercio).sort((a,b) => b[1].espacios.length - a[1].espacios.length);
 
   container.innerHTML = sorted.map(([nombre, data]) => {
-    // Agrupar tipos dentro del comercio
     const porTipo = {};
     data.espacios.forEach(e => {
       if (!porTipo[e.tipo]) porTipo[e.tipo] = [];
@@ -509,7 +536,6 @@ function renderResumenComercio(rows) {
 
     const tipoCards = Object.entries(porTipo).map(([tipo, items]) => {
       const cfg = TIPO_CONFIG[tipo] || { icon:'📦', cls:'bg-gray-100 text-gray-600' };
-      // Lista de productos únicos en este tipo
       const productosUnicos = [...new Map(items.map(i => [i.producto, i])).values()];
       return `
         <div class="rounded-xl p-3 border ${cfg.cls === 'tipo-torre' ? 'border-indigo-200 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-700' : cfg.cls === 'tipo-cabezal' ? 'border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-700' : cfg.cls === 'tipo-paleta' ? 'border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-700' : 'border-purple-200 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-700'}">
@@ -537,7 +563,6 @@ function renderResumenComercio(rows) {
   }).join('');
 }
 
-// ── Búsqueda comercio ─────────────────────────────────────────────
 function buscarComercio(term) {
   clearTimeout(comercioTimer);
   document.getElementById('fComercioVal').value = '';
@@ -562,10 +587,9 @@ function selecComercio(val) {
   document.getElementById('comercioDD').style.display = 'none';
 }
 
-// ── Búsqueda producto ─────────────────────────────────────────────
 function buscarProducto(term) {
   clearTimeout(productoTimer);
-  document.getElementById('fProductoVal').value = term; // filtro por texto parcial
+  document.getElementById('fProductoVal').value = term;
   const dd = document.getElementById('productoDD');
   if (!term.trim()) { dd.style.display = 'none'; return; }
   productoTimer = setTimeout(() => {
@@ -587,7 +611,6 @@ function selecProducto(val) {
   document.getElementById('productoDD').style.display = 'none';
 }
 
-// Cerrar dropdowns al click afuera
 document.addEventListener('click', e => {
   if (!document.getElementById('comercioWrap')?.contains(e.target))
     document.getElementById('comercioDD').style.display = 'none';
@@ -611,6 +634,59 @@ function setDefaultDates() {
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('fHasta').value = hoy;
   document.getElementById('fDesde').value = hoy;
+}
+
+function exportXLS() {
+  try {
+    const wb   = XLSX.utils.book_new();
+    const desde = document.getElementById('fDesde').value;
+    const hasta  = document.getElementById('fHasta').value;
+
+    const tipo     = document.getElementById('fTipo').value;
+    const comercio = document.getElementById('fComercioVal').value;
+    const producto = document.getElementById('fProductoVal').value;
+    const prom     = document.getElementById('fPromotor').value;
+
+    let filtered = allRows;
+    if (tipo)     filtered = filtered.filter(r => r.tipo === tipo);
+    if (comercio) filtered = filtered.filter(r => r.comercio === comercio);
+    if (producto) filtered = filtered.filter(r => r.producto.toLowerCase().includes(producto.toLowerCase()));
+    if (prom)     filtered = filtered.filter(r => r.promotor === prom);
+
+    if (!filtered.length) { alert('Sin datos para exportar.'); return; }
+
+    const det = filtered.map(r => ({
+      'Fecha':     new Date(r.fecha).toLocaleDateString('es-ES'),
+      'Promotor':  r.promotor,
+      'Comercio':  r.comercio,
+      'Estado':    r.state,
+      'Zona':      r.zone,
+      'Tipo':      r.tipo,
+      'Producto':  r.producto,
+      'Capacidad': r.capacidad ?? '',
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(det), 'Detalle');
+
+    const grupos = {};
+    filtered.forEach(r => {
+      const key = r.comercio + '||' + r.tipo;
+      if (!grupos[key]) grupos[key] = { comercio: r.comercio, state: r.state, zone: r.zone, tipo: r.tipo, productos: [], totalCap: 0 };
+      grupos[key].productos.push(r.producto);
+      grupos[key].totalCap += r.capacidad != null ? Number(r.capacidad) : 0;
+    });
+    const agr = Object.values(grupos).map(g => ({
+      'Comercio':          g.comercio,
+      'Estado':            g.state,
+      'Zona':              g.zone,
+      'Tipo':              g.tipo,
+      'Cantidad Productos': g.productos.length,
+      'Productos':         [...new Set(g.productos)].join(' | '),
+      'Capacidad Total':   g.totalCap || '',
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(agr), 'Agrupado');
+
+    XLSX.writeFile(wb, `CAPTA_Espacios_${desde}_${hasta}.xlsx`);
+  } catch(e) { console.error(e); alert('Error al exportar.'); }
 }
 
 window.onLineaChanged = (lineaId) => {

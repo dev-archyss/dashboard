@@ -5,6 +5,7 @@
 <title>Control de Stock — CAPTA</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
   .table-header-sticky th { position:sticky; top:0; z-index:10; background:#F9FAFB; }
@@ -138,6 +139,10 @@
       <button onclick="limpiarFiltros()"
         class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2">
         <i class="fas fa-undo"></i> Limpiar
+      </button>
+      <button onclick="exportXLS()"
+        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2 ml-auto">
+        <i class="fas fa-file-excel"></i> Exportar Excel
       </button>
     </div>
   </div>
@@ -1202,6 +1207,84 @@ function setDefaultDates() {
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('fHasta').value = hoy;
   document.getElementById('fDesde').value = hoy;
+}
+
+function exportXLS() {
+  try {
+    const wb = XLSX.utils.book_new();
+    const desde = document.getElementById('fDesde')?.value || '';
+    const hasta  = document.getElementById('fHasta')?.value  || '';
+
+    // Obtener filas filtradas igual que aplicarFiltros
+    const promotor = document.getElementById('fPromotor').value;
+    const comercio = document.getElementById('fComercioVal').value;
+    const producto = document.getElementById('fProducto').value;
+    const alerta   = document.getElementById('fAlerta').value;
+    let f = filas;
+    if (promotor) f = f.filter(r => r.promotor === promotor);
+    if (comercio) f = f.filter(r => r.comercio === comercio);
+    if (producto) f = f.filter(r => r.producto === producto);
+    if (alerta === 'anaquel')    f = f.filter(r => r.alertaA);
+    if (alerta === 'bodega')     f = f.filter(r => r.alertaB);
+    if (alerta === 'ambos')      f = f.filter(r => r.alertaA && r.alertaB);
+    if (alerta === 'cualquiera') f = f.filter(r => r.alertaA || r.alertaB);
+
+    // Hoja 1: Alertas Urgentes (agrupado por comercio+producto)
+    const visitasPorTrade = {};
+    filas.forEach(r => { visitasPorTrade[r.comercio] = (visitasPorTrade[r.comercio] || 0) + 1; });
+    const byGrupo = {};
+    f.forEach(r => {
+      const k = r.comercio + '|||' + r.producto;
+      if (!byGrupo[k]) byGrupo[k] = { Comercio: r.comercio, Estado: r.state, Producto: r.producto, Quiebres: 0, _visitas: visitasPorTrade[r.comercio] || 1 };
+      if (r.alertaA || r.sinStock) byGrupo[k].Quiebres++;
+    });
+    const alertas = Object.values(byGrupo).filter(x => x.Quiebres > 0).map(x => {
+      const freq = Math.round(x.Quiebres / x._visitas * 100);
+      return { Comercio: x.Comercio, Estado: x.Estado, Producto: x.Producto, Quiebres: x.Quiebres, Visitas: x._visitas, 'Frecuencia %': freq, Prioridad: freq >= 50 ? 'CRÍTICO' : freq >= 25 ? 'ALTO' : 'MEDIO' };
+    }).sort((a,b) => b['Frecuencia %'] - a['Frecuencia %']);
+    if (alertas.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(alertas), 'Alertas Urgentes');
+
+    // Hoja 2: Por Comercio
+    const byTrade = {};
+    f.forEach(r => {
+      if (!byTrade[r.comercio]) byTrade[r.comercio] = { Comercio: r.comercio, Estado: r.state, Total: 0, 'Alerta Anaquel': 0, 'Alerta Bodega': 0 };
+      byTrade[r.comercio].Total++;
+      if (r.alertaA) byTrade[r.comercio]['Alerta Anaquel']++;
+      if (r.alertaB) byTrade[r.comercio]['Alerta Bodega']++;
+    });
+    const porComercio = Object.values(byTrade).sort((a,b) => b['Alerta Anaquel'] - a['Alerta Anaquel']);
+    if (porComercio.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(porComercio), 'Por Comercio');
+
+    // Hoja 3: Por Producto
+    const byProd = {};
+    f.forEach(r => {
+      if (!byProd[r.producto]) byProd[r.producto] = { Producto: r.producto, Total: 0, 'Alerta Anaquel': 0, 'Alerta Bodega': 0 };
+      byProd[r.producto].Total++;
+      if (r.alertaA) byProd[r.producto]['Alerta Anaquel']++;
+      if (r.alertaB) byProd[r.producto]['Alerta Bodega']++;
+    });
+    const porProducto = Object.values(byProd).sort((a,b) => b['Alerta Anaquel'] - a['Alerta Anaquel']);
+    if (porProducto.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(porProducto), 'Por Producto');
+
+    // Hoja 4: Detalle
+    const detalle = f.map(r => ({
+      Fecha: new Date(r.fecha).toLocaleDateString('es-ES'),
+      Promotor: r.promotor,
+      Comercio: r.comercio,
+      Estado: r.state,
+      Producto: r.producto,
+      'Stock Anaquel': r.anaquel ?? 'SIN STOCK',
+      'Stock Bodega': r.bodega ?? '—',
+      'Umbral Anaquel': r.ua,
+      'Umbral Bodega': r.ub,
+      'Alerta Anaquel': r.alertaA ? 'SÍ' : 'No',
+      'Alerta Bodega': r.alertaB ? 'SÍ' : 'No',
+    }));
+    if (detalle.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalle), 'Detalle');
+
+    if (!wb.SheetNames.length) { alert('Sin datos para exportar.'); return; }
+    XLSX.writeFile(wb, `CAPTA_Stock_${desde}_${hasta}.xlsx`);
+  } catch(e) { console.error(e); alert('Error al exportar.'); }
 }
 
 window.onLineaChanged = (lineaId) => {

@@ -23,7 +23,9 @@ window.captaFmtProdTxt = function fmtProdTxt(item) {
   if (!name && !item.gramaje) return '—';
   if (!item.gramaje) return name || '—';
   const g = item.gramaje % 1 === 0 ? parseInt(item.gramaje) : item.gramaje;
-  return name ? `${name} — ${g}${item.unidad || ''}` : `${g}${item.unidad || ''}`;
+  const suffix = `${g}${item.unidad || ''}`;
+  if (name && name.includes(suffix)) return name;
+  return name ? `${name} — ${suffix}` : suffix;
 };
 
 window.captaFmtDate = function fmtDate(s) {
@@ -82,42 +84,4 @@ window.captaEnrichItems = async function enrichItems(records, empresaId, db) {
     myitems:         enrichArray(record.myitems,         prodIdx),
     competitoritems: enrichArray(record.competitoritems, compIdx),
   }));
-};
-
-/**
- * Genera y descarga un archivo XLSX con varias hojas.
- * Requiere SheetJS (xlsx.full.min.js) cargado globalmente como window.XLSX.
- *
- * @param {string} filename — ej. "capta_stock_2026-04-30.xlsx"
- * @param {Array<{name:string, headers:string[], rows:Array<Array>}>} sheets
- */
-window.captaExportXLSX = function exportXLSX(filename, sheets) {
-  if (!window.XLSX) {
-    alert('La librería de Excel aún no se cargó. Recarga la página e inténtalo de nuevo.');
-    return;
-  }
-  if (!sheets || !sheets.length) {
-    alert('No hay datos para exportar.');
-    return;
-  }
-  const wb = XLSX.utils.book_new();
-  sheets.forEach(({ name, headers, rows }) => {
-    const safeRows = (rows || []).map(r =>
-      (r || []).map(v => (v === null || v === undefined) ? '' : v)
-    );
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...safeRows]);
-    // Ancho automático por columna (con tope de 50)
-    ws['!cols'] = headers.map((h, i) => {
-      const longest = Math.max(
-        String(h ?? '').length,
-        ...safeRows.map(r => String(r[i] ?? '').length)
-      );
-      return { wch: Math.min(50, Math.max(10, longest + 2)) };
-    });
-    // Congelar fila de encabezados
-    ws['!freeze'] = { xSplit: 0, ySplit: 1 };
-    const sheetName = (name || 'Hoja').toString().replace(/[\\\/\?\*\[\]]/g, '').substring(0, 31);
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  });
-  XLSX.writeFile(wb, filename);
 };

@@ -5,6 +5,7 @@
 <title>Análisis de Precios — CAPTA</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
   .table-header-sticky th { position:sticky; top:0; z-index:10; background:#F9FAFB; }
@@ -103,8 +104,8 @@
         class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2">
         <i class="fas fa-undo"></i> Limpiar
       </button>
-      <button onclick="exportarExcel()"
-        class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition-all flex items-center gap-2 ml-auto">
+      <button onclick="exportXLS()"
+        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2 ml-auto">
         <i class="fas fa-file-excel"></i> Exportar Excel
       </button>
     </div>
@@ -687,89 +688,71 @@ function aplicarFiltros() {
   fetchDataAnalisis();
 }
 
-// ── Exportar a Excel (3 hojas: Comparaciones, Por promotor, Por comercio) ─
-function exportarExcel() {
-  const filas = analisisData.length ? analisisData : nuestrosPrecios;
-  if (!filas.length) { alert('No hay datos para exportar.'); return; }
-
-  const fmtFecha = s => new Date(s).toLocaleDateString('es-ES');
-
-  // Hoja 1 — Comparaciones
-  const sheet1 = {
-    name: 'Comparaciones',
-    headers: ['Fecha','Comercio','Estado','Zona','Tipo','Promotor','Nuestro producto','USD nuestro','Competidor','USD comp.','Diferencia %'],
-    rows: filas.map(f => [
-      fmtFecha(f.fecha),
-      f.trade,
-      f.state,
-      f.zone === '—' ? '' : f.zone,
-      f.p_mayorista === 'Si' ? 'Mayorista' : 'Detal',
-      f.promotor,
-      f.nuestroProd,
-      f.nUSD != null ? +f.nUSD.toFixed(2) : '',
-      f.compProd || 'Sin competidor',
-      f.cUSD != null ? +f.cUSD.toFixed(2) : '',
-      f.diferencia != null ? +f.diferencia.toFixed(1) : '',
-    ])
-  };
-
-  // Hoja 2 — Por promotor
-  const byProm = {};
-  filas.forEach(f => {
-    if (!byProm[f.promotor]) byProm[f.promotor] = { n: [], c: [], count: 0 };
-    if (f.nUSD != null) byProm[f.promotor].n.push(f.nUSD);
-    if (f.cUSD != null) byProm[f.promotor].c.push(f.cUSD);
-    byProm[f.promotor].count++;
-  });
-  const sheet2 = {
-    name: 'Por promotor',
-    headers: ['Promotor','Precio prom. nuestro (USD)','Precio prom. comp. (USD)','Diferencia %','Registros'],
-    rows: Object.entries(byProm).map(([k,v]) => {
-      const nProm = v.n.length ? avg(v.n) : null;
-      const cProm = v.c.length ? avg(v.c) : null;
-      const dif   = (nProm != null && cProm != null) ? ((nProm - cProm) / cProm) * 100 : null;
-      return [
-        k,
-        nProm != null ? +nProm.toFixed(2) : '',
-        cProm != null ? +cProm.toFixed(2) : '',
-        dif   != null ? +dif.toFixed(1)   : '',
-        v.count,
-      ];
-    })
-  };
-
-  // Hoja 3 — Por comercio
-  const byCom = {};
-  filas.forEach(f => {
-    if (!byCom[f.trade]) byCom[f.trade] = { state: f.state, zone: f.zone, n: [], c: [], visitas: new Set() };
-    if (f.nUSD != null) byCom[f.trade].n.push(f.nUSD);
-    if (f.cUSD != null) byCom[f.trade].c.push(f.cUSD);
-    byCom[f.trade].visitas.add((f.fecha || '').split('T')[0]);
-  });
-  const sheet3 = {
-    name: 'Por comercio',
-    headers: ['Comercio','Estado','Zona','Precio prom. nuestro','Precio prom. comp.','Diferencia %','Visitas'],
-    rows: Object.entries(byCom).map(([k,v]) => {
-      const nProm = v.n.length ? avg(v.n) : null;
-      const cProm = v.c.length ? avg(v.c) : null;
-      const dif   = (nProm != null && cProm != null) ? ((nProm - cProm) / cProm) * 100 : null;
-      return [
-        k,
-        v.state,
-        v.zone === '—' ? '' : v.zone,
-        nProm != null ? +nProm.toFixed(2) : '',
-        cProm != null ? +cProm.toFixed(2) : '',
-        dif   != null ? +dif.toFixed(1)   : '',
-        v.visitas.size,
-      ];
-    })
-  };
-
-  const fechaHoy = new Date().toISOString().split('T')[0];
-  window.captaExportXLSX(`capta_analisis_precios_${fechaHoy}.xlsx`, [sheet1, sheet2, sheet3]);
-}
-
 waitDb(() => { setDefaultDates(); loadCatalogs(); });
+
+function exportXLS() {
+  try {
+    const wb = XLSX.utils.book_new();
+    const desde = $('fDesde').value;
+    const hasta = $('fHasta').value;
+
+    // Hoja 1: Comparaciones
+    const filas = analisisData.length > 0 ? analisisData : nuestrosPrecios;
+    const comp = filas.map(f => ({
+      'Fecha': new Date(f.fecha).toLocaleDateString('es-ES'),
+      'Promotor': f.promotor,
+      'Comercio': f.trade,
+      'Estado': f.state,
+      'Zona': f.zone,
+      'Nuestro Producto': f.nuestroProd,
+      'USD Nuestro': +f.nUSD.toFixed(2),
+      'Competidor': f.compProd || '',
+      'USD Comp.': f.cUSD ? +f.cUSD.toFixed(2) : '',
+      'Δ%': f.diferencia !== null ? +f.diferencia.toFixed(1) : '',
+    }));
+    if (comp.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(comp), 'Comparaciones');
+
+    // Hoja 2: Por Promotor
+    const byProm = {};
+    filas.forEach(f => {
+      const p = f.promotor;
+      if (!byProm[p]) byProm[p] = { Promotor: p, Registros: 0, _sN: 0, _sC: 0, _sd: 0, _nd: 0 };
+      byProm[p].Registros++;
+      byProm[p]._sN += f.nUSD;
+      if (f.cUSD) { byProm[p]._sC += f.cUSD; byProm[p]._nd++; }
+      if (f.diferencia !== null) { byProm[p]._sd += f.diferencia; }
+    });
+    const porProm = Object.values(byProm).map(x => ({
+      Promotor: x.Promotor,
+      Registros: x.Registros,
+      'Precio Prom. Nuestro (USD)': +(x._sN / x.Registros).toFixed(2),
+      'Precio Prom. Comp. (USD)': x._nd ? +(x._sC / x._nd).toFixed(2) : '',
+      'Δ% Promedio': x.Registros ? +(x._sd / x.Registros).toFixed(1) : '',
+    }));
+    if (porProm.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(porProm), 'Por Promotor');
+
+    // Hoja 3: Por Comercio
+    const byTrade = {};
+    filas.forEach(f => {
+      const t = f.trade;
+      if (!byTrade[t]) byTrade[t] = { Comercio: t, Estado: f.state, Zona: f.zone, Registros: 0, _sN: 0, _sC: 0, _sd: 0, _nd: 0 };
+      byTrade[t].Registros++;
+      byTrade[t]._sN += f.nUSD;
+      if (f.cUSD) { byTrade[t]._sC += f.cUSD; byTrade[t]._nd++; }
+      if (f.diferencia !== null) byTrade[t]._sd += f.diferencia;
+    });
+    const porTrade = Object.values(byTrade).map(x => ({
+      Comercio: x.Comercio, Estado: x.Estado, Zona: x.Zona, Registros: x.Registros,
+      'Precio Prom. Nuestro (USD)': +(x._sN / x.Registros).toFixed(2),
+      'Precio Prom. Comp. (USD)': x._nd ? +(x._sC / x._nd).toFixed(2) : '',
+      'Δ% Promedio': x.Registros ? +(x._sd / x.Registros).toFixed(1) : '',
+    })).sort((a, b) => b['Precio Prom. Nuestro (USD)'] - a['Precio Prom. Nuestro (USD)']);
+    if (porTrade.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(porTrade), 'Por Comercio');
+
+    if (!wb.SheetNames.length) { alert('Sin datos para exportar.'); return; }
+    XLSX.writeFile(wb, `CAPTA_Precios_${desde}_${hasta}.xlsx`);
+  } catch(e) { console.error(e); alert('Error al exportar.'); }
+}
 </script>
 </body>
 </html>

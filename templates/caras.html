@@ -5,6 +5,7 @@
 <title>Caras en Anaquel — CAPTA</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
   .table-header-sticky th { position:sticky; top:0; z-index:10; background:#F9FAFB; }
@@ -126,6 +127,10 @@
       <button onclick="limpiar()"
         class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2">
         <i class="fas fa-undo"></i> Limpiar
+      </button>
+      <button onclick="exportXLS()"
+        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2 ml-auto">
+        <i class="fas fa-file-excel"></i> Exportar Excel
       </button>
     </div>
   </div>
@@ -752,6 +757,73 @@ function setDefaultDates() {
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('fHasta').value = hoy;
   document.getElementById('fDesde').value = hoy;
+}
+
+function exportXLS() {
+  try {
+    const wb = XLSX.utils.book_new();
+    const desde = document.getElementById('fDesde').value;
+    const hasta  = document.getElementById('fHasta').value;
+
+    // Reconstruir byProdN y byProdC desde allData
+    const byProdN = {}, byProdC = {};
+    let totalNuestrasAntes = 0, totalNuestrasDespues = 0, totalCarasComp = 0;
+    allData.forEach(r => {
+      parseJ(r.myitems).forEach(i => {
+        if (i.sin_stock) return;
+        const bef = parseFloat(i.faces_before) || 0;
+        const aft = parseFloat(i.faces_after) || 0;
+        totalNuestrasAntes += bef; totalNuestrasDespues += aft;
+        const k = labelConGramaje(i);
+        if (!byProdN[k]) byProdN[k] = { before: 0, after: 0 };
+        byProdN[k].before += bef; byProdN[k].after += aft;
+      });
+      parseJ(r.competitoritems).forEach(i => {
+        if (i.sin_stock) return;
+        const c = getCarasComp(i); totalCarasComp += c;
+        const k = labelConGramaje(i);
+        if (!byProdC[k]) byProdC[k] = { faces: 0 };
+        byProdC[k].faces += c;
+      });
+    });
+
+    // Hoja 1: Nuestros
+    const nuestros = Object.entries(byProdN).map(([prod, v]) => ({
+      Producto: prod,
+      'Caras Antes': v.before,
+      'Caras Después': v.after,
+      'Δ Caras': v.after - v.before,
+    })).sort((a,b) => b['Caras Después'] - a['Caras Después']);
+    if (nuestros.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(nuestros), 'Nuestros');
+
+    // Hoja 2: Competencia
+    const comp = Object.entries(byProdC).map(([prod, v]) => ({
+      Producto: prod, 'Total Caras': v.faces,
+    })).sort((a,b) => b['Total Caras'] - a['Total Caras']);
+    if (comp.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(comp), 'Competencia');
+
+    // Hoja 3: Por Visita
+    const visitas = allData.map(r => {
+      const na = r._nAntes || 0, nd = r._nDespues || 0, nc = r._comp || 0;
+      const tot = nd + nc;
+      return {
+        Fecha: fmtDate(r.created_at),
+        Promotor: r.promoter_name || '',
+        Comercio: r.trade || '',
+        Estado: r.state || '',
+        'Nuestras Antes': na,
+        'Nuestras Después': nd,
+        'Caras Comp.': nc,
+        'Total Anaquel': tot,
+        'SOS%': tot > 0 ? +(nd / tot * 100).toFixed(1) : 0,
+        'Δ Caras': nd - na,
+      };
+    });
+    if (visitas.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(visitas), 'Por Visita');
+
+    if (!wb.SheetNames.length) { alert('Sin datos para exportar.'); return; }
+    XLSX.writeFile(wb, `CAPTA_Caras_${desde}_${hasta}.xlsx`);
+  } catch(e) { console.error(e); alert('Error al exportar.'); }
 }
 
 window.onLineaChanged = (lineaId) => {
