@@ -311,6 +311,15 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
     <div class="chart-card"><div class="chart-card-title">Top comercios con más espacios <span>Barras</span></div><div class="chart-wrap" style="height:250px"><canvas id="c-esp-trade"></canvas></div></div>
     <div class="chart-card" style="grid-column:1/-1"><div class="chart-card-title">Espacios por promotor <span>Stacked</span></div><div class="chart-wrap" style="height:220px"><canvas id="c-esp-prom"></canvas></div></div>
   </div>
+  <div class="chart-card" style="margin-top:18px">
+    <div class="chart-card-title">Espacios agrupados por comercio <span>Click para ver detalle por producto</span></div>
+    <div class="rp-tbl-wrap" style="max-height:500px">
+      <table class="rp-tbl" id="t-esp-grupos">
+        <thead><tr><th>Comercio</th><th>Tipo</th><th>Total Cap.</th><th>Productos</th><th style="width:32px"></th></tr></thead>
+        <tbody><tr><td colspan="5" class="empty">Sin datos</td></tr></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- ══ TAB: PROYECCIONES ══ -->
@@ -434,7 +443,7 @@ function aplicarFiltros(){
     if(estado && r.state!==estado)          return false;
     if(zona   && r.zone!==zona)             return false;
     if(comerc && r.trade!==comerc)          return false;
-    if(linea  && r.linea_id!==linea)        return false;
+    if(linea  && String(r.linea_id)!==String(linea)) return false;
     if(tipo   && r.p_mayorista!==tipo)      return false;
     if(prod){
       const items=parseJ(r.myitems);
@@ -486,6 +495,17 @@ function toUSD(p,m,f){
   if(mn==='BS'||mn==='B$'||mn==='VES') return n/parseFloat(t.tasa_bs_usd||36.5);
   if(mn==='COP'||mn==='PESOS') return n/parseFloat(t.tasa_cop_usd||4200);
   return n;
+}
+
+function fmtProdTxt(item){
+  if(!item) return '—';
+  const name = item.presentation || item.producto || item.name || item.descripcion || '';
+  if(!name && !item.gramaje) return '—';
+  if(!item.gramaje) return name || '—';
+  const g = item.gramaje % 1 === 0 ? parseInt(item.gramaje) : item.gramaje;
+  const suffix = `${g}${item.unidad || ''}`;
+  if(name && name.includes(suffix)) return name;
+  return name ? `${name} — ${suffix}` : suffix;
 }
 
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
@@ -584,7 +604,7 @@ function haversineDist(lat1,lon1,lat2,lon2){
 let clientesCoordMap = {};
 async function loadClientesCoords(){
   try{
-    const {data}=await $db('web_clientes').select('id,latitude,longitude').eq('empresa_id',empresaId);
+    const {data}=await $db('web_clientes').select('id,latitude,longitude').eq('empresa_id',EID);
     (data||[]).forEach(c=>{if(c.latitude&&c.longitude)clientesCoordMap[c.id]={lat:parseFloat(c.latitude),lon:parseFloat(c.longitude)};});
   }catch(e){console.warn('coords:',e);}
 }
@@ -688,12 +708,16 @@ function renderPrecios(){
 
   mkChart('c-pre-prod','bar',{labels:topProd.map(x=>x.k),datasets:[{data:topProd.map(x=>+x.v.toFixed(2)),backgroundColor:'rgba(79,70,229,.75)',borderRadius:4,borderSkipped:false}]},{yTick:{callback:v=>'$'+v.toFixed(1)}});
 
-  // Nuestros vs comp por producto común
-  const comunes=Object.keys(prodUSD).filter(k=>compUSD[k]).slice(0,8);
-  if(comunes.length){
-    mkChart('c-pre-comp','bar',{labels:comunes.map(k=>k),datasets:[
-      {label:'Nuestro',data:comunes.map(k=>+avg(prodUSD[k]).toFixed(2)),backgroundColor:'rgba(79,70,229,.75)',borderRadius:4,borderSkipped:false},
-      {label:'Competencia',data:comunes.map(k=>+avg(compUSD[k]).toFixed(2)),backgroundColor:'rgba(220,38,38,.65)',borderRadius:4,borderSkipped:false}
+  // Nuestros vs comp — mostrar aunque no haya nombres en común
+  const topNuestros=Object.entries(prodUSD).map(([k,v])=>({k,v:avg(v)})).sort((a,b)=>b.v-a.v).slice(0,8);
+  const topComp=Object.entries(compUSD).map(([k,v])=>({k,v:avg(v)})).sort((a,b)=>b.v-a.v).slice(0,8);
+  const allCompLabels=[...new Set([...topNuestros.map(x=>x.k),...topComp.map(x=>x.k)])].slice(0,12);
+  const nMap=Object.fromEntries(topNuestros.map(x=>[x.k,x.v]));
+  const cMap=Object.fromEntries(topComp.map(x=>[x.k,x.v]));
+  if(allCompLabels.length){
+    mkChart('c-pre-comp','bar',{labels:allCompLabels,datasets:[
+      {label:'Nuestro',data:allCompLabels.map(k=>nMap[k]!=null?+nMap[k].toFixed(2):null),backgroundColor:'rgba(79,70,229,.75)',borderRadius:4,borderSkipped:false},
+      {label:'Competencia',data:allCompLabels.map(k=>cMap[k]!=null?+cMap[k].toFixed(2):null),backgroundColor:'rgba(220,38,38,.65)',borderRadius:4,borderSkipped:false}
     ]},{plugins:{legend:{display:true,labels:{color:tc(),font:{size:10},boxWidth:10}}}});
   }
 
@@ -738,13 +762,16 @@ function renderAnaquel(){
     });
     parseJ(r.myitems).forEach(i=>{
       if(i.presentation&&i.presentation!=='SIN STOCK'&&sm>0){
-        if(!byItem[i.presentation])byItem[i.presentation]=0;
-        byItem[i.presentation]+=sm/Math.max(parseJ(r.myitems).filter(x=>x.presentation&&x.presentation!=='SIN STOCK').length,1);
+        if(!byItem[i.presentation])byItem[i.presentation]={sum:0,cnt:0};
+        const itemCnt=Math.max(parseJ(r.myitems).filter(x=>x.presentation&&x.presentation!=='SIN STOCK').length,1);
+        byItem[i.presentation].sum+=sm/itemCnt;
+        byItem[i.presentation].cnt++;
       }
     });
   });
 
-  const topI=Object.entries(byItem).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  // Promedio por producto, no acumulado
+  const topI=Object.entries(byItem).map(([k,v])=>([k,v.sum/v.cnt])).sort((a,b)=>b[1]-a[1]).slice(0,10);
   mkChart('c-an-prod','bar',{labels:topI.map(([k])=>k),datasets:[{data:topI.map(([,v])=>+v.toFixed(2)),backgroundColor:'rgba(5,150,105,.75)',borderRadius:4,borderSkipped:false}]},{yTick:{callback:v=>v+'m'}});
 
   mkChart('c-an-sos','doughnut',{labels:['Metros propios','Metros competencia'],datasets:[{data:[+totN[0].toFixed(2),+totC[0].toFixed(2)],backgroundColor:['rgba(79,70,229,.8)','rgba(220,38,38,.7)'],borderWidth:0}]},{plugins:{legend:{display:true,position:'bottom',labels:{color:tc(),font:{size:11},boxWidth:10}}}});
@@ -761,12 +788,13 @@ function renderAnaquel(){
 // ════════════════════════════════════════
 function renderCaras(){
   const byDay={}, byProm={};
-  let totBef=0,totAft=0,totCBef=0;
+  let totBef=0,totAft=0,totCBef=0,totCompFaces=0;
   filtData.forEach(r=>{
     const b=parseFloat(r.our_faces_before_counted)||parseFloat(r.our_faces_before_manual)||0;
     const a=parseFloat(r.our_faces_after)||0;
     const tb=parseFloat(r.total_faces_before)||0;
     totBef+=b;totAft+=a;totCBef+=tb;
+    parseJ(r.competitoritems).forEach(i=>{if(!i.sin_stock)totCompFaces+=parseFloat(i.faces)||parseFloat(i.faces_after)||parseFloat(i.faces_before)||0;});
     const d=fmtD(r.created_at);
     if(!byDay[d])byDay[d]={b:[],a:[]};byDay[d].b.push(b);byDay[d].a.push(a);
     const p=r.promoter_name||'Sin nombre';
@@ -783,7 +811,7 @@ function renderCaras(){
   const promE=Object.entries(byProm).sort((a,b)=>(b[1].a-b[1].b)-(a[1].a-a[1].b)).slice(0,10);
   mkChart('c-car-prom','bar',{labels:promE.map(([k])=>k),datasets:[{data:promE.map(([,v])=>+(v.a-v.b).toFixed(1)),backgroundColor:promE.map(([,v])=>v.a>=v.b?'rgba(5,150,105,.75)':'rgba(220,38,38,.65)'),borderRadius:4,borderSkipped:false}]});
 
-  const totNuestras=totAft;const totComp=Math.max(totCBef-totBef,0);
+  const totNuestras=totAft;const totComp=totCompFaces>0?totCompFaces:Math.max(totCBef-totBef,0);
   mkChart('c-car-sos','bar',{labels:['Total acumulado'],datasets:[
     {label:'Caras propias',data:[totNuestras],backgroundColor:'rgba(79,70,229,.8)',borderRadius:4,borderSkipped:false},
     {label:'Caras competencia (ref)',data:[totComp],backgroundColor:'rgba(220,38,38,.6)',borderRadius:4,borderSkipped:false}
@@ -831,7 +859,7 @@ function renderPromotores(){
     // Espacios
     const esp=r.espacios_adicionales;
     let espArr=[];try{espArr=Array.isArray(esp)?esp:(esp?JSON.parse(esp):[]);}catch{}
-    stats[p].esp+=espArr.reduce((s,e)=>s+(parseInt(e.unidades)||0),0);
+    stats[p].esp+=espArr.filter(e=>e.activo!==false&&e.tipo).length;
     // Completos: tiene precio, GPS y fotos
     const items=parseJ(r.myitems);
     const tienePrecio=items.some(i=>i.price&&i.currency&&i.presentation!=='SIN STOCK');
@@ -898,12 +926,11 @@ function renderEspacios(){
   const byTrade={},byProm={};
   filtData.forEach(r=>{
     let esp=[];try{esp=Array.isArray(r.espacios_adicionales)?r.espacios_adicionales:(r.espacios_adicionales?JSON.parse(r.espacios_adicionales):[]);}catch{}
-    esp.forEach(e=>{
-      const u=parseInt(e.unidades)||0;
-      if(tipos[e.tipo]!==undefined)tipos[e.tipo]+=u;
-      byTrade[r.trade||'N/A']=(byTrade[r.trade||'N/A']||0)+u;
+    esp.filter(e=>e.activo!==false&&e.tipo).forEach(e=>{
+      if(tipos[e.tipo]!==undefined)tipos[e.tipo]++;
+      byTrade[r.trade||'N/A']=(byTrade[r.trade||'N/A']||0)+1;
       if(!byProm[r.promoter_name||'N/A'])byProm[r.promoter_name||'N/A']={Torre:0,Cabezal:0,Paleta:0,'Exhibición':0};
-      if(byProm[r.promoter_name||'N/A'][e.tipo]!==undefined)byProm[r.promoter_name||'N/A'][e.tipo]+=u;
+      if(byProm[r.promoter_name||'N/A'][e.tipo]!==undefined)byProm[r.promoter_name||'N/A'][e.tipo]++;
     });
   });
 
@@ -915,6 +942,51 @@ function renderEspacios(){
   const promE=Object.entries(byProm).slice(0,10);
   const cols=['#8b5cf6','#06b6d4','#f59e0b','#10b981'];
   mkChart('c-esp-prom','bar',{labels:promE.map(([k])=>k),datasets:['Torre','Cabezal','Paleta','Exhibición'].map((t,i)=>({label:t,data:promE.map(([,v])=>v[t]||0),backgroundColor:cols[i],borderRadius:3,borderSkipped:false}))},{plugins:{legend:{display:true,labels:{color:tc(),font:{size:10},boxWidth:10}}}});
+  renderEspaciosTabla();
+}
+
+function renderEspaciosTabla(){
+  const grupos={};
+  filtData.forEach(r=>{
+    let esp=[];try{esp=Array.isArray(r.espacios_adicionales)?r.espacios_adicionales:(r.espacios_adicionales?JSON.parse(r.espacios_adicionales):[]);}catch{}
+    esp.filter(e=>e.activo!==false&&e.tipo).forEach(e=>{
+      const k=(r.trade||'—')+'|||'+e.tipo;
+      if(!grupos[k])grupos[k]={comercio:r.trade||'—',tipo:e.tipo,items:[]};
+      grupos[k].items.push({producto:e.producto||'—',cantidad:e.capacidad??e.unidades??null});
+    });
+  });
+  const tbody=document.querySelector('#t-esp-grupos tbody');
+  const entries=Object.entries(grupos).sort((a,b)=>a[1].comercio.localeCompare(b[1].comercio));
+  if(!entries.length){tbody.innerHTML='<tr><td colspan="5" class="empty">Sin espacios en el período</td></tr>';return;}
+  let html='';
+  entries.forEach(([k,g],idx)=>{
+    const totalCap=g.items.reduce((s,i)=>s+(parseFloat(i.cantidad)||0),0);
+    const prodDesc=[...new Set(g.items.map(i=>i.producto))].join(', ');
+    html+=`<tr class="esp-gr" style="cursor:pointer" onclick="toggleEspDetalle('esp-d-${idx}',this)">
+      <td><strong>${g.comercio}</strong></td><td>${g.tipo}</td>
+      <td style="text-align:center;font-weight:700">${totalCap||'—'}</td>
+      <td style="color:var(--ink3);font-size:.75rem;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${prodDesc}">${prodDesc}</td>
+      <td style="text-align:center;color:var(--acc);font-size:.8rem">▶</td></tr>
+    <tr id="esp-d-${idx}" style="display:none;background:rgba(79,70,229,.03)">
+      <td colspan="5" style="padding:0 12px 12px 32px">
+        <table style="width:100%;font-size:.76rem;border-collapse:collapse;margin-top:6px">
+          <thead><tr>
+            <th style="text-align:left;padding:5px 10px;color:var(--ink3);border-bottom:1px solid var(--brd);font-size:.65rem;text-transform:uppercase">Producto</th>
+            <th style="text-align:right;padding:5px 10px;color:var(--ink3);border-bottom:1px solid var(--brd);font-size:.65rem;text-transform:uppercase">Cantidad</th>
+          </tr></thead>
+          <tbody>${g.items.map(i=>`<tr><td style="padding:4px 10px;border-bottom:1px solid var(--brd)">${i.producto}</td><td style="padding:4px 10px;text-align:right;border-bottom:1px solid var(--brd);font-weight:700;color:var(--acc)">${i.cantidad??'—'}</td></tr>`).join('')}</tbody>
+        </table>
+      </td>
+    </tr>`;
+  });
+  tbody.innerHTML=html;
+}
+
+function toggleEspDetalle(id,row){
+  const det=document.getElementById(id); if(!det)return;
+  const open=det.style.display!=='none';
+  det.style.display=open?'none':'table-row';
+  row.querySelector('td:last-child').textContent=open?'▶':'▼';
 }
 
 // ════════════════════════════════════════
@@ -1149,8 +1221,8 @@ function exportXLS(todos=false,specificTab=null){
       anaquel:()=>filtData.filter(r=>r.shelf_meters).map(r=>({'Fecha':fmtD(r.created_at),'Promotor':r.promoter_name||'','Comercio':r.trade||'','Estado':r.state||'','Metros Propios':r.shelf_meters||0,'Metros Comp.':parseJ(r.competitoritems).reduce((s,i)=>s+(parseFloat(i.shelf_meters)||0),0).toFixed(2)})),
       caras:()=>filtData.map(r=>({'Fecha':fmtD(r.created_at),'Promotor':r.promoter_name||'','Comercio':r.trade||'','Caras Antes':r.our_faces_before_counted||r.our_faces_before_manual||0,'Caras Después':r.our_faces_after||0,'Total Antes':r.total_faces_before||0,'Total Después':r.total_faces||0})),
       stock:()=>{const rows=[];filtData.forEach(r=>parseJ(r.myitems).forEach(i=>{if(i.presentation==='SIN STOCK'||i.stock_shelf===0||i.stock_shelf===null)rows.push({'Fecha':fmtD(r.created_at),'Promotor':r.promoter_name||'','Comercio':r.trade||'','Producto':i.presentation||'','Stock Anaquel':i.stock_shelf??'SIN STOCK','Stock Bodega':i.stock_warehouse??'SIN STOCK'});}));return rows;},
-      promotores:()=>{const s={};allProms.forEach(p=>{s[p.promoter_name]={Promotor:p.promoter_name,Dias:p.dias_trabajo||5,Visitas:0,Meta:0,Confirmadas:0,'Cumpl %':0,'GPS %':0,'Metros m':0,'Δ Caras':0,Espacios:0,'Datos completos %':0};});filtData.forEach(r=>{const p=r.promoter_name;if(!s[p])return;s[p].Visitas++;s[p].Meta=s[p].Dias*8;if(isConfirmado(r))s[p].Confirmadas++;s[p]['Metros m']+=parseFloat(r.shelf_meters)||0;s[p]['Δ Caras']+=(parseFloat(r.our_faces_after)||0)-(parseFloat(r.our_faces_before_counted)||parseFloat(r.our_faces_before_manual)||0);let espArr=[];try{espArr=Array.isArray(r.espacios_adicionales)?r.espacios_adicionales:(r.espacios_adicionales?JSON.parse(r.espacios_adicionales):[]);}catch{}s[p].Espacios+=espArr.reduce((t,e)=>t+(parseInt(e.unidades)||0),0);});return Object.values(s).filter(x=>x.Visitas>0).map(x=>{x['Cumpl %']=x.Meta?Math.round(x.Confirmadas/x.Meta*100):0;x['GPS %']=x.Visitas?Math.round(x.Confirmadas/x.Visitas*100):0;x['Metros m']=+x['Metros m'].toFixed(2);x['Δ Caras']=+x['Δ Caras'].toFixed(0);return x;});},
-      espacios:()=>{const rows=[];filtData.forEach(r=>{let esp=[];try{esp=Array.isArray(r.espacios_adicionales)?r.espacios_adicionales:(r.espacios_adicionales?JSON.parse(r.espacios_adicionales):[]);}catch{}esp.forEach(e=>rows.push({'Fecha':fmtD(r.created_at),'Promotor':r.promoter_name||'','Comercio':r.trade||'','Tipo':e.tipo,'Unidades':e.unidades||0}));});return rows;},
+      promotores:()=>{const s={};allProms.forEach(p=>{s[p.promoter_name]={Promotor:p.promoter_name,Dias:p.dias_trabajo||5,Visitas:0,Meta:0,Confirmadas:0,'Cumpl %':0,'GPS %':0,'Metros m':0,'Δ Caras':0,Espacios:0,'Datos completos %':0};});filtData.forEach(r=>{const p=r.promoter_name;if(!s[p])return;s[p].Visitas++;s[p].Meta=s[p].Dias*8;if(isConfirmado(r))s[p].Confirmadas++;s[p]['Metros m']+=parseFloat(r.shelf_meters)||0;s[p]['Δ Caras']+=(parseFloat(r.our_faces_after)||0)-(parseFloat(r.our_faces_before_counted)||parseFloat(r.our_faces_before_manual)||0);let espArr=[];try{espArr=Array.isArray(r.espacios_adicionales)?r.espacios_adicionales:(r.espacios_adicionales?JSON.parse(r.espacios_adicionales):[]);}catch{}s[p].Espacios+=espArr.filter(e=>e.activo!==false&&e.tipo).length;});return Object.values(s).filter(x=>x.Visitas>0).map(x=>{x['Cumpl %']=x.Meta?Math.round(x.Confirmadas/x.Meta*100):0;x['GPS %']=x.Visitas?Math.round(x.Confirmadas/x.Visitas*100):0;x['Metros m']=+x['Metros m'].toFixed(2);x['Δ Caras']=+x['Δ Caras'].toFixed(0);return x;});},
+      espacios:()=>{const rows=[];filtData.forEach(r=>{let esp=[];try{esp=Array.isArray(r.espacios_adicionales)?r.espacios_adicionales:(r.espacios_adicionales?JSON.parse(r.espacios_adicionales):[]);}catch{}esp.filter(e=>e.activo!==false&&e.tipo).forEach(e=>rows.push({'Fecha':fmtD(r.created_at),'Promotor':r.promoter_name||'','Comercio':r.trade||'','Tipo':e.tipo,'Producto':e.producto||'','Capacidad':e.capacidad??e.unidades??''}));});return rows;},
     };
 
     // Hoja de resumen
@@ -1158,13 +1230,89 @@ function exportXLS(todos=false,specificTab=null){
     const wsRes=XLSX.utils.aoa_to_sheet(resumen);
     XLSX.utils.book_append_sheet(wb,wsRes,'Info');
 
+    // Funciones multi-hoja para módulos específicos
+    const multiSheetFns={
+      precios:()=>{
+        const comp=[];
+        filtData.forEach(r=>{
+          parseJ(r.myitems).forEach(mi=>{
+            if(!mi.price||!mi.currency||mi.presentation==='SIN STOCK')return;
+            const nUSD=+toUSD(mi.price,mi.currency,r.created_at).toFixed(2);
+            const ci=parseJ(r.competitoritems).find(x=>x.price&&x.currency&&!x.sin_stock);
+            const cUSD=ci?+toUSD(ci.price,ci.currency,r.created_at).toFixed(2):null;
+            comp.push({'Fecha':fmtD(r.created_at),'Promotor':r.promoter_name||'','Comercio':r.trade||'','Estado':r.state||'','Zona':r.zone||'','Nuestro Producto':mi.presentation||'','USD Nuestro':nUSD,'Competidor':ci?.presentation||'','USD Comp.':cUSD??'','Δ%':cUSD?+((nUSD-cUSD)/cUSD*100).toFixed(1):''});
+          });
+        });
+        const bP={},bT={};
+        comp.forEach(x=>{
+          const p=x.Promotor;if(!bP[p])bP[p]={Promotor:p,Registros:0,_sN:0,_sC:0,_nd:0,_sd:0};
+          bP[p].Registros++;bP[p]._sN+=x['USD Nuestro'];
+          if(x['USD Comp.']!==''){bP[p]._sC+=x['USD Comp.'];bP[p]._nd++;bP[p]._sd+=x['Δ%'];}
+          const t=x.Comercio;if(!bT[t])bT[t]={Comercio:t,Estado:x.Estado,Zona:x.Zona,Registros:0,_sN:0,_sC:0,_nd:0,_sd:0};
+          bT[t].Registros++;bT[t]._sN+=x['USD Nuestro'];
+          if(x['USD Comp.']!==''){bT[t]._sC+=x['USD Comp.'];bT[t]._nd++;bT[t]._sd+=x['Δ%'];}
+        });
+        const porProm=Object.values(bP).map(x=>({'Promotor':x.Promotor,'Registros':x.Registros,'USD Prom. Nuestro':+(x._sN/x.Registros).toFixed(2),'USD Prom. Comp.':x._nd?+(x._sC/x._nd).toFixed(2):'','Δ% Promedio':x._nd?+(x._sd/x._nd).toFixed(1):''}));
+        const porTrade=Object.values(bT).map(x=>({'Comercio':x.Comercio,'Estado':x.Estado,'Zona':x.Zona,'Registros':x.Registros,'USD Prom. Nuestro':+(x._sN/x.Registros).toFixed(2),'USD Prom. Comp.':x._nd?+(x._sC/x._nd).toFixed(2):'','Δ% Promedio':x._nd?+(x._sd/x._nd).toFixed(1):''})).sort((a,b)=>b['USD Prom. Nuestro']-a['USD Prom. Nuestro']);
+        return[{name:'Comparaciones',data:comp},{name:'Por Promotor',data:porProm},{name:'Por Comercio',data:porTrade}];
+      },
+      caras:()=>{
+        const bPN={},bPC={};
+        const visitas=filtData.map(r=>{
+          let nA=0,nD=0,nc=0;
+          parseJ(r.myitems).forEach(i=>{if(i.sin_stock)return;const b=parseFloat(i.faces_before)||0,a=parseFloat(i.faces_after)||0;nA+=b;nD+=a;const k=i.presentation||'—';if(!bPN[k])bPN[k]={Producto:k,Antes:0,Después:0};bPN[k].Antes+=b;bPN[k].Después+=a;});
+          parseJ(r.competitoritems).forEach(i=>{if(i.sin_stock)return;const c=parseFloat(i.faces)||parseFloat(i.faces_after)||0;nc+=c;const k=i.presentation||'—';if(!bPC[k])bPC[k]={Producto:k,'Total Caras':0};bPC[k]['Total Caras']+=c;});
+          const tot=nD+nc;
+          return{Fecha:fmtD(r.created_at),Promotor:r.promoter_name||'',Comercio:r.trade||'','Nuestras Antes':nA,'Nuestras Después':nD,'Caras Comp.':nc,'Total Anaquel':tot,'SOS%':tot>0?+(nD/tot*100).toFixed(1):0,'Δ Caras':nD-nA};
+        });
+        const nuestros=Object.values(bPN).map(x=>({...x,'Δ':x['Después']-x['Antes']})).sort((a,b)=>b['Después']-a['Después']);
+        const comp=Object.values(bPC).sort((a,b)=>b['Total Caras']-a['Total Caras']);
+        return[{name:'Nuestros',data:nuestros},{name:'Competencia',data:comp},{name:'Por Visita',data:visitas}];
+      },
+      anaquel:()=>{
+        const bT={};
+        filtData.forEach(r=>{
+          const t=r.trade||'—';if(!bT[t])bT[t]={'Comercio':t,'Estado':r.state||'','MN':0,'MC':0};
+          bT[t].MN+=parseFloat(r.shelf_meters)||0;
+          parseJ(r.competitoritems).forEach(i=>{bT[t].MC+=parseFloat(i.shelf_meters)||0;});
+        });
+        const rows=Object.values(bT).map(x=>({Comercio:x.Comercio,Estado:x.Estado,'MN - Metros Nuestros':+x.MN.toFixed(2),'MC - Metros Comp.':+x.MC.toFixed(2),'MT - Total':+(x.MN+x.MC).toFixed(2),'% Propio':(x.MN+x.MC)>0?+(x.MN/(x.MN+x.MC)*100).toFixed(1):0})).sort((a,b)=>b['MN - Metros Nuestros']-a['MN - Metros Nuestros']);
+        return[{name:'Por Comercio',data:rows}];
+      },
+      stock:()=>{
+        const visitasPT={};filtData.forEach(r=>{const t=r.trade||'—';visitasPT[t]=(visitasPT[t]||0)+1;});
+        const bGrupo={},bTrade={},bProd={},detalle=[];
+        filtData.forEach(r=>{
+          parseJ(r.myitems).forEach(i=>{
+            if(i.presentation==='SIN STOCK'||i.stock_shelf===0||i.stock_shelf===null){
+              const t=r.trade||'—',p=i.presentation||'N/A',k=t+'|||'+p;
+              if(!bGrupo[k])bGrupo[k]={Comercio:t,Estado:r.state||'',Producto:p,Quiebres:0,_v:visitasPT[t]||1};
+              bGrupo[k].Quiebres++;
+              if(!bTrade[t])bTrade[t]={Comercio:t,Quiebres:0};bTrade[t].Quiebres++;
+              if(!bProd[p])bProd[p]={Producto:p,Quiebres:0};bProd[p].Quiebres++;
+              detalle.push({Fecha:fmtD(r.created_at),Promotor:r.promoter_name||'',Comercio:t,Producto:p,'Stock Anaquel':i.stock_shelf??'SIN STOCK','Stock Bodega':i.stock_warehouse??'—'});
+            }
+          });
+        });
+        const alertas=Object.values(bGrupo).map(x=>{const freq=Math.round(x.Quiebres/x._v*100);return{...x,Visitas:x._v,'Frecuencia %':freq,Prioridad:freq>=50?'CRÍTICO':freq>=25?'ALTO':'MEDIO'};}).sort((a,b)=>b['Frecuencia %']-a['Frecuencia %']);
+        return[{name:'Alertas Urgentes',data:alertas},{name:'Por Comercio',data:Object.values(bTrade).sort((a,b)=>b.Quiebres-a.Quiebres)},{name:'Por Producto',data:Object.values(bProd).sort((a,b)=>b.Quiebres-a.Quiebres)},{name:'Detalle',data:detalle}];
+      },
+    };
+
     tabsToExport.forEach(tab=>{
-      const fn=dataFns[tab]; if(!fn)return;
-      const data=fn();
-      if(!data.length)return;
-      const ws=XLSX.utils.json_to_sheet(data);
-      const tabNames={gerencial:'Gerencial',precios:'Precios',anaquel:'Anaquel',caras:'Caras',stock:'Stock',promotores:'Promotores',espacios:'Espacios'};
-      XLSX.utils.book_append_sheet(wb,ws,tabNames[tab]||tab);
+      if(multiSheetFns[tab]){
+        multiSheetFns[tab]().forEach(s=>{
+          if(!s.data||!s.data.length)return;
+          XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(s.data),s.name.slice(0,31));
+        });
+      } else {
+        const fn=dataFns[tab]; if(!fn)return;
+        const data=fn();
+        if(!data.length)return;
+        const ws=XLSX.utils.json_to_sheet(data);
+        const tabNames={gerencial:'Gerencial',precios:'Precios',anaquel:'Anaquel',caras:'Caras',stock:'Stock',promotores:'Promotores',espacios:'Espacios'};
+        XLSX.utils.book_append_sheet(wb,ws,tabNames[tab]||tab);
+      }
     });
 
     XLSX.writeFile(wb,`CAPTA_Reportes_${new Date().toISOString().split('T')[0]}.xlsx`);
