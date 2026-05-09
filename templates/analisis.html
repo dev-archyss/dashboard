@@ -249,7 +249,7 @@
           <h3 class="text-sm font-bold text-gray-700 dark:text-white mb-1">Precio promedio por comercio</h3>
           <p class="text-xs text-gray-400">Nuestro precio vs. competencia en cada punto de venta</p>
         </div>
-        <input type="text" id="buscarComercioTabla" placeholder="Buscar comercio…" 
+        <input type="text" id="buscarComercioTabla" placeholder="Buscar comercio…"
           class="h-9 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 text-sm w-52" oninput="filtrarTablaComercio(this.value)">
       </div>
       <div class="overflow-x-auto rounded-xl border border-gray-100 dark:border-slate-700 max-h-96">
@@ -563,7 +563,7 @@ function mostrarAvisoSinComp() {
   const aviso = $('avisoSinComp');
   if (!sinCompAsignada.size) { aviso.style.display = 'none'; return; }
   aviso.style.display = 'block';
-  $('listaSinComp').innerHTML = [...sinCompAsignada].sort().map(p => 
+  $('listaSinComp').innerHTML = [...sinCompAsignada].sort().map(p =>
     `<span class="inline-flex items-center gap-1 bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-1 rounded-lg text-xs font-semibold">
       <i class="fas fa-link-slash text-xs"></i>${p}
     </span>`).join('');
@@ -621,10 +621,203 @@ function drawChartComparativa() {
   });
 }
 
-function drawChartEvolucion() { console.log("Evolución - pendiente implementar"); }
-function drawChartZonas() { console.log("Zonas - pendiente implementar"); }
-function drawChartPromotores() { console.log("Promotores - pendiente implementar"); }
-function renderTablaComercio() { console.log("Tabla comercio - pendiente implementar"); }
+function drawChartEvolucion() {
+  const { tc, gc } = chartColors();
+  const sel = $('selectorProductoEvol').value;
+  destroyChart('chartEvolucion');
+
+  const prodsDisponibles = [...new Set(analisisData.map(f => f.nuestroProd))].sort();
+  const selEl = $('selectorProductoEvol');
+  const curVal = selEl.value;
+  selEl.innerHTML = '<option value="">— Selecciona producto —</option>' +
+    prodsDisponibles.map(p => `<option value="${p}"${p===curVal?' selected':''}>${p}</option>`).join('');
+
+  if (!sel) return;
+
+  const filasFiltradas = analisisData.filter(f => f.nuestroProd === sel);
+  if (!filasFiltradas.length) return;
+
+  const byDate = {};
+  filasFiltradas.forEach(f => {
+    const d = new Date(f.fecha).toLocaleDateString('es-ES', {day:'2-digit',month:'short',year:'2-digit'});
+    if (!byDate[d]) byDate[d] = { n:[], c:[] };
+    byDate[d].n.push(f.nUSD);
+    if (f.cUSD) byDate[d].c.push(f.cUSD);
+  });
+  const entries = Object.entries(byDate).sort((a,b) => new Date(a[0]) - new Date(b[0]));
+  const labels = entries.map(([k]) => k);
+  const dataN = entries.map(([,v]) => +avg(v.n).toFixed(2));
+  const dataC = entries.map(([,v]) => v.c.length ? +avg(v.c).toFixed(2) : null);
+
+  chartInst['chartEvolucion'] = new Chart($('chartEvolucion').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label:'Nuestro (USD)', data:dataN, borderColor:'#4f46e5', backgroundColor:'rgba(79,70,229,.1)', tension:.4, pointRadius:3, fill:true },
+        { label:'Competidor (USD)', data:dataC, borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.07)', tension:.4, pointRadius:3, fill:true, spanGaps:true }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{ labels:{ color:tc, font:{size:11} }}},
+      scales: {
+        x: { ticks:{ color:tc, font:{size:10}, maxRotation:45 }, grid:{color:gc} },
+        y: { ticks:{ color:tc, font:{size:10}, callback:v=>'$'+v.toFixed(2) }, grid:{color:gc} }
+      }
+    }
+  });
+}
+
+function drawChartZonas() {
+  const { tc, gc } = chartColors();
+
+  const byEstado = {};
+  analisisData.forEach(f => {
+    const k = f.state || 'N/A';
+    if (!byEstado[k]) byEstado[k] = [];
+    byEstado[k].push(f.nUSD);
+  });
+  const estE = Object.entries(byEstado).sort((a,b) => avg(b[1])-avg(a[1])).slice(0,10);
+  destroyChart('chartZonaEstado');
+  if (estE.length) {
+    chartInst['chartZonaEstado'] = new Chart($('chartZonaEstado').getContext('2d'), {
+      type:'bar',
+      data: {
+        labels: estE.map(([k])=>k),
+        datasets:[{ label:'USD prom.', data:estE.map(([,v])=>+avg(v).toFixed(2)), backgroundColor:'rgba(79,70,229,.75)', borderRadius:4, borderSkipped:false }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false }},
+        scales:{
+          x:{ ticks:{ color:tc, font:{size:10} }, grid:{color:gc} },
+          y:{ ticks:{ color:tc, font:{size:10}, callback:v=>'$'+v.toFixed(2) }, grid:{color:gc} }
+        }
+      }
+    });
+  }
+
+  const byZona = {};
+  analisisData.forEach(f => {
+    const k = f.zone || 'N/A';
+    if (!byZona[k]) byZona[k] = [];
+    byZona[k].push(f.nUSD);
+  });
+  const zonaE = Object.entries(byZona).sort((a,b) => avg(b[1])-avg(a[1])).slice(0,10);
+  destroyChart('chartZonaZona');
+  if (zonaE.length) {
+    chartInst['chartZonaZona'] = new Chart($('chartZonaZona').getContext('2d'), {
+      type:'bar',
+      data: {
+        labels: zonaE.map(([k])=>k),
+        datasets:[{ label:'USD prom.', data:zonaE.map(([,v])=>+avg(v).toFixed(2)), backgroundColor:'rgba(8,145,178,.75)', borderRadius:4, borderSkipped:false }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false }},
+        scales:{
+          x:{ ticks:{ color:tc, font:{size:10} }, grid:{color:gc} },
+          y:{ ticks:{ color:tc, font:{size:10}, callback:v=>'$'+v.toFixed(2) }, grid:{color:gc} }
+        }
+      }
+    });
+  }
+}
+
+function drawChartPromotores() {
+  const { tc, gc } = chartColors();
+  const byProm = {};
+  analisisData.forEach(f => {
+    const p = f.promotor || 'N/A';
+    if (!byProm[p]) byProm[p] = { n:[], c:[], dif:[] };
+    byProm[p].n.push(f.nUSD);
+    if (f.cUSD) byProm[p].c.push(f.cUSD);
+    if (f.diferencia !== null) byProm[p].dif.push(f.diferencia);
+  });
+
+  const promE = Object.entries(byProm).sort((a,b) => avg(b[1].n)-avg(a[1].n)).slice(0,12);
+  destroyChart('chartPromotores');
+  if (promE.length) {
+    chartInst['chartPromotores'] = new Chart($('chartPromotores').getContext('2d'), {
+      type:'bar',
+      data: {
+        labels: promE.map(([k])=>k),
+        datasets:[
+          { label:'Nuestro (USD)', data:promE.map(([,v])=>+avg(v.n).toFixed(2)), backgroundColor:'rgba(79,70,229,.75)', borderRadius:4, borderSkipped:false },
+          { label:'Comp. (USD)', data:promE.map(([,v])=>v.c.length?+avg(v.c).toFixed(2):null), backgroundColor:'rgba(239,68,68,.65)', borderRadius:4, borderSkipped:false }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{ color:tc, font:{size:11} }}},
+        scales:{
+          x:{ ticks:{ color:tc, font:{size:10} }, grid:{color:gc} },
+          y:{ ticks:{ color:tc, font:{size:10}, callback:v=>'$'+v.toFixed(2) }, grid:{color:gc} }
+        }
+      }
+    });
+
+    const avgG = avg(analisisData.map(f=>f.nUSD));
+    const tbody = $('tbodyPromotores');
+    tbody.innerHTML = promE.map(([nombre, v]) => {
+      const pN = avg(v.n);
+      const pC = v.c.length ? avg(v.c) : null;
+      const dif = pN - avgG;
+      const difStr = (dif>0?'+':'')+dif.toFixed(2);
+      const difColor = dif>0?'text-red-500':'text-green-600';
+      return `<tr class="row-hover">
+        <td class="py-3 px-4 font-semibold">${nombre}</td>
+        <td class="py-3 px-4 text-center text-indigo-600 font-bold">$${pN.toFixed(2)}</td>
+        <td class="py-3 px-4 text-center text-red-500">${pC?'$'+pC.toFixed(2):'—'}</td>
+        <td class="py-3 px-4 text-center">${v.n.length}</td>
+        <td class="py-3 px-4 text-center font-bold ${difColor}">${difStr}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function renderTablaComercio() {
+  const byTrade = {};
+  analisisData.forEach(f => {
+    const t = f.trade || 'N/A';
+    if (!byTrade[t]) byTrade[t] = { trade:t, state:f.state, zone:f.zone, n:[], c:[], v:new Set() };
+    byTrade[t].n.push(f.nUSD);
+    if (f.cUSD) byTrade[t].c.push(f.cUSD);
+    byTrade[t].v.add(f.fecha.split('T')[0]);
+  });
+  tablaComercioData = Object.values(byTrade).sort((a,b) => avg(b.n)-avg(a.n));
+  renderFilasComercio(tablaComercioData);
+}
+
+function renderFilasComercio(data) {
+  const tbody = $('tbodyComercio');
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-gray-400">Sin datos</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.map(x => {
+    const pN = avg(x.n);
+    const pC = x.c.length ? avg(x.c) : null;
+    const dif = pC ? ((pN-pC)/pC*100) : null;
+    const difColor = dif===null?'text-gray-400':dif>0?'text-red-500':'text-green-600';
+    const difStr = dif===null?'—':(dif>0?'+':'')+dif.toFixed(1)+'%';
+    return `<tr class="row-hover">
+      <td class="py-3 px-4 font-semibold">${x.trade}</td>
+      <td class="py-3 px-4 text-xs text-gray-500">${x.state}${x.zone&&x.zone!=='—'?' / '+x.zone:''}</td>
+      <td class="py-3 px-4 text-center text-indigo-600 font-bold">$${pN.toFixed(2)}</td>
+      <td class="py-3 px-4 text-center text-red-500">${pC?'$'+pC.toFixed(2):'—'}</td>
+      <td class="py-3 px-4 text-center font-bold ${difColor}">${difStr}</td>
+      <td class="py-3 px-4 text-center">${x.v.size}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filtrarTablaComercio(term) {
+  if (!term.trim()) { renderFilasComercio(tablaComercioData); return; }
+  const t = term.toLowerCase();
+  renderFilasComercio(tablaComercioData.filter(x => x.trade.toLowerCase().includes(t)));
+}
 
 function renderTablaDetalle() {
   const filas = analisisData.length > 0 ? analisisData : nuestrosPrecios;
@@ -679,9 +872,10 @@ function limpiarFiltros() {
 }
 
 function setDefaultDates() {
-  const hoy = new Date().toISOString().split('T')[0];
-  $('fDesde').value = hoy;
-  $('fHasta').value = hoy;
+  const hoy = new Date();
+  const hace2a = new Date(hoy.getFullYear()-2, hoy.getMonth(), 1);
+  $('fDesde').value = hace2a.toISOString().split('T')[0];
+  $('fHasta').value = hoy.toISOString().split('T')[0];
 }
 
 function aplicarFiltros() {
@@ -696,7 +890,6 @@ function exportXLS() {
     const desde = $('fDesde').value;
     const hasta = $('fHasta').value;
 
-    // Hoja 1: Comparaciones
     const filas = analisisData.length > 0 ? analisisData : nuestrosPrecios;
     const comp = filas.map(f => ({
       'Fecha': new Date(f.fecha).toLocaleDateString('es-ES'),
@@ -712,7 +905,6 @@ function exportXLS() {
     }));
     if (comp.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(comp), 'Comparaciones');
 
-    // Hoja 2: Por Promotor
     const byProm = {};
     filas.forEach(f => {
       const p = f.promotor;
@@ -731,7 +923,6 @@ function exportXLS() {
     }));
     if (porProm.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(porProm), 'Por Promotor');
 
-    // Hoja 3: Por Comercio
     const byTrade = {};
     filas.forEach(f => {
       const t = f.trade;
